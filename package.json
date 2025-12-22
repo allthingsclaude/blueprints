@@ -1,0 +1,64 @@
+{
+  "name": "@allthingsclaude/blueprints",
+  "version": "0.1.0",
+  "description": "Claude Code commands and agents for enhanced AI-assisted development workflows",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "blueprints": "./bin/cli.js",
+    "@allthingsclaude/blueprints": "./bin/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "pnpm run build && pnpm run test",
+    "release:patch": "pnpm run build && pnpm run test && npm version patch && git push && git push --tags",
+    "release:minor": "pnpm run build && pnpm run test && npm version minor && git push && git push --tags",
+    "release:major": "pnpm run build && pnpm run test && npm version major && git push && git push --tags"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "ai",
+    "agents",
+    "commands",
+    "cli",
+    "development",
+    "workflow",
+    "anthropic"
+  ],
+  "author": "Marko Radak (https://github.com/markoradak)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/allthingsclaude/blueprints.git"
+  },
+  "homepage": "https://github.com/allthingsclaude/blueprints#readme",
+  "bugs": {
+    "url": "https://github.com/allthingsclaude/blueprints/issues"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    "content/",
+    "README.md"
+  ],
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^11.1.0",
+    "inquirer": "^8.2.6",
+    "ora": "^5.4.1"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^8.2.10",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "vitest": "^4.0.16"
+  }
+}
