@@ -1,4 +1,7 @@
-# @allthingsclaude/blueprints
+# Blueprints
+> by All Things Claude
+
+![Blueprints by All Things Claude](assets/blueprints.webp)
 
 Install powerful commands and agents for Claude Code to enhance your AI-assisted development workflows.
 
