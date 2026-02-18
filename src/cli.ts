@@ -4,7 +4,8 @@ import { program } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
-import { installBlueprints, getDefaultClaudeDir, getInstallPaths } from './installer.js';
+import { installBlueprints, getDefaultClaudeDir, getInstallPaths, POWER_LEVEL_LABELS } from './installer.js';
+import type { AgentPowerLevel } from './installer.js';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
@@ -15,6 +16,7 @@ interface CLIOptions {
   local?: boolean;
   path?: string;
   yes?: boolean;
+  power?: string;
 }
 
 type InstallType = 'global' | 'local' | 'custom';
@@ -27,6 +29,7 @@ program
   .option('-l, --local', 'Install to current directory (./.claude)')
   .option('-p, --path <path>', 'Install to a custom path')
   .option('-y, --yes', 'Skip confirmation prompts')
+  .option('--power <level>', 'Agent power level 1-5 (default: 3)')
   .parse(process.argv);
 
 const options = program.opts<CLIOptions>();
@@ -96,14 +99,46 @@ async function main(): Promise<void> {
     }
   }
 
+  // Determine power level
+  let powerLevel: AgentPowerLevel;
+
+  if (options.power) {
+    const parsed = parseInt(options.power, 10);
+    if (parsed < 1 || parsed > 5 || isNaN(parsed)) {
+      console.error(chalk.red('Error: --power must be between 1 and 5'));
+      process.exit(1);
+    }
+    powerLevel = parsed as AgentPowerLevel;
+  } else if (options.yes) {
+    powerLevel = 3;
+  } else {
+    const powerAnswer = await inquirer.prompt<{ power: AgentPowerLevel }>([
+      {
+        type: 'list',
+        name: 'power',
+        message: 'Select agent power level:',
+        choices: [
+          { name: '1 - Economy     (all haiku — fastest, lowest cost)', value: 1 },
+          { name: '2 - Balanced    (haiku research, sonnet tasks)', value: 2 },
+          { name: '3 - Standard    (all sonnet — recommended)', value: 3 },
+          { name: '4 - Enhanced    (sonnet research, opus tasks)', value: 4 },
+          { name: '5 - Maximum     (all opus — most capable)', value: 5 },
+        ],
+        default: 2 // 0-indexed, so index 2 = value 3
+      }
+    ]);
+    powerLevel = powerAnswer.power;
+  }
+
   // Show what will be installed
   const paths = getInstallPaths(targetPath);
 
   console.log();
   console.log(chalk.yellow('Installation Summary:'));
   console.log(chalk.dim('─'.repeat(50)));
-  console.log(`  ${chalk.bold('Commands:')} 21 files → ${chalk.cyan(paths.commands)}`);
-  console.log(`  ${chalk.bold('Agents:')}   11 files → ${chalk.cyan(paths.agents)}`);
+  console.log(`  ${chalk.bold('Commands:')}    21 files → ${chalk.cyan(paths.commands)}`);
+  console.log(`  ${chalk.bold('Agents:')}      12 files → ${chalk.cyan(paths.agents)}`);
+  console.log(`  ${chalk.bold('Power Level:')} ${chalk.magenta(`${powerLevel} - ${POWER_LEVEL_LABELS[powerLevel]}`)}`);
   console.log(chalk.dim('─'.repeat(50)));
   console.log();
 
@@ -128,7 +163,7 @@ async function main(): Promise<void> {
   const spinner = ora('Installing blueprints...').start();
 
   try {
-    const result = await installBlueprints(targetPath);
+    const result = await installBlueprints(targetPath, powerLevel);
     spinner.succeed(chalk.green('Installation complete!'));
 
     console.log();

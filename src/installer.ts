@@ -21,7 +21,24 @@ export interface InstallResult {
   commands: number;
   agents: number;
   paths: InstallPaths;
+  powerLevel: AgentPowerLevel;
 }
+
+export type AgentPowerLevel = 1 | 2 | 3 | 4 | 5;
+
+export const POWER_LEVEL_LABELS: Record<AgentPowerLevel, string> = {
+  1: 'Economy',
+  2: 'Balanced',
+  3: 'Standard',
+  4: 'Enhanced',
+  5: 'Maximum',
+};
+
+export const RESEARCH_AGENTS = [
+  'research-codebase.md',
+  'research-docs.md',
+  'research-web.md',
+];
 
 export interface ExistingInstallation {
   hasCommands: boolean;
@@ -123,9 +140,57 @@ export function copyDirectory(srcDir: string, destDir: string): number {
 }
 
 /**
+ * Get the model to use for a given agent file based on power level
+ */
+export function getModelForAgent(filename: string, powerLevel: AgentPowerLevel): 'haiku' | 'sonnet' | 'opus' {
+  const isResearch = RESEARCH_AGENTS.includes(filename);
+
+  const modelMap: Record<AgentPowerLevel, { research: 'haiku' | 'sonnet' | 'opus'; other: 'haiku' | 'sonnet' | 'opus' }> = {
+    1: { research: 'haiku', other: 'haiku' },
+    2: { research: 'haiku', other: 'sonnet' },
+    3: { research: 'sonnet', other: 'sonnet' },
+    4: { research: 'sonnet', other: 'opus' },
+    5: { research: 'opus', other: 'opus' },
+  };
+
+  return isResearch ? modelMap[powerLevel].research : modelMap[powerLevel].other;
+}
+
+/**
+ * Copy agent files with model rewritten based on power level
+ */
+export function copyAgentsWithPowerLevel(srcDir: string, destDir: string, powerLevel: AgentPowerLevel): number {
+  ensureDir(destDir);
+
+  const files = fs.readdirSync(srcDir);
+  let copiedCount = 0;
+
+  for (const file of files) {
+    const srcFile = path.join(srcDir, file);
+    const destFile = path.join(destDir, file);
+    const stat = fs.statSync(srcFile);
+
+    if (stat.isDirectory()) {
+      copiedCount += copyAgentsWithPowerLevel(srcFile, path.join(destDir, file), powerLevel);
+    } else if (stat.isFile() && file.endsWith('.md')) {
+      const content = fs.readFileSync(srcFile, 'utf-8');
+      const model = getModelForAgent(file, powerLevel);
+      const updated = content.replace(/^(model:\s*).+$/m, `$1${model}`);
+      fs.writeFileSync(destFile, updated, 'utf-8');
+      copiedCount++;
+    } else if (stat.isFile()) {
+      fs.copyFileSync(srcFile, destFile);
+      copiedCount++;
+    }
+  }
+
+  return copiedCount;
+}
+
+/**
  * Install blueprints to the target path
  */
-export async function installBlueprints(targetPath: string): Promise<InstallResult> {
+export async function installBlueprints(targetPath: string, powerLevel: AgentPowerLevel = 3): Promise<InstallResult> {
   const sourcePaths = getSourcePaths();
   const installPaths = getInstallPaths(targetPath);
 
@@ -143,13 +208,14 @@ export async function installBlueprints(targetPath: string): Promise<InstallResu
   // Copy commands
   const commandsCount = copyDirectory(sourcePaths.commands, installPaths.commands);
 
-  // Copy agents
-  const agentsCount = copyDirectory(sourcePaths.agents, installPaths.agents);
+  // Copy agents with power level model overrides
+  const agentsCount = copyAgentsWithPowerLevel(sourcePaths.agents, installPaths.agents, powerLevel);
 
   return {
     commands: commandsCount,
     agents: agentsCount,
-    paths: installPaths
+    paths: installPaths,
+    powerLevel
   };
 }
 
