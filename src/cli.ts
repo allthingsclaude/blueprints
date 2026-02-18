@@ -102,8 +102,8 @@ async function main(): Promise<void> {
   console.log();
   console.log(chalk.yellow('Installation Summary:'));
   console.log(chalk.dim('─'.repeat(50)));
-  console.log(`  ${chalk.bold('Commands:')} 20 files → ${chalk.cyan(paths.commands)}`);
-  console.log(`  ${chalk.bold('Agents:')}   10 files → ${chalk.cyan(paths.agents)}`);
+  console.log(`  ${chalk.bold('Commands:')} 21 files → ${chalk.cyan(paths.commands)}`);
+  console.log(`  ${chalk.bold('Agents:')}   11 files → ${chalk.cyan(paths.agents)}`);
   console.log(chalk.dim('─'.repeat(50)));
   console.log();
 
@@ -154,7 +154,8 @@ async function main(): Promise<void> {
     console.log();
     console.log(chalk.dim('Available commands: /audit, /bootstrap, /brainstorm, /challenge, /cleanup,'));
     console.log(chalk.dim('/critique, /debug, /explain, /finalize, /flush, /handoff, /implement,'));
-    console.log(chalk.dim('/kickoff, /parallelize, /pickup, /plan, /refactor, /research, /test, /verify'));
+    console.log(chalk.dim('/kickoff, /parallelize, /pickup, /plan, /refactor, /research, /storyboard,'));
+    console.log(chalk.dim('/test, /verify'));
     console.log();
 
   } catch (error) {
