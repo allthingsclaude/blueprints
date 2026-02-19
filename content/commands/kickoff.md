@@ -16,8 +16,8 @@ $ARGUMENTS
 
 ## Available Plans
 
-**Plans in .claude/temp/**:
-!`ls -1 .claude/temp/PLAN_*.md 2>/dev/null || echo "No plans found"`
+**Plans in plans/**:
+!`ls -1 plans/PLAN_*.md 2>/dev/null || echo "No plans found"`
 
 **Current Branch**: !`git branch --show-current`
 
@@ -52,7 +52,7 @@ I'll work through this plan collaboratively with you:
 
 Now let me load the plan and we'll get started together.
 
-Use Read to load `.claude/temp/PLAN_{NAME}.md`, display a comprehensive summary with:
+Use Read to load `plans/PLAN_{NAME}.md`, display a comprehensive summary with:
 - Objective
 - Phases and task counts
 - Key files involved

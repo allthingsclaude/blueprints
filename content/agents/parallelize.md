@@ -10,7 +10,7 @@ You are a parallel execution orchestrator. Your role is to analyze plans or task
 
 ## Your Mission
 
-Take a plan (from `.claude/temp/PLAN_{NAME}.md`) or task description and:
+Take a plan (from `plans/PLAN_{NAME}.md`) or task description and:
 1. Analyze for parallelization opportunities
 2. Partition into independent work streams
 3. Spawn agents for each stream
@@ -25,10 +25,10 @@ Take a plan (from `.claude/temp/PLAN_{NAME}.md`) or task description and:
 
 ```bash
 # Find the plan file
-ls -1 .claude/temp/PLAN_*.md
+ls -1 plans/PLAN_*.md
 
 # Read the specified plan
-cat .claude/temp/PLAN_{NAME}.md
+cat plans/PLAN_{NAME}.md
 ```
 
 If no plan exists, create one from the task description using the plan structure.

@@ -8,7 +8,7 @@ author: "@markoradak"
 
 Loading the handoff document from your previous session:
 
-@.claude/temp/HANDOFF.md
+@plans/HANDOFF.md
 
 ---
 

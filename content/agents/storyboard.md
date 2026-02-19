@@ -80,13 +80,13 @@ Examples:
 #### 2c. Create temp directory and extract
 
 ```bash
-mkdir -p .claude/temp/storyboard_$(date +%s)
+mkdir -p /tmp/storyboard_$(date +%s)
 ```
 
 Run ffmpeg with the calculated FPS:
 
 ```bash
-ffmpeg -i <video> -vf "fps=<calculated_fps>,scale=1024:-1" -frames:v <total_frames> .claude/temp/storyboard_<ts>/frame_%04d.png
+ffmpeg -i <video> -vf "fps=<calculated_fps>,scale=1024:-1" -frames:v <total_frames> /tmp/storyboard_<ts>/frame_%04d.png
 ```
 
 Parameter rationale:
@@ -125,7 +125,13 @@ Derive the spec name from the video filename:
 - `dropdown-menu.mov` becomes `INTERACTION_SPEC_DROPDOWN_MENU.md`
 - Strip extension, replace hyphens/spaces with underscores, uppercase
 
-Write the spec to `.claude/temp/INTERACTION_SPEC_{NAME}.md` using this format:
+Before writing, ensure the output directory exists:
+
+```bash
+mkdir -p plans
+```
+
+Write the spec to `plans/INTERACTION_SPEC_{NAME}.md` using this format:
 
 ```markdown
 # Interaction Spec: {Name}
@@ -208,7 +214,7 @@ Write the spec to `.claude/temp/INTERACTION_SPEC_{NAME}.md` using this format:
 When the spec is written, report:
 
 ```markdown
-Interaction spec written to: .claude/temp/INTERACTION_SPEC_{NAME}.md
+Interaction spec written to: plans/INTERACTION_SPEC_{NAME}.md
 
 **Summary**: [One sentence about what the interaction shows]
 **States detected**: {count}

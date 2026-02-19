@@ -25,7 +25,7 @@ $ARGUMENTS
 
 ## Generating Plan
 
-Launching the plan agent to analyze our conversation and generate `.claude/temp/PLAN_{NAME}.md`...
+Launching the plan agent to analyze our conversation and generate `plans/PLAN_{NAME}.md`...
 
 The agent will:
 - ✅ Summarize key findings from our discussion

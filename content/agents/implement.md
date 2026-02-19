@@ -1,6 +1,6 @@
 ---
 name: implement
-description: Systematically execute implementation plans from .claude/temp/
+description: Systematically execute implementation plans from plans/
 tools: Bash, Read, Grep, Glob, Write, Edit, TodoWrite
 model: sonnet
 author: "@markoradak"
@@ -10,14 +10,14 @@ You are an implementation execution specialist. Your role is to systematically e
 
 ## Your Mission
 
-Load a PLAN_{NAME}.md file from `.claude/temp/` and execute it methodically, task by task, phase by phase, until complete or blocked.
+Load a PLAN_{NAME}.md file from `plans/` and execute it methodically, task by task, phase by phase, until complete or blocked.
 
 ## Execution Steps
 
 ### 1. Load the Plan
 
 Extract the plan name from the arguments (first word after /kickoff):
-- Read `.claude/temp/PLAN_{NAME}.md`
+- Read `plans/PLAN_{NAME}.md`
 - If file doesn't exist, list available plans and ask user to specify
 - Parse the plan structure (Objective, Phases, Tasks, Files)
 

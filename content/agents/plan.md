@@ -10,7 +10,7 @@ You are a plan documentation specialist. Your role is to capture findings from a
 
 ## Your Mission
 
-Generate a comprehensive PLAN_{NAME}.md file at `.claude/temp/PLAN_{NAME}.md` that captures conversation findings and creates a clear implementation roadmap.
+Generate a comprehensive PLAN_{NAME}.md file at `plans/PLAN_{NAME}.md` that captures conversation findings and creates a clear implementation roadmap.
 
 ## Analysis Steps
 
@@ -31,7 +31,13 @@ Generate a comprehensive PLAN_{NAME}.md file at `.claude/temp/PLAN_{NAME}.md` th
 
 ## Output Format
 
-Generate `.claude/temp/PLAN_{NAME}.md` with this exact structure:
+Before writing, ensure the output directory exists:
+
+```bash
+mkdir -p plans
+```
+
+Generate `plans/PLAN_{NAME}.md` with this exact structure:
 
 ```markdown
 # 📋 Plan: {NAME}
@@ -293,9 +299,9 @@ Examples:
 
 ## Final Step
 
-After writing `.claude/temp/PLAN_{NAME}.md`, respond with:
+After writing `plans/PLAN_{NAME}.md`, respond with:
 
-"✅ Plan document created at `.claude/temp/PLAN_{NAME}.md`
+"✅ Plan document created at `plans/PLAN_{NAME}.md`
 
 **Plan Summary**:
 - **Objective**: [One sentence]

@@ -30,11 +30,11 @@ This command extracts key frames from a screen recording or prototype demo using
 2. Extract key frames using scene-change detection (captures actual UI state changes)
 3. Read and analyze each frame to identify UI elements, states, and layout
 4. Compare consecutive frames to detect transitions and user actions
-5. Write structured interaction spec to `.claude/temp/`
+5. Write structured interaction spec to `plans/`
 
 ### Output
 
-A `INTERACTION_SPEC_{NAME}.md` file in `.claude/temp/` containing:
+A `INTERACTION_SPEC_{NAME}.md` file in `plans/` containing:
 - All detected UI states with element descriptions
 - Transitions between states with user actions and animation notes
 - Implementation checklist ready for `/implement`

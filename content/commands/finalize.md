@@ -21,7 +21,7 @@ I'll finalize your work session by updating plans, creating a comprehensive git 
 !`git diff --stat`
 
 **Active Plans**:
-!`ls -1 .claude/temp/PLAN_*.md 2>/dev/null || echo "No active plans"`
+!`ls -1 plans/PLAN_*.md 2>/dev/null || echo "No active plans"`
 
 ---
 

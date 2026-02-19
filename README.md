@@ -98,7 +98,7 @@ npx @allthingsclaude/blueprints --global --yes
 |---------|-------------|
 | `/handoff` | Generate comprehensive documentation for context switching |
 | `/pickup` | Resume work from a previous handoff document |
-| `/flush` | Clear all temporary files from `.claude/temp/` |
+| `/flush` | Clear all plan artifacts from `plans/` |
 
 ---
 
@@ -387,10 +387,10 @@ After installation, your `.claude` directory will contain:
 │   ├── bootstrap.md
 │   ├── finalize.md
 │   └── ...
-└── temp/              # Runtime files (created during use)
-    ├── PLAN_*.md      # Implementation plans
-    ├── HANDOFF.md     # Session handoff document
-    └── ...
+plans/                     # Runtime artifacts (created during use)
+├── PLAN_*.md              # Implementation plans
+├── HANDOFF.md             # Session handoff document
+└── ...
 ```
 
 ---

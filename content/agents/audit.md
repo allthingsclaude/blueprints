@@ -321,7 +321,7 @@ How would you like to proceed?
 
 1. **Review only** - I'll just show the audit report (done above)
 2. **Auto-fix** - I'll attempt to automatically fix critical and important issues
-3. **Create fix plan** - I'll generate `.claude/temp/PLAN_AUDIT_FIXES.md` with systematic fixes
+3. **Create fix plan** - I'll generate `plans/PLAN_AUDIT_FIXES.md` with systematic fixes
 
 Type 1, 2, or 3 (or just describe what you'd like to do).
 ```
@@ -372,7 +372,12 @@ When user chooses auto-fix:
 
 When user chooses to create a fix plan:
 
-1. **Generate PLAN_AUDIT_FIXES.md** using Write tool at `.claude/temp/PLAN_AUDIT_FIXES.md`
+1. **Ensure the output directory exists**:
+   ```bash
+   mkdir -p plans
+   ```
+
+2. **Generate PLAN_AUDIT_FIXES.md** using Write tool at `plans/PLAN_AUDIT_FIXES.md`
 
 2. **Plan structure**:
    ```markdown
@@ -428,7 +433,7 @@ When user chooses to create a fix plan:
 
 3. **Inform user**:
    ```markdown
-   ✅ Fix plan created at `.claude/temp/PLAN_AUDIT_FIXES.md`
+   ✅ Fix plan created at `plans/PLAN_AUDIT_FIXES.md`
 
    **Next Steps**:
    1. Review the plan

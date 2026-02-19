@@ -49,7 +49,7 @@ Check for active plan documents:
 
 ```bash
 # List all plans
-ls -1 .claude/temp/PLAN_*.md 2>/dev/null || echo "No plans found"
+ls -1 plans/PLAN_*.md 2>/dev/null || echo "No plans found"
 ```
 
 For each PLAN file found:
@@ -105,7 +105,13 @@ Scan through the changes and your analysis to identify:
 
 ### 5. Create Phase Summary (If Needed)
 
-If there were significant bottlenecks or decisions, create `.claude/temp/PHASE_SUMMARY_[TIMESTAMP].md`:
+If there were significant bottlenecks or decisions, ensure the output directory exists and create the summary:
+
+```bash
+mkdir -p plans
+```
+
+Create `plans/PHASE_SUMMARY_[TIMESTAMP].md`:
 
 ```markdown
 # 📝 Phase Summary
@@ -390,8 +396,8 @@ After everything is complete, provide a final summary:
 ## 📁 Artifacts Created
 
 - ✅ Git commit: [hash]
-- ✅ Updated plan: `.claude/temp/PLAN_[NAME].md` [if applicable]
-- ✅ Phase summary: `.claude/temp/PHASE_SUMMARY_[TIMESTAMP].md` [if created]
+- ✅ Updated plan: `plans/PLAN_[NAME].md` [if applicable]
+- ✅ Phase summary: `plans/PHASE_SUMMARY_[TIMESTAMP].md` [if created]
 
 ---
 
