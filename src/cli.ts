@@ -31,7 +31,7 @@ program
   .option('-l, --local', 'Install to current directory (./.claude)')
   .option('-p, --path <path>', 'Install to a custom path')
   .option('-y, --yes', 'Skip confirmation prompts')
-  .option('--power <level>', 'Agent power level 1-5 (default: 3)')
+  .option('--power <level>', 'Agent power level 1-5 (default: 4)')
   .option('--tasks-dir <name>', `Tasks directory name (default: ${DEFAULT_TASKS_DIR})`)
   .parse(process.argv);
 
@@ -113,7 +113,7 @@ async function main(): Promise<void> {
     }
     powerLevel = parsed as AgentPowerLevel;
   } else if (options.yes) {
-    powerLevel = 3;
+    powerLevel = 4;
   } else {
     const powerAnswer = await inquirer.prompt<{ power: AgentPowerLevel }>([
       {
@@ -121,13 +121,13 @@ async function main(): Promise<void> {
         name: 'power',
         message: 'Select agent power level:',
         choices: [
-          { name: '1 - Economy     (all haiku — fastest, lowest cost)', value: 1 },
-          { name: '2 - Balanced    (haiku research, sonnet tasks)', value: 2 },
-          { name: '3 - Standard    (all sonnet — recommended)', value: 3 },
-          { name: '4 - Enhanced    (sonnet research, opus tasks)', value: 4 },
-          { name: '5 - Maximum     (all opus — most capable)', value: 5 },
+          { name: '1 - Economy     (haiku + sonnet heavyweight — fastest, lowest cost)', value: 1 },
+          { name: '2 - Balanced    (haiku light, sonnet everything else)', value: 2 },
+          { name: '3 - Standard    (haiku light, sonnet everything else)', value: 3 },
+          { name: '4 - Enhanced    (sonnet light, opus everything else — recommended)', value: 4 },
+          { name: '5 - Maximum     (all opus — most capable, highest cost)', value: 5 },
         ],
-        default: 2 // 0-indexed, so index 2 = value 3
+        default: 3 // 0-indexed, so index 3 = value 4
       }
     ]);
     powerLevel = powerAnswer.power;
@@ -218,9 +218,9 @@ async function main(): Promise<void> {
     }
 
     console.log();
-    console.log(chalk.dim('Available commands: /audit, /bootstrap, /brainstorm, /challenge, /cleanup,'));
-    console.log(chalk.dim('/critique, /debug, /dry, /explain, /finalize, /flush, /handoff, /imagine,'));
-    console.log(chalk.dim('/implement, /kickoff, /parallelize, /pickup, /plan, /refactor,'));
+    console.log(chalk.dim('Available commands: /audit, /auto, /bootstrap, /brainstorm, /challenge,'));
+    console.log(chalk.dim('/cleanup, /critique, /debug, /dry, /explain, /finalize, /flush, /handoff,'));
+    console.log(chalk.dim('/imagine, /implement, /kickoff, /parallelize, /pickup, /plan, /refactor,'));
     console.log(chalk.dim('/research, /storyboard, /test, /verify'));
     console.log();
 
