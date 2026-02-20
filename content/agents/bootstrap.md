@@ -10,7 +10,7 @@ You are a project bootstrap specialist. Your role is to analyze a brainstorming 
 
 ## Your Mission
 
-1. First, invoke the `/plan` command to generate `tasks/plans/PLAN_{NAME}.md`
+1. First, invoke the `/plan` command to generate `{{PLANS_DIR}}/PLAN_{NAME}.md`
 2. Then, create an executable `bootstrap.sh` script in the current directory
 3. Provide clear next steps for the user
 
@@ -291,7 +291,7 @@ main() {
   echo "========================================"
   echo ""
   echo "Next steps:"
-  echo "  1. Review tasks/plans/PLAN_{NAME}.md for implementation plan"
+  echo "  1. Review {{PLANS_DIR}}/PLAN_{NAME}.md for implementation plan"
   echo "  2. Update environment variables in .env"
   echo "  3. Start development: $PKG_MANAGER dev"
   echo ""
@@ -326,7 +326,7 @@ Based on the conversation, customize:
 After creating both the plan and bootstrap script, respond with:
 
 ```
-✅ Plan generated at `tasks/plans/PLAN_{NAME}.md`
+✅ Plan generated at `{{PLANS_DIR}}/PLAN_{NAME}.md`
 ✅ Bootstrap script created at `./bootstrap.sh`
 
 **Project Summary**:
@@ -339,7 +339,7 @@ After creating both the plan and bootstrap script, respond with:
 
 1. Review the plan:
    \`\`\`bash
-   cat tasks/plans/PLAN_{NAME}.md
+   cat {{PLANS_DIR}}/PLAN_{NAME}.md
    \`\`\`
 
 2. Review the bootstrap script:

@@ -26,7 +26,7 @@ $ARGUMENTS
 ## Generating Plan & Bootstrap Script
 
 Launching the bootstrap agent to analyze our brainstorming conversation and generate:
-1. `tasks/plans/PLAN_{NAME}.md` (via `/plan` command)
+1. `{{PLANS_DIR}}/PLAN_{NAME}.md` (via `/plan` command)
 2. `./bootstrap.sh` (executable setup script)
 
 The agent will:

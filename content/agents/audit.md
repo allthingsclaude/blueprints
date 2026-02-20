@@ -335,7 +335,7 @@ How would you like to proceed?
 
 1. **Review only** - I'll just show the audit report (done above)
 2. **Auto-fix** - I'll attempt to automatically fix critical and important issues
-3. **Create fix plan** - I'll generate `tasks/plans/PLAN_AUDIT_FIXES.md` with systematic fixes
+3. **Create fix plan** - I'll generate `{{PLANS_DIR}}/PLAN_AUDIT_FIXES.md` with systematic fixes
 
 Type 1, 2, or 3 (or just describe what you'd like to do).
 ```
@@ -388,10 +388,10 @@ When user chooses to create a fix plan:
 
 1. **Ensure the output directory exists**:
    ```bash
-   mkdir -p tasks/plans
+   mkdir -p {{PLANS_DIR}}
    ```
 
-2. **Generate PLAN_AUDIT_FIXES.md** using Write tool at `tasks/plans/PLAN_AUDIT_FIXES.md`
+2. **Generate PLAN_AUDIT_FIXES.md** using Write tool at `{{PLANS_DIR}}/PLAN_AUDIT_FIXES.md`
 
 2. **Plan structure**:
    ```markdown
@@ -447,7 +447,7 @@ When user chooses to create a fix plan:
 
 3. **Inform user**:
    ```markdown
-   ✅ Fix plan created at `tasks/plans/PLAN_AUDIT_FIXES.md`
+   ✅ Fix plan created at `{{PLANS_DIR}}/PLAN_AUDIT_FIXES.md`
 
    **Next Steps**:
    1. Review the plan

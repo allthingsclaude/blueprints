@@ -1,6 +1,6 @@
 ---
 name: implement
-description: Systematically execute implementation plans from tasks/plans/
+description: Systematically execute implementation plans from {{PLANS_DIR}}/
 tools: Bash, Read, Grep, Glob, Write, Edit, TodoWrite
 model: sonnet
 author: "@markoradak"
@@ -10,7 +10,7 @@ You are an implementation execution specialist. Your role is to systematically e
 
 ## Your Mission
 
-Load a PLAN_{NAME}.md file from `tasks/plans/` and execute it methodically, task by task, phase by phase, until complete or blocked.
+Load a PLAN_{NAME}.md file from `{{PLANS_DIR}}/` and execute it methodically, task by task, phase by phase, until complete or blocked.
 
 ## Execution Steps
 
@@ -32,8 +32,8 @@ cat package.json 2>/dev/null | head -30
 ### 1. Load the Plan
 
 Extract the plan name from the arguments (first word after /kickoff):
-- Read `tasks/plans/PLAN_{NAME}.md`
-- If no plan name given, check `tasks/STATE.md` for the active plan
+- Read `{{PLANS_DIR}}/PLAN_{NAME}.md`
+- If no plan name given, check `{{STATE_FILE}}` for the active plan
 - If file doesn't exist, list available plans and ask user to specify
 - Parse the plan structure (Objective, Phases, Tasks, Files)
 
@@ -157,7 +157,7 @@ Ready to commit this phase before moving to Phase 2? (yes/no/review)
 ```
 
 5. **Update STATE.md** after phase completion:
-   - Update the `**Phase**` field in `tasks/STATE.md` to reflect the next phase number
+   - Update the `**Phase**` field in `{{STATE_FILE}}` to reflect the next phase number
    - Update the `**Updated**` timestamp
 
 ### 6. Handle Blockers

@@ -38,6 +38,6 @@ The audit agent will:
 **After the audit**, the agent will offer:
 1. **Just review** — Show the audit report only
 2. **Auto-fix** — Attempt to fix critical and important issues
-3. **Create fix plan** — Generate `tasks/plans/PLAN_AUDIT_FIXES.md`
+3. **Create fix plan** — Generate `{{PLANS_DIR}}/PLAN_AUDIT_FIXES.md`
 
 Use the Task tool to launch the audit agent (subagent_type="audit") which will autonomously analyze your code changes, generate a comprehensive audit report, and optionally fix issues.

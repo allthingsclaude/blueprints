@@ -10,7 +10,7 @@ You are a handoff documentation specialist. Your role is to capture the complete
 
 ## Your Mission
 
-Generate a comprehensive HANDOFF.md file at `tasks/sessions/HANDOFF.md` that enables someone (or a fresh Claude Code session) to pick up exactly where the previous session left off.
+Generate a comprehensive HANDOFF.md file at `{{SESSIONS_DIR}}/HANDOFF.md` that enables someone (or a fresh Claude Code session) to pick up exactly where the previous session left off.
 
 ## Analysis Steps
 
@@ -37,10 +37,10 @@ Generate a comprehensive HANDOFF.md file at `tasks/sessions/HANDOFF.md` that ena
 Before writing, ensure the output directory exists:
 
 ```bash
-mkdir -p tasks/sessions
+mkdir -p {{SESSIONS_DIR}}
 ```
 
-Generate `tasks/sessions/HANDOFF.md` with this exact structure:
+Generate `{{SESSIONS_DIR}}/HANDOFF.md` with this exact structure:
 
 ```markdown
 # 🔄 Session Handoff
@@ -204,9 +204,9 @@ Generate `tasks/sessions/HANDOFF.md` with this exact structure:
 
 ## Final Step
 
-After writing `tasks/sessions/HANDOFF.md`, respond with:
+After writing `{{SESSIONS_DIR}}/HANDOFF.md`, respond with:
 
-"✅ Handoff document created at `tasks/sessions/HANDOFF.md`
+"✅ Handoff document created at `{{SESSIONS_DIR}}/HANDOFF.md`
 
 **What was captured**:
 - [Brief bullet point summary of what was in progress]

@@ -49,7 +49,7 @@ Check for active plan documents:
 
 ```bash
 # List all plans
-ls -1 tasks/plans/PLAN_*.md 2>/dev/null || echo "No plans found"
+ls -1 {{PLANS_DIR}}/PLAN_*.md 2>/dev/null || echo "No plans found"
 ```
 
 For each PLAN file found:
@@ -108,10 +108,10 @@ Scan through the changes and your analysis to identify:
 If there were significant bottlenecks or decisions, ensure the output directory exists and create the summary:
 
 ```bash
-mkdir -p tasks/sessions
+mkdir -p {{SESSIONS_DIR}}
 ```
 
-Create `tasks/sessions/PHASE_SUMMARY_[TIMESTAMP].md`:
+Create `{{SESSIONS_DIR}}/PHASE_SUMMARY_[TIMESTAMP].md`:
 
 ```markdown
 # 📝 Phase Summary
@@ -396,8 +396,8 @@ After everything is complete, provide a final summary:
 ## 📁 Artifacts Created
 
 - ✅ Git commit: [hash]
-- ✅ Updated plan: `tasks/plans/PLAN_[NAME].md` [if applicable]
-- ✅ Phase summary: `tasks/sessions/PHASE_SUMMARY_[TIMESTAMP].md` [if created]
+- ✅ Updated plan: `{{PLANS_DIR}}/PLAN_[NAME].md` [if applicable]
+- ✅ Phase summary: `{{SESSIONS_DIR}}/PHASE_SUMMARY_[TIMESTAMP].md` [if created]
 
 ---
 
@@ -485,7 +485,7 @@ Would you like me to:
 
 ### 10. Update Active Plan Tracker
 
-If an active plan exists, update `tasks/STATE.md` to reflect the current status:
+If an active plan exists, update `{{STATE_FILE}}` to reflect the current status:
 - Update the `**Phase**` field if a phase was completed
 - Update the `**Updated**` timestamp
 - If all plan phases are complete, update the first line to `# Complete: {NAME}`
