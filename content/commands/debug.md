@@ -12,7 +12,7 @@ I'll systematically investigate and diagnose the issue you're experiencing.
 
 **Working Directory**: !`pwd`
 
-**Branch**: !`git branch --show-current`
+**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Recent Changes** (potential cause):
 !`git log --oneline -5`

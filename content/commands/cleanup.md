@@ -14,7 +14,7 @@ I'll scan your codebase for dead code, unused imports, and technical debt.
 
 **Working Directory**: !`pwd`
 
-**Branch**: !`git branch --show-current`
+**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Files to Analyze**:
 !`find . -maxdepth 5 -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" 2>/dev/null | grep -v node_modules | wc -l` source files

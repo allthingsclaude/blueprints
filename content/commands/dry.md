@@ -14,7 +14,7 @@ I'll find and eliminate DRY violations across your codebase while guaranteeing i
 
 **Working Directory**: !`pwd`
 
-**Branch**: !`git branch --show-current`
+**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Status**:
 !`git status --short`

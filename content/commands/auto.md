@@ -12,7 +12,7 @@ Full autonomous development loop. I'll take it from idea to committed code on a 
 
 **Working Directory**: !`pwd`
 
-**Branch**: !`git branch --show-current`
+**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Git Status**:
 !`git status --short 2>/dev/null || echo "Not a git repository"`

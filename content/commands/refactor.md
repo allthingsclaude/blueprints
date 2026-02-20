@@ -14,7 +14,7 @@ I'll help you safely restructure code — renaming, extracting, inlining, or mov
 
 **Working Directory**: !`pwd`
 
-**Branch**: !`git branch --show-current`
+**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Status**:
 !`git status --short`

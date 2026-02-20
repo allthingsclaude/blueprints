@@ -14,7 +14,7 @@ I'll perform a focused security audit of your codebase, checking for vulnerabili
 
 **Working Directory**: !`pwd`
 
-**Branch**: !`git branch --show-current`
+**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Status**:
 !`git status --short`

@@ -12,7 +12,7 @@ I'll finalize your work session by updating plans, creating a comprehensive git 
 
 **Working Directory**: !`pwd`
 
-**Branch**: !`git branch --show-current`
+**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Status**:
 !`git status --short`

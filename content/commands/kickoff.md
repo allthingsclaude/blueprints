@@ -22,7 +22,7 @@ $ARGUMENTS
 **Plans in {{PLANS_DIR}}/**:
 !`ls -1 {{PLANS_DIR}}/PLAN_*.md 2>/dev/null || echo "No plans found"`
 
-**Current Branch**: !`git branch --show-current`
+**Current Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Working Directory**: !`pwd`
 

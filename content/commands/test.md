@@ -12,7 +12,7 @@ I'll help you run tests, analyze failures, and generate missing test coverage.
 
 **Working Directory**: !`pwd`
 
-**Branch**: !`git branch --show-current`
+**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Test Configuration**:
 !`ls -la vitest.config.* jest.config.* playwright.config.* 2>/dev/null || echo "No test config found"`
