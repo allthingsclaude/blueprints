@@ -40,16 +40,23 @@ export const RESEARCH_AGENTS = [
   'research-web.md',
 ];
 
-export const TEMPLATE_VARS: Record<string, string> = {
-  '{{TASKS_DIR}}': 'tasks',
-  '{{PLANS_DIR}}': 'tasks/plans',
-  '{{SESSIONS_DIR}}': 'tasks/sessions',
-  '{{STATE_FILE}}': 'tasks/STATE.md',
-};
+export const DEFAULT_TASKS_DIR = 'tasks';
 
-export function replaceTemplateVars(content: string): string {
+export function buildTemplateVars(tasksDir: string = DEFAULT_TASKS_DIR): Record<string, string> {
+  return {
+    '{{TASKS_DIR}}': tasksDir,
+    '{{PLANS_DIR}}': `${tasksDir}/plans`,
+    '{{SESSIONS_DIR}}': `${tasksDir}/sessions`,
+    '{{STATE_FILE}}': `${tasksDir}/STATE.md`,
+  };
+}
+
+export const TEMPLATE_VARS: Record<string, string> = buildTemplateVars();
+
+export function replaceTemplateVars(content: string, tasksDir?: string): string {
+  const vars = tasksDir ? buildTemplateVars(tasksDir) : TEMPLATE_VARS;
   let result = content;
-  for (const [key, value] of Object.entries(TEMPLATE_VARS)) {
+  for (const [key, value] of Object.entries(vars)) {
     result = result.replaceAll(key, value);
   }
   return result;
@@ -131,7 +138,7 @@ export function ensureDir(dirPath: string): void {
 /**
  * Copy all files from source to destination directory
  */
-export function copyDirectory(srcDir: string, destDir: string): number {
+export function copyDirectory(srcDir: string, destDir: string, tasksDir?: string): number {
   ensureDir(destDir);
 
   const files = fs.readdirSync(srcDir);
@@ -145,7 +152,7 @@ export function copyDirectory(srcDir: string, destDir: string): number {
 
     if (stat.isFile() && file.endsWith('.md')) {
       const content = fs.readFileSync(srcFile, 'utf-8');
-      const updated = replaceTemplateVars(content);
+      const updated = replaceTemplateVars(content, tasksDir);
       fs.writeFileSync(destFile, updated, 'utf-8');
       copiedCount++;
     } else if (stat.isFile()) {
@@ -153,7 +160,7 @@ export function copyDirectory(srcDir: string, destDir: string): number {
       copiedCount++;
     } else if (stat.isDirectory()) {
       // Recursively copy subdirectories
-      copiedCount += copyDirectory(srcFile, path.join(destDir, file));
+      copiedCount += copyDirectory(srcFile, path.join(destDir, file), tasksDir);
     }
   }
 
@@ -180,7 +187,7 @@ export function getModelForAgent(filename: string, powerLevel: AgentPowerLevel):
 /**
  * Copy agent files with model rewritten based on power level
  */
-export function copyAgentsWithPowerLevel(srcDir: string, destDir: string, powerLevel: AgentPowerLevel): number {
+export function copyAgentsWithPowerLevel(srcDir: string, destDir: string, powerLevel: AgentPowerLevel, tasksDir?: string): number {
   ensureDir(destDir);
 
   const files = fs.readdirSync(srcDir);
@@ -192,12 +199,12 @@ export function copyAgentsWithPowerLevel(srcDir: string, destDir: string, powerL
     const stat = fs.statSync(srcFile);
 
     if (stat.isDirectory()) {
-      copiedCount += copyAgentsWithPowerLevel(srcFile, path.join(destDir, file), powerLevel);
+      copiedCount += copyAgentsWithPowerLevel(srcFile, path.join(destDir, file), powerLevel, tasksDir);
     } else if (stat.isFile() && file.endsWith('.md')) {
       const content = fs.readFileSync(srcFile, 'utf-8');
       const model = getModelForAgent(file, powerLevel);
       let updated = content.replace(/^(model:\s*).+$/m, `$1${model}`);
-      updated = replaceTemplateVars(updated);
+      updated = replaceTemplateVars(updated, tasksDir);
       fs.writeFileSync(destFile, updated, 'utf-8');
       copiedCount++;
     } else if (stat.isFile()) {
@@ -256,7 +263,7 @@ export function cleanStaleFiles(srcDir: string, destDir: string): number {
 /**
  * Install blueprints to the target path
  */
-export async function installBlueprints(targetPath: string, powerLevel: AgentPowerLevel = 3): Promise<InstallResult> {
+export async function installBlueprints(targetPath: string, powerLevel: AgentPowerLevel = 3, tasksDir: string = DEFAULT_TASKS_DIR): Promise<InstallResult> {
   const sourcePaths = getSourcePaths();
   const installPaths = getInstallPaths(targetPath);
 
@@ -276,10 +283,10 @@ export async function installBlueprints(targetPath: string, powerLevel: AgentPow
   cleanStaleFiles(sourcePaths.agents, installPaths.agents);
 
   // Copy commands
-  const commandsCount = copyDirectory(sourcePaths.commands, installPaths.commands);
+  const commandsCount = copyDirectory(sourcePaths.commands, installPaths.commands, tasksDir);
 
   // Copy agents with power level model overrides
-  const agentsCount = copyAgentsWithPowerLevel(sourcePaths.agents, installPaths.agents, powerLevel);
+  const agentsCount = copyAgentsWithPowerLevel(sourcePaths.agents, installPaths.agents, powerLevel, tasksDir);
 
   // Write version marker
   const version = getPackageVersion();

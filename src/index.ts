@@ -12,7 +12,9 @@ export {
   checkExistingInstallation,
   ensureDir,
   copyDirectory,
+  DEFAULT_TASKS_DIR,
   TEMPLATE_VARS,
+  buildTemplateVars,
   replaceTemplateVars
 } from './installer.js';
 

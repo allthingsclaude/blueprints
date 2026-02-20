@@ -4,7 +4,7 @@ import { program } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
-import { installBlueprints, getDefaultClaudeDir, getInstallPaths, getSourcePaths, POWER_LEVEL_LABELS } from './installer.js';
+import { installBlueprints, getDefaultClaudeDir, getInstallPaths, getSourcePaths, POWER_LEVEL_LABELS, DEFAULT_TASKS_DIR } from './installer.js';
 import type { AgentPowerLevel } from './installer.js';
 import fs from 'fs';
 import { createRequire } from 'module';
@@ -18,6 +18,7 @@ interface CLIOptions {
   path?: string;
   yes?: boolean;
   power?: string;
+  tasksDir?: string;
 }
 
 type InstallType = 'global' | 'local' | 'custom';
@@ -31,6 +32,7 @@ program
   .option('-p, --path <path>', 'Install to a custom path')
   .option('-y, --yes', 'Skip confirmation prompts')
   .option('--power <level>', 'Agent power level 1-5 (default: 3)')
+  .option('--tasks-dir <name>', `Tasks directory name (default: ${DEFAULT_TASKS_DIR})`)
   .parse(process.argv);
 
 const options = program.opts<CLIOptions>();
@@ -131,6 +133,30 @@ async function main(): Promise<void> {
     powerLevel = powerAnswer.power;
   }
 
+  // Determine tasks directory name
+  let tasksDir: string;
+
+  if (options.tasksDir) {
+    tasksDir = options.tasksDir;
+  } else if (options.yes) {
+    tasksDir = DEFAULT_TASKS_DIR;
+  } else {
+    const tasksDirAnswer = await inquirer.prompt<{ tasksDir: string }>([
+      {
+        type: 'input',
+        name: 'tasksDir',
+        message: 'Tasks directory name (for plans, handoffs, state):',
+        default: DEFAULT_TASKS_DIR,
+        validate: (input: string) => {
+          if (!input.trim()) return 'Please enter a directory name';
+          if (/[<>:"|?*]/.test(input)) return 'Invalid characters in directory name';
+          return true;
+        }
+      }
+    ]);
+    tasksDir = tasksDirAnswer.tasksDir;
+  }
+
   // Show what will be installed
   const paths = getInstallPaths(targetPath);
   const sourcePaths = getSourcePaths();
@@ -143,6 +169,7 @@ async function main(): Promise<void> {
   console.log(`  ${chalk.bold('Commands:')}    ${commandCount} files → ${chalk.cyan(paths.commands)}`);
   console.log(`  ${chalk.bold('Agents:')}      ${agentCount} files → ${chalk.cyan(paths.agents)}`);
   console.log(`  ${chalk.bold('Power Level:')} ${chalk.magenta(`${powerLevel} - ${POWER_LEVEL_LABELS[powerLevel]}`)}`);
+  console.log(`  ${chalk.bold('Tasks Dir:')}   ${chalk.cyan(`${tasksDir}/`)}`);
   console.log(chalk.dim('─'.repeat(50)));
   console.log();
 
@@ -167,7 +194,7 @@ async function main(): Promise<void> {
   const spinner = ora('Installing blueprints...').start();
 
   try {
-    const result = await installBlueprints(targetPath, powerLevel);
+    const result = await installBlueprints(targetPath, powerLevel, tasksDir);
     spinner.succeed(chalk.green('Installation complete!'));
 
     console.log();
