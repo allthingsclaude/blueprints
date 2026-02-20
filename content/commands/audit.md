@@ -27,28 +27,17 @@ $ARGUMENTS
 
 ## Launching Code Auditor
 
-Initiating comprehensive code review to check for:
+The audit agent will:
+- Detect your toolchain and project conventions
+- Review all staged and unstaged changes
+- Check for security vulnerabilities, breaking changes, and data loss risks
+- Identify DRY violations, type safety issues, and error handling gaps
+- Verify consistency with project patterns (CLAUDE.md)
+- Provide a structured report with severity levels and specific fixes
 
-- 🔴 **Critical Issues** (security, breaking changes, data loss)
-- 🟡 **Important Issues** (DRY violations, type safety, error handling)
-- 🔵 **Suggestions** (best practices, code clarity, performance)
+**After the audit**, the agent will offer:
+1. **Just review** — Show the audit report only
+2. **Auto-fix** — Attempt to fix critical and important issues
+3. **Create fix plan** — Generate `plans/PLAN_AUDIT_FIXES.md`
 
-The auditor will:
-- ✅ Review all staged and unstaged changes
-- ✅ Check for security vulnerabilities (XSS, SQL injection, etc.)
-- ✅ Identify DRY violations and code duplication
-- ✅ Verify TypeScript type safety
-- ✅ Validate error handling
-- ✅ Check consistency with project patterns (CLAUDE.md)
-- ✅ Flag performance issues
-- ✅ Verify multi-tenant isolation (site-specific)
-- ✅ Provide specific, actionable recommendations
-- ✅ Give final verdict: safe to commit or issues to fix
-
-**After the audit completes**, the agent will ask:
-
-1. **Just review** (default) - Show the audit report only
-2. **Auto-fix** - Attempt to automatically fix important and critical issues
-3. **Create fix plan** - Generate a PLAN_AUDIT_FIXES.md with systematic fixes
-
-Use the Task tool to launch the audit agent (subagent_type="general-purpose") which will autonomously analyze your code changes, generate a comprehensive audit report, and optionally fix issues.
+Use the Task tool to launch the audit agent (subagent_type="audit") which will autonomously analyze your code changes, generate a comprehensive audit report, and optionally fix issues.

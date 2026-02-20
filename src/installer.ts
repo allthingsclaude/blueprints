@@ -40,6 +40,7 @@ export const RESEARCH_AGENTS = [
   'research-web.md',
 ];
 
+
 export interface ExistingInstallation {
   hasCommands: boolean;
   hasAgents: boolean;
@@ -188,6 +189,50 @@ export function copyAgentsWithPowerLevel(srcDir: string, destDir: string, powerL
 }
 
 /**
+ * Get the current package version
+ */
+export function getPackageVersion(): string {
+  const packageRoot = path.join(__dirname, '..');
+  const pkgPath = path.join(packageRoot, 'package.json');
+  try {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+    return pkg.version || 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
+/**
+ * Remove files from a destination directory that no longer exist in the source
+ */
+export function cleanStaleFiles(srcDir: string, destDir: string): number {
+  if (!fs.existsSync(destDir)) return 0;
+
+  let removedCount = 0;
+  const destFiles = fs.readdirSync(destDir);
+
+  for (const file of destFiles) {
+    const srcFile = path.join(srcDir, file);
+    const destFile = path.join(destDir, file);
+    const destStat = fs.statSync(destFile);
+
+    if (destStat.isDirectory()) {
+      if (fs.existsSync(srcFile)) {
+        removedCount += cleanStaleFiles(srcFile, destFile);
+      } else {
+        fs.rmSync(destFile, { recursive: true });
+        removedCount++;
+      }
+    } else if (!fs.existsSync(srcFile)) {
+      fs.unlinkSync(destFile);
+      removedCount++;
+    }
+  }
+
+  return removedCount;
+}
+
+/**
  * Install blueprints to the target path
  */
 export async function installBlueprints(targetPath: string, powerLevel: AgentPowerLevel = 3): Promise<InstallResult> {
@@ -205,11 +250,23 @@ export async function installBlueprints(targetPath: string, powerLevel: AgentPow
   // Ensure base .claude directory exists
   ensureDir(installPaths.base);
 
+  // Clean stale files from previous installations
+  cleanStaleFiles(sourcePaths.commands, installPaths.commands);
+  cleanStaleFiles(sourcePaths.agents, installPaths.agents);
+
   // Copy commands
   const commandsCount = copyDirectory(sourcePaths.commands, installPaths.commands);
 
   // Copy agents with power level model overrides
   const agentsCount = copyAgentsWithPowerLevel(sourcePaths.agents, installPaths.agents, powerLevel);
+
+  // Write version marker
+  const version = getPackageVersion();
+  fs.writeFileSync(
+    path.join(installPaths.base, '.blueprints-version'),
+    JSON.stringify({ version, installedAt: new Date().toISOString(), powerLevel }, null, 2),
+    'utf-8'
+  );
 
   return {
     commands: commandsCount,

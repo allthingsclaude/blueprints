@@ -14,16 +14,12 @@ I'll flush all plan artifacts from `plans/`.
 
 ---
 
-## Flushing
+## Confirmation Required
 
-Now I'll remove all files from `plans/`:
+Before deleting, list all files in `plans/` to the user and ask for explicit confirmation.
 
-!`rm -rf plans/* 2>/dev/null && echo "✅ Flushed plans/" || echo "✅ Nothing to flush"`
+If the user confirms, delete all files using Bash: `rm -rf plans/*`
 
-## Verification
+Then verify the directory is empty using Bash: `ls -lh plans/ 2>/dev/null || echo "Plans directory is now empty"`
 
-!`ls -lh plans/ 2>/dev/null || echo "Plans directory is now empty"`
-
----
-
-**Done!** All handoffs, plans, and other plan artifacts have been flushed.
+**Do NOT delete anything without user confirmation.**

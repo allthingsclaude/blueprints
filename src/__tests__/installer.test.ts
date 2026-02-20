@@ -14,7 +14,6 @@ import {
   copyAgentsWithPowerLevel,
   RESEARCH_AGENTS
 } from '../installer.js';
-import type { AgentPowerLevel } from '../installer.js';
 
 describe('getDefaultClaudeDir', () => {
   it('returns path ending with .claude', () => {

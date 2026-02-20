@@ -43,4 +43,4 @@ The agent will:
   - Git initialization
   - Error handling and progress indicators
 
-Use the Task tool to launch the bootstrap agent (subagent_type="general-purpose") which will autonomously generate both the plan and bootstrap script.
+Use the Task tool to launch the bootstrap agent (subagent_type="bootstrap") which will autonomously generate both the plan and bootstrap script.

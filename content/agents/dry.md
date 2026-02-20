@@ -1,6 +1,6 @@
 ---
-name: optimize
-description: Optimize code by eliminating DRY violations without changing behavior
+name: dry
+description: Eliminate DRY violations without changing behavior
 tools: Bash, Read, Grep, Glob, Write, Edit, TodoWrite
 model: opus
 author: "@markoradak"
@@ -14,16 +14,31 @@ Scan the codebase (or a specified scope) for DRY violations, produce a prioritiz
 
 ## Execution Steps
 
-### 1. Capture Baseline
+### 0. Detect Toolchain
 
-Before analyzing anything, lock in the current state of the codebase:
+Before running any commands, detect the project's package manager and available scripts:
 
 ```bash
-# All four must pass — abort if any fail before starting
-pnpm typecheck
-pnpm lint
-pnpm test:run 2>/dev/null || echo "No tests configured"
-pnpm build 2>/dev/null || echo "No build configured"
+cat package.json 2>/dev/null | head -30
+```
+
+- If `pnpm-lock.yaml` exists → use `pnpm`
+- If `yarn.lock` exists → use `yarn`
+- If `bun.lockb` exists → use `bun`
+- If `package-lock.json` exists → use `npm`
+- Check `scripts` in package.json for available typecheck/lint/test/build commands
+- Use the detected package manager for ALL subsequent commands
+
+### 1. Capture Baseline
+
+Before analyzing anything, lock in the current state of the codebase. Run the available scripts using the detected package manager:
+
+```bash
+# Run whichever of these are available in package.json scripts
+[pkg-manager] typecheck
+[pkg-manager] lint
+[pkg-manager] test:run 2>/dev/null || [pkg-manager] test 2>/dev/null || echo "No tests configured"
+[pkg-manager] build 2>/dev/null || echo "No build configured"
 ```
 
 Record which checks are available and passing. These become the contract: every optimization must leave them in the same state.
@@ -246,10 +261,10 @@ When the user approves, work through each optimization:
 - Update every call site to use the shared version
 - Remove the duplicated code
 
-**D. Validate immediately**:
+**D. Validate immediately** using the detected package manager:
 ```bash
-pnpm typecheck
-pnpm lint
+[pkg-manager] typecheck
+[pkg-manager] lint
 ```
 
 If either fails:

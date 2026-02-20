@@ -19,6 +19,18 @@ Take a plan (from `plans/PLAN_{NAME}.md`) or task description and:
 
 ## Execution Protocol
 
+### Phase 0: Detect Toolchain
+
+Before running any commands, detect the project's package manager and available scripts:
+
+```bash
+cat package.json 2>/dev/null | head -30
+```
+
+- Detect package manager from lock files (pnpm/yarn/bun/npm)
+- Check available scripts in package.json for typecheck/lint/test/build
+- Use the detected package manager for ALL subsequent commands and agent instructions
+
 ### Phase 1: Analysis
 
 #### 1.1 Load the Plan

@@ -35,4 +35,4 @@ The agent will:
 - ✅ Note technical considerations and constraints
 - ✅ List relevant files and references
 
-Use the Task tool to launch the plan agent (subagent_type="general-purpose") which will autonomously generate the plan document.
+Use the Task tool to launch the plan agent (subagent_type="plan") which will autonomously generate the plan document.

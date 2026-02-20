@@ -41,4 +41,4 @@ A `INTERACTION_SPEC_{NAME}.md` file in `plans/` containing:
 
 ---
 
-Use the Task tool to launch the storyboard agent (subagent_type="general-purpose") with the video file path and any additional context from arguments. The agent needs the full path to the video file to process it.
+Use the Task tool to launch the storyboard agent (subagent_type="storyboard") with the video file path and any additional context from arguments. The agent needs the full path to the video file to process it.

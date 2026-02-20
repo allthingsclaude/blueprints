@@ -4,8 +4,9 @@ import { program } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
-import { installBlueprints, getDefaultClaudeDir, getInstallPaths, POWER_LEVEL_LABELS } from './installer.js';
+import { installBlueprints, getDefaultClaudeDir, getInstallPaths, getSourcePaths, POWER_LEVEL_LABELS } from './installer.js';
 import type { AgentPowerLevel } from './installer.js';
+import fs from 'fs';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
@@ -132,12 +133,15 @@ async function main(): Promise<void> {
 
   // Show what will be installed
   const paths = getInstallPaths(targetPath);
+  const sourcePaths = getSourcePaths();
+  const commandCount = fs.readdirSync(sourcePaths.commands).filter(f => f.endsWith('.md')).length;
+  const agentCount = fs.readdirSync(sourcePaths.agents).filter(f => f.endsWith('.md')).length;
 
   console.log();
   console.log(chalk.yellow('Installation Summary:'));
   console.log(chalk.dim('─'.repeat(50)));
-  console.log(`  ${chalk.bold('Commands:')}    23 files → ${chalk.cyan(paths.commands)}`);
-  console.log(`  ${chalk.bold('Agents:')}      13 files → ${chalk.cyan(paths.agents)}`);
+  console.log(`  ${chalk.bold('Commands:')}    ${commandCount} files → ${chalk.cyan(paths.commands)}`);
+  console.log(`  ${chalk.bold('Agents:')}      ${agentCount} files → ${chalk.cyan(paths.agents)}`);
   console.log(`  ${chalk.bold('Power Level:')} ${chalk.magenta(`${powerLevel} - ${POWER_LEVEL_LABELS[powerLevel]}`)}`);
   console.log(chalk.dim('─'.repeat(50)));
   console.log();
@@ -188,8 +192,8 @@ async function main(): Promise<void> {
 
     console.log();
     console.log(chalk.dim('Available commands: /audit, /bootstrap, /brainstorm, /challenge, /cleanup,'));
-    console.log(chalk.dim('/critique, /debug, /explain, /finalize, /flush, /handoff, /imagine,'));
-    console.log(chalk.dim('/implement, /kickoff, /optimize, /parallelize, /pickup, /plan, /refactor,'));
+    console.log(chalk.dim('/critique, /debug, /dry, /explain, /finalize, /flush, /handoff, /imagine,'));
+    console.log(chalk.dim('/implement, /kickoff, /parallelize, /pickup, /plan, /refactor,'));
     console.log(chalk.dim('/research, /storyboard, /test, /verify'));
     console.log();
 

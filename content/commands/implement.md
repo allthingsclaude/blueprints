@@ -64,4 +64,4 @@ Use `/implement` when:
 
 ---
 
-Use the Task tool to launch the implement agent (subagent_type="general-purpose") with the plan name and any additional context from arguments.
+Use the Task tool to launch the implement agent (subagent_type="implement") with the plan name and any additional context from arguments.

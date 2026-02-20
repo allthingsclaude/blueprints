@@ -23,6 +23,21 @@ Review all staged and unstaged changes to:
 
 ## Analysis Steps
 
+### 0. Detect Toolchain
+
+Before running any commands, detect the project's package manager and available scripts:
+
+```bash
+cat package.json 2>/dev/null | head -30
+```
+
+- If `pnpm-lock.yaml` exists → use `pnpm`
+- If `yarn.lock` exists → use `yarn`
+- If `bun.lockb` exists → use `bun`
+- If `package-lock.json` exists → use `npm`
+- Check `scripts` in package.json for available typecheck/lint/test/build commands
+- Use the detected package manager for ALL subsequent commands
+
 ### 1. Gather Changes
 
 Run these commands to understand what's being changed:
@@ -135,13 +150,12 @@ Go through each change systematically:
 
 ### 4. Check Project-Specific Rules
 
-Review against CLAUDE.md requirements:
-- Multi-tenant considerations (site isolation)
-- Proper middleware usage
-- tRPC router patterns
-- Prisma best practices
+Review against CLAUDE.md requirements (if present):
+- Project-specific architectural patterns
+- Framework-specific conventions
+- Database/ORM best practices
 - Environment variable usage
-- Package manager (pnpm) compliance
+- Package manager compliance
 
 ### 5. Look for Common Pitfalls
 
@@ -273,9 +287,9 @@ Provide a comprehensive audit report:
 - [ ] No commented-out code (unless with explanation)
 - [ ] Environment variables properly configured
 - [ ] Database migrations created if needed
-- [ ] Type errors resolved (`pnpm typecheck`)
-- [ ] Linter passes (`pnpm lint`)
-- [ ] Build succeeds (`pnpm build`)
+- [ ] Type errors resolved (run typecheck script)
+- [ ] Linter passes (run lint script)
+- [ ] Build succeeds (run build script)
 
 ---
 
@@ -301,7 +315,7 @@ Provide a comprehensive audit report:
 
 **Next Steps**:
 1. Address critical and important issues
-2. Run `pnpm check` to verify TypeScript and linting
+2. Run typecheck and lint to verify
 3. Run tests if applicable
 4. Review this audit report items
 5. Stage final changes: `git add .`
@@ -476,26 +490,22 @@ When user chooses to create a fix plan:
 
 ## Special Considerations
 
-### Multi-Tenant Context
-When reviewing this project, always check:
-- Is site isolation maintained?
-- Are queries properly filtered by site/domain?
-- Could data leak between tenants?
-- Are middleware checks in place?
-
-### Type Safety
-This project uses strict TypeScript:
+### Type Safety (if TypeScript project)
 - Every `any` should be justified
 - Prefer unknown over any
 - Use proper type guards
-- Validate external data with Zod
+- Validate external data at system boundaries
 
 ### Performance
-This is an e-commerce platform:
 - Database queries must be efficient
 - Consider caching strategies
 - Check for N+1 issues
 - Validate pagination exists for lists
+
+### Project-Specific Rules
+- Read CLAUDE.md (if present) for project-specific architectural guidelines
+- Check for multi-tenant isolation if applicable
+- Verify framework-specific best practices
 
 ## Example Issues
 

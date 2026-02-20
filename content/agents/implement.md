@@ -14,6 +14,21 @@ Load a PLAN_{NAME}.md file from `plans/` and execute it methodically, task by ta
 
 ## Execution Steps
 
+### 0. Detect Toolchain
+
+Before running any commands, detect the project's package manager and available scripts:
+
+```bash
+cat package.json 2>/dev/null | head -30
+```
+
+- If `pnpm-lock.yaml` exists → use `pnpm`
+- If `yarn.lock` exists → use `yarn`
+- If `bun.lockb` exists → use `bun`
+- If `package-lock.json` exists → use `npm`
+- Check `scripts` in package.json for available typecheck/lint/test/build commands
+- Use the detected package manager for ALL subsequent commands
+
 ### 1. Load the Plan
 
 Extract the plan name from the arguments (first word after /kickoff):
@@ -41,7 +56,7 @@ Before starting implementation:
 **Environment Check**:
 - ✅ Git branch: [current branch]
 - ✅ Working directory clean: [yes/no - show git status if dirty]
-- ✅ Type check: [run pnpm typecheck or skip if not applicable]
+- ✅ Type check: [run typecheck script if available]
 ```
 
 **Ask the user**: "Ready to begin implementation? I'll work through Phase 1 first. Type 'go' to proceed or specify a different starting phase."
@@ -79,8 +94,8 @@ For each task in the current phase:
 - Add comments where complexity is high
 
 #### C. Validate
-- Run type check: `pnpm typecheck` (if TypeScript project)
-- Run linter: `pnpm lint` (if applicable)
+- Run type check (if TypeScript project, using detected package manager)
+- Run linter (if applicable, using detected package manager)
 - Check git diff to review changes
 - Verify the change works as expected
 
@@ -113,7 +128,7 @@ At the end of each phase:
 
 1. **Run validation checks** from the plan's "Validation" section
 2. **Review all changes** in the phase: `git diff`
-3. **Run full checks**: `pnpm check` (or equivalent)
+3. **Run full checks**: typecheck and lint using the detected package manager
 4. **Ask user for approval** before moving to next phase:
 
 ```markdown

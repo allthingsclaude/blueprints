@@ -32,7 +32,7 @@ Analyze the query to determine the best research agent:
 - Check package.json first to see if mentioned library is a project dependency
 
 **Use `web-research` agent when:**
-- Query asks for "latest", "best practices", "how to do X in 2025"
+- Query asks for "latest", "best practices", "how to do X"
 - Looking for online tutorials, guides, or examples
 - Researching industry standards or modern approaches
 - No specific library mentioned, or general "how to" questions

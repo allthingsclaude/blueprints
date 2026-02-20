@@ -46,4 +46,4 @@ The finalize agent will systematically:
 
 **This will create a git commit with all your work.**
 
-Use the Task tool to launch the finalize agent (subagent_type="general-purpose") which will autonomously finalize your session and create the commit.
+Use the Task tool to launch the finalize agent (subagent_type="finalize") which will autonomously finalize your session and create the commit.
