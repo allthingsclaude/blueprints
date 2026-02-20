@@ -65,7 +65,14 @@ Read `{{STATE_FILE}}`. If it contains an active plan (status is `In Progress` or
 
 If a plan name was provided and `{{PLANS_DIR}}/PLAN_{NAME}.md` exists:
 - Load that plan
-- Update `{{STATE_FILE}}` to set it as active
+- **STATE UPDATE**: Write `{{STATE_FILE}}` to activate this plan:
+  ```markdown
+  # Active: {NAME}
+  **File**: {{PLANS_DIR}}/PLAN_{NAME}.md
+  **Phase**: 1
+  **Status**: 🚧 In Progress
+  **Updated**: [ISO timestamp]
+  ```
 - Skip to **Step 3** (branch) then **Step 4** (execute)
 
 #### 1c. No Active Work — Enter Brainstorm
@@ -180,9 +187,14 @@ Present the blockers to the user and ask how to proceed. Do NOT continue until b
 - The commit agent will determine the appropriate prefix (`feat:`, `fix:`, `refactor:`, `chore:`, etc.) based on the nature of the changes
 - The commit message should reference the plan and phase (e.g., "feat: implement user authentication (PLAN_AUTH Phase 1)")
 
+**STATE UPDATE**: After committing, update `{{STATE_FILE}}`:
+- Increment `**Phase**` to the next phase number
+- Keep `**Status**` as `🚧 In Progress`
+- Update `**Updated**` timestamp
+
 #### 4d. Continue to Next Phase
 
-After committing, check if there are more phases remaining:
+After committing and updating STATE.md, check if there are more phases remaining:
 - **More phases** → loop back to 4a for the next phase
 - **All phases done** → proceed to Step 5
 
@@ -239,6 +251,12 @@ Review security report:
 ---
 
 ### Step 6: Report
+
+**STATE UPDATE**: Before reporting, update `{{STATE_FILE}}` to reflect final status:
+- If all phases and validation passed: change first line to `# Complete: {NAME}` and set `**Status**: ✅ Complete`
+- If partially complete (blockers, user stopped): keep `# Active: {NAME}` and set `**Status**: ⏸️ Paused`
+- Update `**Phase**` to the last completed phase number
+- Update `**Updated**` timestamp
 
 After everything is done (or stopped), provide a final summary:
 
@@ -309,10 +327,33 @@ Auto mode commits **early and often** using the commit agent (`subagent_type="co
 - After 2 failures, stop and ask the user
 - Never silently skip failing validation
 
-### Track State
-- STATE.md should always reflect current progress
-- Plan document checkboxes should be updated by the implement/parallelize agents
-- If interrupted, `/auto` can resume from where it left off — each phase is committed separately
+### Track State (MANDATORY)
+
+`{{STATE_FILE}}` must ALWAYS reflect current progress. Update it at these points:
+1. **Step 1b** — when activating an existing plan (set Phase 1, Status In Progress)
+2. **Step 2** — plan agent creates it (verify it exists after plan agent completes)
+3. **Step 4c** — after each phase commit (increment Phase, update timestamp)
+4. **Step 6** — final status (Complete or Paused)
+
+**STATE.md format** (never deviate):
+```markdown
+# Active: {NAME}
+**File**: {{PLANS_DIR}}/PLAN_{NAME}.md
+**Phase**: {current_phase_number}
+**Status**: 🚧 In Progress
+**Updated**: {ISO timestamp}
+```
+
+When all work is done, change to:
+```markdown
+# Complete: {NAME}
+**File**: {{PLANS_DIR}}/PLAN_{NAME}.md
+**Phase**: {final_phase_number}
+**Status**: ✅ Complete
+**Updated**: {ISO timestamp}
+```
+
+If `/auto` is interrupted or paused, ensure STATE.md reflects where it stopped so the next `/auto` run can resume correctly. Plan document checkboxes are updated by the implement/parallelize agents.
 
 ### Keep the User Informed
 - Brief status updates between major steps

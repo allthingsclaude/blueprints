@@ -297,31 +297,29 @@ Examples:
 - `/plan responsive-images some context here` → PLAN_RESPONSIVE_IMAGES.md
 - Additional context should be incorporated into the Background section
 
-## Update Active Plan Tracker
+## Update Active Plan Tracker (MANDATORY)
 
-After writing the plan file, create or update `{{STATE_FILE}}` to track the active plan:
+**This step is NOT optional.** After writing the plan file, you MUST create or update `{{STATE_FILE}}`. Other commands (`/auto`, `/kickoff`, `/implement`, `/parallelize`) depend on this file to detect the active plan. If STATE.md is missing, the entire workflow breaks.
 
 ```bash
 mkdir -p $(dirname {{STATE_FILE}})
 ```
 
-Write to `{{STATE_FILE}}` using this exact format (other agents depend on it):
+Write to `{{STATE_FILE}}` using this **exact format** (other agents parse these fields):
 ```markdown
 # Active: {NAME}
 **File**: {{PLANS_DIR}}/PLAN_{NAME}.md
 **Phase**: 1
 **Status**: 🚧 In Progress
-**Updated**: [timestamp]
+**Updated**: [ISO timestamp]
 ```
 
-**STATE.md contract** — other agents read and update this file:
-- The first line is always `# Active: {NAME}` or `# Complete: {NAME}`
-- **File** — path to the plan document
-- **Phase** — current phase number (incremented by `/implement` and `/finalize` after each phase)
+**STATE.md contract** — all agents MUST follow this format:
+- Line 1 is always `# Active: {NAME}` or `# Complete: {NAME}`
+- **File** — path to the plan document (must be valid, readable path)
+- **Phase** — current phase number (starts at 1, incremented after each phase by `/auto`, `/implement`, `/finalize`)
 - **Status** — one of: `🚧 In Progress`, `⏸️ Paused`, `✅ Complete`
-- **Updated** — ISO timestamp of last update
-
-This allows other commands (`/kickoff`, `/implement`, `/parallelize`) to automatically detect the active plan.
+- **Updated** — ISO timestamp of last update (e.g., `2025-01-15T14:30:00Z`)
 
 ## Final Step
 
