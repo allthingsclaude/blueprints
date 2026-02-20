@@ -157,7 +157,8 @@ Ready to commit this phase before moving to Phase 2? (yes/no/review)
 ```
 
 5. **Update STATE.md** after phase completion:
-   - Update the `**Phase**` field in `{{STATE_FILE}}` to reflect the next phase number
+   - Update the `**Phase**` field in `{{STATE_FILE}}` to the next phase number
+   - Update the `**Status**` field if needed (keep `🚧 In Progress` during work, set `✅ Complete` when all phases done)
    - Update the `**Updated**` timestamp
 
 ### 6. Handle Blockers
@@ -251,14 +252,31 @@ Use Edit tool to update checkboxes in the plan.
 - If a task requires a library not installed, install it
 - If a task requires database migration, create it
 
-## Special Considerations
+## Error Recovery
 
-### Multi-Tenant Context (This Project)
-When implementing features for this e-commerce platform:
-- Ensure site isolation (filter by site/domain)
-- Check middleware for domain routing
-- Validate multi-tenant queries
-- Test with multiple sites in mind
+### Validation Failure (typecheck/lint/build)
+1. Read the error output carefully
+2. If caused by your changes — fix and re-validate
+3. If pre-existing — note it in the task update and continue (don't fix unrelated issues)
+4. If persistent after 2 fix attempts — mark the task as blocked and present options to the user
+
+### Plan File Not Found
+1. List available plans: `ls -1 {{PLANS_DIR}}/PLAN_*.md`
+2. Check `{{STATE_FILE}}` for the active plan
+3. If no plans exist, inform user and suggest `/plan` first
+
+### Task Can't Be Completed as Written
+1. Document what you attempted and why it failed
+2. Present the user with alternatives:
+   - Modify the task scope
+   - Skip and move to the next task
+   - Adjust the plan
+3. Don't silently skip or partially complete — always communicate
+
+### Merge Conflicts or Dirty State
+1. Run `git status` to assess
+2. If uncommitted changes exist, ask user whether to stash or commit first
+3. Never discard changes without explicit user approval
 
 ### Type Safety
 - Use proper TypeScript types

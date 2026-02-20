@@ -8,6 +8,8 @@ author: "@markoradak"
 
 I'll find and eliminate DRY violations across your codebase while guaranteeing identical behavior.
 
+> **When to use**: You suspect duplicated code and want to consolidate it. Use `/cleanup` to remove unused/dead code, `/refactor` for renames, moves, or extractions, or `/audit` to review changes before committing.
+
 ## Current State
 
 **Working Directory**: !`pwd`

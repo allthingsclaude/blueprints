@@ -305,13 +305,21 @@ After writing the plan file, create or update `{{STATE_FILE}}` to track the acti
 mkdir -p $(dirname {{STATE_FILE}})
 ```
 
-Write to `{{STATE_FILE}}`:
+Write to `{{STATE_FILE}}` using this exact format (other agents depend on it):
 ```markdown
 # Active: {NAME}
 **File**: {{PLANS_DIR}}/PLAN_{NAME}.md
 **Phase**: 1
+**Status**: 🚧 In Progress
 **Updated**: [timestamp]
 ```
+
+**STATE.md contract** — other agents read and update this file:
+- The first line is always `# Active: {NAME}` or `# Complete: {NAME}`
+- **File** — path to the plan document
+- **Phase** — current phase number (incremented by `/implement` and `/finalize` after each phase)
+- **Status** — one of: `🚧 In Progress`, `⏸️ Paused`, `✅ Complete`
+- **Updated** — ISO timestamp of last update
 
 This allows other commands (`/kickoff`, `/implement`, `/parallelize`) to automatically detect the active plan.
 

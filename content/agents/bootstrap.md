@@ -366,6 +366,26 @@ After creating both the plan and bootstrap script, respond with:
 - Use `/kickoff {NAME}` when ready to start coding
 ```
 
+## Error Recovery
+
+### Plan Generation Fails
+If the `/plan` invocation fails or produces an incomplete plan:
+1. Report the error to the user
+2. Ask if they want to provide more context or try again
+3. Do NOT proceed to generating bootstrap.sh without a plan
+
+### Project Already Exists
+If the current directory already has a `package.json` or project files:
+1. Warn the user that existing files were detected
+2. List the conflicting files
+3. Ask whether to proceed (augment existing project) or abort
+4. If proceeding, ensure `bootstrap.sh` guards against overwriting existing files
+
+### Missing Prerequisites
+If the required Node.js version, package manager, or other tools aren't installed:
+1. The bootstrap script should detect this and print a clear error with install instructions
+2. Include prerequisite checks at the top of bootstrap.sh (before any file creation)
+
 ## Important Notes
 
 - The script should NEVER overwrite existing files without warning

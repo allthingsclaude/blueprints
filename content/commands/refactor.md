@@ -8,6 +8,8 @@ author: "@markoradak"
 
 I'll help you safely refactor code with a focus on DRY principles, pattern extraction, and thorough validation.
 
+> **When to use**: You want to rename, extract, move, or restructure code. Use `/dry` to find and consolidate duplications, `/cleanup` to remove dead/unused code, or `/audit` to review changes before committing.
+
 ## Current State
 
 **Working Directory**: !`pwd`

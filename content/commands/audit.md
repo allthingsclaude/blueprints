@@ -8,6 +8,8 @@ author: "@markoradak"
 
 I'll perform a thorough review of your code changes before you commit.
 
+> **When to use**: You have changes ready to commit and want a comprehensive review. Use `/cleanup` to find dead code, `/dry` to eliminate duplication, or `/refactor` for structural changes.
+
 ## Current Changes
 
 **Working Directory**: !`pwd`

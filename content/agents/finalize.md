@@ -487,8 +487,9 @@ Would you like me to:
 
 If an active plan exists, update `{{STATE_FILE}}` to reflect the current status:
 - Update the `**Phase**` field if a phase was completed
+- Update the `**Status**` field (`🚧 In Progress`, `⏸️ Paused`, or `✅ Complete`)
 - Update the `**Updated**` timestamp
-- If all plan phases are complete, update the first line to `# Complete: {NAME}`
+- If all plan phases are complete, change the first line to `# Complete: {NAME}` and set status to `✅ Complete`
 
 ## Final Checks
 

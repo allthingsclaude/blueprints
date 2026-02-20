@@ -8,6 +8,8 @@ author: "@markoradak"
 
 I'll scan your codebase for dead code, unused imports, and technical debt.
 
+> **When to use**: You want to remove things that shouldn't be there (unused imports, dead exports, stale TODOs, console.logs). Use `/dry` to consolidate duplicated code, `/refactor` for structural changes, or `/audit` to review changes before committing.
+
 ## Current State
 
 **Working Directory**: !`pwd`
