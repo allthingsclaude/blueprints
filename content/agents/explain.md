@@ -2,7 +2,7 @@
 name: explain
 description: Generate detailed explanations of code, architecture, or features
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

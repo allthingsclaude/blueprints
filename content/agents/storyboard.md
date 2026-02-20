@@ -2,7 +2,7 @@
 name: storyboard
 description: Extract UI interaction specs from video mockups by analyzing key frames
 tools: Bash, Read, Write, Glob
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

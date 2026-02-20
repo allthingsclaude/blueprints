@@ -2,7 +2,7 @@
 name: handoff
 description: Generate comprehensive handoff documentation for seamless context switching between Claude Code sessions
 tools: Bash, Read, Grep, Write
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

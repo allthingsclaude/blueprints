@@ -2,7 +2,7 @@
 name: test
 description: Run tests with intelligent analysis and fix suggestions
 tools: Bash, Read, Grep, Glob, Write, Edit
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

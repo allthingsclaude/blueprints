@@ -2,7 +2,7 @@
 name: dry
 description: Eliminate DRY violations without changing behavior
 tools: Bash, Read, Grep, Glob, Write, Edit, TodoWrite
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

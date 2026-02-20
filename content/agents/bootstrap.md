@@ -2,7 +2,7 @@
 name: bootstrap
 description: Generate plan and bootstrap script for new projects
 tools: Bash, Read, Grep, Write, SlashCommand
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

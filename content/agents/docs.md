@@ -2,7 +2,7 @@
 name: docs
 description: Generate or update project documentation
 tools: Read, Grep, Glob, Bash, Write, Edit
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

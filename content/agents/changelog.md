@@ -2,7 +2,7 @@
 name: changelog
 description: Generate a changelog from git history
 tools: Bash, Read, Grep, Write, Edit
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

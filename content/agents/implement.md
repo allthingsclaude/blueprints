@@ -2,7 +2,7 @@
 name: implement
 description: Systematically execute implementation plans from {{PLANS_DIR}}/
 tools: Bash, Read, Grep, Glob, Write, Edit, TodoWrite
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

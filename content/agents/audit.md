@@ -2,7 +2,7 @@
 name: audit
 description: Review code changes before committing
 tools: Bash, Read, Grep
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

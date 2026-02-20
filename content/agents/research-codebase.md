@@ -2,7 +2,7 @@
 name: codebase-research
 description: Use PROACTIVELY when user asks to research, explore, investigate, analyze, or understand the codebase structure, code patterns, architecture, file organization, implementation details, or how something works in the code. Triggers on keywords - research codebase, explore code, investigate implementation, analyze architecture, find in code, how does X work, where is X implemented.
 tools: Glob, Grep, Read, Bash
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

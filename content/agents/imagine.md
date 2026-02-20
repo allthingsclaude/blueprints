@@ -2,7 +2,7 @@
 name: imagine
 description: Generate images via Nano Banana Pro API
 tools: Bash
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

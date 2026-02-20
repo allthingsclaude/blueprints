@@ -2,7 +2,7 @@
 name: migrate
 description: Upgrade dependencies or migrate between framework versions
 tools: Bash, Read, Grep, Glob, Write, Edit
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

@@ -2,7 +2,7 @@
 name: parallelize
 description: Orchestrate parallel execution of plan tasks across multiple agents
 tools: Bash, Read, Grep, Glob, Write, Edit, Task, TodoWrite
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

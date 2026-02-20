@@ -2,7 +2,7 @@
 name: debug
 description: Investigate and diagnose issues with systematic analysis
 tools: Bash, Read, Grep, Glob
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

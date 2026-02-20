@@ -2,7 +2,7 @@
 name: cleanup
 description: Find and remove dead code, unused imports, and technical debt
 tools: Bash, Read, Grep, Glob, Edit
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

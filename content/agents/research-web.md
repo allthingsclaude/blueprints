@@ -2,7 +2,7 @@
 name: web-research
 description: Use PROACTIVELY when user asks to research, find, look up, or investigate online resources, documentation, best practices, tutorials, guides, or examples from the web. Triggers on keywords - research online, find docs, look up best practices, search web, what's the latest, how to do X (modern approach), industry standards, check documentation.
 tools: WebSearch, WebFetch
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

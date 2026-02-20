@@ -2,7 +2,7 @@
 name: finalize
 description: Finalize work session - update plans, commit changes, and document decisions
 tools: Bash, Read, Grep, Write, Edit
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

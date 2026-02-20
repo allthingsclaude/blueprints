@@ -2,7 +2,7 @@
 name: refactor
 description: Safely refactor code with DRY analysis, pattern extraction, and validation
 tools: Bash, Read, Grep, Glob, Edit
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

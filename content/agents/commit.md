@@ -2,7 +2,7 @@
 name: commit
 description: Create a well-crafted git commit from current changes
 tools: Bash, Read, Grep
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 

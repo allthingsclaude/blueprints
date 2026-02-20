@@ -2,7 +2,7 @@
 name: plan
 description: Generate structured plan documents from conversation findings
 tools: Bash, Read, Grep, Write
-model: sonnet
+model: {{MODEL}}
 author: "@markoradak"
 ---
 
