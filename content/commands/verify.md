@@ -1,5 +1,6 @@
 ---
 description: Verification Mode
+argument-hint: [optional: approach or task to verify]
 author: "@markoradak"
 ---
 

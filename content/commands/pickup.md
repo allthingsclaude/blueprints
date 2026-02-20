@@ -8,7 +8,7 @@ author: "@markoradak"
 
 Loading the handoff document from your previous session:
 
-@{{SESSIONS_DIR}}/HANDOFF.md
+{{SESSIONS_DIR}}/HANDOFF.md
 
 ---
 

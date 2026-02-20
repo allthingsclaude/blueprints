@@ -1,6 +1,5 @@
 ---
 description: Flush all task artifacts from {{TASKS_DIR}}/
-argument-hint:
 author: "@markoradak"
 ---
 

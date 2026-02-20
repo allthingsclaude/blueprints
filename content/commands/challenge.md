@@ -1,5 +1,6 @@
 ---
 description: Challenge Mode - Critical Thinking Assistant
+argument-hint: [optional: approach or decision to challenge]
 author: "@markoradak"
 ---
 
