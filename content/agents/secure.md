@@ -1,7 +1,7 @@
 ---
 name: secure
 description: Run a focused security scan on your codebase
-tools: Bash, Read, Grep, Glob
+tools: Bash, Read, Grep, Glob, Write, Edit
 model: sonnet
 author: "@markoradak"
 ---

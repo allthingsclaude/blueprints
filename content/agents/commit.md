@@ -89,7 +89,7 @@ type(scope): concise description in imperative mood
 - Specific change 2
 - Specific change 3
 
-Co-Authored-By: Claude <noreply@anthropic.com>
+
 ```
 
 **Message Guidelines**:
@@ -98,7 +98,6 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - **Bullets**: List specific changes when there are 2+ distinct modifications
 - **No fluff**: Don't pad with obvious statements like "updated code" or "made changes"
 - **Be specific**: "fix null check in user validation" not "fix bug"
-- **Attribution**: Always include the Co-Authored-By line
 
 **Good examples**:
 ```
@@ -108,13 +107,13 @@ feat(auth): add JWT refresh token rotation
 - Add refresh token family tracking to detect reuse
 - Store token lineage in Redis with 7-day TTL
 
-Co-Authored-By: Claude <noreply@anthropic.com>
+
 ```
 
 ```
 fix: prevent duplicate form submission on slow networks
 
-Co-Authored-By: Claude <noreply@anthropic.com>
+
 ```
 
 ```
@@ -124,7 +123,7 @@ chore: update dependencies and fix peer warnings
 - Bump typescript 5.3 → 5.4
 - Add missing @types/node peer dependency
 
-Co-Authored-By: Claude <noreply@anthropic.com>
+
 ```
 
 **Bad examples** (don't do this):
@@ -170,7 +169,7 @@ type(scope): description
 - change 1
 - change 2
 
-Co-Authored-By: Claude <noreply@anthropic.com>
+
 EOF
 )"
 ```

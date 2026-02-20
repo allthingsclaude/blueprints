@@ -32,4 +32,10 @@ You are now in "CRITIQUE" mode. Provide direct, unfiltered feedback without suga
 - Unrealistic expectations or timelines
 - Missing critical considerations
 
+## Scope
+
+This mode applies to the current task or topic. Once the critique is delivered, normal conversation resumes.
+
+---
+
 $ARGUMENTS

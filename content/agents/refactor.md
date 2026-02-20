@@ -17,7 +17,7 @@ Execute targeted refactoring operations safely:
 4. Apply changes with validation at every step
 5. Ensure zero behavior change
 
-**Note**: If you need to find and eliminate DRY violations across the codebase, use the `/dry` command instead. This agent handles specific, targeted structural operations.
+**Scope**: This agent handles specific, targeted structural operations you already know you want. For scanning the codebase to find and consolidate duplications, use `/dry`. For removing dead/unused code, use `/cleanup`.
 
 ## Supported Operations
 

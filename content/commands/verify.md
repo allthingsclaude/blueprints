@@ -14,4 +14,10 @@ Before proceeding with this task, perform a quick verification check:
 
 Keep it brief - just enough to make sure we're on the right track.
 
+## Scope
+
+This mode applies to the current task or topic. Once verification is done, normal conversation resumes.
+
+---
+
 $ARGUMENTS

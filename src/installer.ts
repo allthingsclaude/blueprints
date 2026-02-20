@@ -40,6 +40,22 @@ export const RESEARCH_AGENTS = [
   'research-web.md',
 ];
 
+export const LIGHTWEIGHT_AGENTS = [
+  'commit.md',
+  'changelog.md',
+  'handoff.md',
+  'cleanup.md',
+  'imagine.md',
+];
+
+export const HEAVYWEIGHT_AGENTS = [
+  'audit.md',
+  'debug.md',
+  'secure.md',
+];
+
+export type AgentTier = 'lightweight' | 'research' | 'standard' | 'heavyweight';
+
 export const DEFAULT_TASKS_DIR = 'tasks';
 
 export function buildTemplateVars(tasksDir: string = DEFAULT_TASKS_DIR): Record<string, string> {
@@ -168,20 +184,36 @@ export function copyDirectory(srcDir: string, destDir: string, tasksDir?: string
 }
 
 /**
- * Get the model to use for a given agent file based on power level
+ * Determine the tier for an agent based on its filename
+ */
+export function getAgentTier(filename: string): AgentTier {
+  if (LIGHTWEIGHT_AGENTS.includes(filename)) return 'lightweight';
+  if (RESEARCH_AGENTS.includes(filename)) return 'research';
+  if (HEAVYWEIGHT_AGENTS.includes(filename)) return 'heavyweight';
+  return 'standard';
+}
+
+/**
+ * Get the model to use for a given agent file based on power level and tier
+ *
+ * Tiers:
+ * - lightweight: commit, changelog, handoff, cleanup, imagine (rote tasks)
+ * - research: codebase/docs/web research (search + synthesize)
+ * - standard: refactor, test, plan, implement, etc. (balanced)
+ * - heavyweight: audit, debug, secure (deep reasoning, high stakes)
  */
 export function getModelForAgent(filename: string, powerLevel: AgentPowerLevel): 'haiku' | 'sonnet' | 'opus' {
-  const isResearch = RESEARCH_AGENTS.includes(filename);
+  const tier = getAgentTier(filename);
 
-  const modelMap: Record<AgentPowerLevel, { research: 'haiku' | 'sonnet' | 'opus'; other: 'haiku' | 'sonnet' | 'opus' }> = {
-    1: { research: 'haiku', other: 'haiku' },
-    2: { research: 'haiku', other: 'sonnet' },
-    3: { research: 'sonnet', other: 'sonnet' },
-    4: { research: 'sonnet', other: 'opus' },
-    5: { research: 'opus', other: 'opus' },
+  const modelMap: Record<AgentPowerLevel, Record<AgentTier, 'haiku' | 'sonnet' | 'opus'>> = {
+    1: { lightweight: 'haiku', research: 'haiku', standard: 'haiku',  heavyweight: 'sonnet' },
+    2: { lightweight: 'haiku', research: 'haiku', standard: 'sonnet', heavyweight: 'sonnet' },
+    3: { lightweight: 'haiku', research: 'sonnet', standard: 'sonnet', heavyweight: 'sonnet' },
+    4: { lightweight: 'sonnet', research: 'sonnet', standard: 'sonnet', heavyweight: 'opus' },
+    5: { lightweight: 'opus',  research: 'opus',  standard: 'opus',  heavyweight: 'opus' },
   };
 
-  return isResearch ? modelMap[powerLevel].research : modelMap[powerLevel].other;
+  return modelMap[powerLevel][tier];
 }
 
 /**

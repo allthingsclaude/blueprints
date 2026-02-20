@@ -11,8 +11,11 @@ import {
   installBlueprints,
   checkExistingInstallation,
   getModelForAgent,
+  getAgentTier,
   copyAgentsWithPowerLevel,
   RESEARCH_AGENTS,
+  LIGHTWEIGHT_AGENTS,
+  HEAVYWEIGHT_AGENTS,
   TEMPLATE_VARS,
   replaceTemplateVars
 } from '../installer.js';
@@ -209,39 +212,72 @@ describe('checkExistingInstallation', () => {
   });
 });
 
+describe('getAgentTier', () => {
+  it('classifies lightweight agents', () => {
+    expect(getAgentTier('commit.md')).toBe('lightweight');
+    expect(getAgentTier('changelog.md')).toBe('lightweight');
+    expect(getAgentTier('handoff.md')).toBe('lightweight');
+    expect(getAgentTier('cleanup.md')).toBe('lightweight');
+    expect(getAgentTier('imagine.md')).toBe('lightweight');
+  });
+
+  it('classifies research agents', () => {
+    expect(getAgentTier('research-codebase.md')).toBe('research');
+    expect(getAgentTier('research-docs.md')).toBe('research');
+    expect(getAgentTier('research-web.md')).toBe('research');
+  });
+
+  it('classifies heavyweight agents', () => {
+    expect(getAgentTier('audit.md')).toBe('heavyweight');
+    expect(getAgentTier('debug.md')).toBe('heavyweight');
+    expect(getAgentTier('secure.md')).toBe('heavyweight');
+  });
+
+  it('defaults to standard for unlisted agents', () => {
+    expect(getAgentTier('implement.md')).toBe('standard');
+    expect(getAgentTier('plan.md')).toBe('standard');
+    expect(getAgentTier('refactor.md')).toBe('standard');
+  });
+});
+
 describe('getModelForAgent', () => {
-  it('level 1: all agents use haiku', () => {
+  it('level 1: lightweight/research/standard haiku, heavyweight sonnet', () => {
+    expect(getModelForAgent('commit.md', 1)).toBe('haiku');
     expect(getModelForAgent('research-codebase.md', 1)).toBe('haiku');
-    expect(getModelForAgent('research-docs.md', 1)).toBe('haiku');
-    expect(getModelForAgent('research-web.md', 1)).toBe('haiku');
-    expect(getModelForAgent('audit.md', 1)).toBe('haiku');
     expect(getModelForAgent('implement.md', 1)).toBe('haiku');
+    expect(getModelForAgent('audit.md', 1)).toBe('sonnet');
+    expect(getModelForAgent('debug.md', 1)).toBe('sonnet');
   });
 
-  it('level 2: research haiku, others sonnet', () => {
-    expect(getModelForAgent('research-codebase.md', 2)).toBe('haiku');
+  it('level 2: lightweight/research haiku, standard/heavyweight sonnet', () => {
+    expect(getModelForAgent('commit.md', 2)).toBe('haiku');
     expect(getModelForAgent('research-docs.md', 2)).toBe('haiku');
-    expect(getModelForAgent('audit.md', 2)).toBe('sonnet');
     expect(getModelForAgent('implement.md', 2)).toBe('sonnet');
+    expect(getModelForAgent('audit.md', 2)).toBe('sonnet');
   });
 
-  it('level 3: all agents use sonnet', () => {
+  it('level 3: lightweight haiku, research/standard/heavyweight sonnet', () => {
+    expect(getModelForAgent('commit.md', 3)).toBe('haiku');
+    expect(getModelForAgent('changelog.md', 3)).toBe('haiku');
     expect(getModelForAgent('research-web.md', 3)).toBe('sonnet');
     expect(getModelForAgent('plan.md', 3)).toBe('sonnet');
-    expect(getModelForAgent('optimize.md', 3)).toBe('sonnet');
+    expect(getModelForAgent('secure.md', 3)).toBe('sonnet');
   });
 
-  it('level 4: research sonnet, others opus', () => {
+  it('level 4: lightweight/research/standard sonnet, heavyweight opus', () => {
+    expect(getModelForAgent('commit.md', 4)).toBe('sonnet');
     expect(getModelForAgent('research-codebase.md', 4)).toBe('sonnet');
-    expect(getModelForAgent('research-docs.md', 4)).toBe('sonnet');
+    expect(getModelForAgent('parallelize.md', 4)).toBe('sonnet');
     expect(getModelForAgent('audit.md', 4)).toBe('opus');
-    expect(getModelForAgent('parallelize.md', 4)).toBe('opus');
+    expect(getModelForAgent('debug.md', 4)).toBe('opus');
+    expect(getModelForAgent('secure.md', 4)).toBe('opus');
   });
 
   it('level 5: all agents use opus', () => {
+    expect(getModelForAgent('commit.md', 5)).toBe('opus');
     expect(getModelForAgent('research-web.md', 5)).toBe('opus');
     expect(getModelForAgent('implement.md', 5)).toBe('opus');
-    expect(getModelForAgent('storyboard.md', 5)).toBe('opus');
+    expect(getModelForAgent('audit.md', 5)).toBe('opus');
   });
 });
 
@@ -253,11 +289,19 @@ describe('copyAgentsWithPowerLevel', () => {
     fs.mkdirSync(srcDir, { recursive: true });
     fs.writeFileSync(
       path.join(srcDir, 'research-codebase.md'),
-      '---\nname: research-codebase\nmodel: haiku\n---\nContent here'
+      '---\nname: research-codebase\nmodel: sonnet\n---\nContent here'
     );
     fs.writeFileSync(
       path.join(srcDir, 'implement.md'),
       '---\nname: implement\nmodel: sonnet\n---\nContent here'
+    );
+    fs.writeFileSync(
+      path.join(srcDir, 'audit.md'),
+      '---\nname: audit\nmodel: sonnet\n---\nContent here'
+    );
+    fs.writeFileSync(
+      path.join(srcDir, 'commit.md'),
+      '---\nname: commit\nmodel: sonnet\n---\nContent here'
     );
   });
 
@@ -266,31 +310,33 @@ describe('copyAgentsWithPowerLevel', () => {
     if (fs.existsSync(destDir)) fs.rmSync(destDir, { recursive: true });
   });
 
-  it('rewrites model in frontmatter for research agent at level 5', () => {
+  it('level 5: rewrites all agents to opus', () => {
     copyAgentsWithPowerLevel(srcDir, destDir, 5);
-    const content = fs.readFileSync(path.join(destDir, 'research-codebase.md'), 'utf-8');
-    expect(content).toContain('model: opus');
-    expect(content).not.toContain('model: haiku');
+    for (const file of ['research-codebase.md', 'implement.md', 'audit.md', 'commit.md']) {
+      const content = fs.readFileSync(path.join(destDir, file), 'utf-8');
+      expect(content).toContain('model: opus');
+    }
   });
 
-  it('rewrites model in frontmatter for non-research agent at level 1', () => {
+  it('level 1: heavyweight gets sonnet, others get haiku', () => {
     copyAgentsWithPowerLevel(srcDir, destDir, 1);
-    const content = fs.readFileSync(path.join(destDir, 'implement.md'), 'utf-8');
-    expect(content).toContain('model: haiku');
-    expect(content).not.toContain('model: sonnet');
+    expect(fs.readFileSync(path.join(destDir, 'audit.md'), 'utf-8')).toContain('model: sonnet');
+    expect(fs.readFileSync(path.join(destDir, 'commit.md'), 'utf-8')).toContain('model: haiku');
+    expect(fs.readFileSync(path.join(destDir, 'research-codebase.md'), 'utf-8')).toContain('model: haiku');
+    expect(fs.readFileSync(path.join(destDir, 'implement.md'), 'utf-8')).toContain('model: haiku');
   });
 
-  it('level 2: research stays haiku, other becomes sonnet', () => {
-    copyAgentsWithPowerLevel(srcDir, destDir, 2);
-    const research = fs.readFileSync(path.join(destDir, 'research-codebase.md'), 'utf-8');
-    const impl = fs.readFileSync(path.join(destDir, 'implement.md'), 'utf-8');
-    expect(research).toContain('model: haiku');
-    expect(impl).toContain('model: sonnet');
+  it('level 4: heavyweight gets opus, others get sonnet', () => {
+    copyAgentsWithPowerLevel(srcDir, destDir, 4);
+    expect(fs.readFileSync(path.join(destDir, 'audit.md'), 'utf-8')).toContain('model: opus');
+    expect(fs.readFileSync(path.join(destDir, 'commit.md'), 'utf-8')).toContain('model: sonnet');
+    expect(fs.readFileSync(path.join(destDir, 'research-codebase.md'), 'utf-8')).toContain('model: sonnet');
+    expect(fs.readFileSync(path.join(destDir, 'implement.md'), 'utf-8')).toContain('model: sonnet');
   });
 
   it('returns correct file count', () => {
     const count = copyAgentsWithPowerLevel(srcDir, destDir, 3);
-    expect(count).toBe(2);
+    expect(count).toBe(4);
   });
 
   it('preserves non-model content', () => {
@@ -321,13 +367,16 @@ describe('installBlueprints with power level', () => {
     expect(researchContent).toMatch(/^model:\s*sonnet$/m);
   });
 
-  it('power level 1 sets all agents to haiku', async () => {
+  it('power level 1: heavyweight gets sonnet, others get haiku', async () => {
     const result = await installBlueprints(testDir, 1);
     expect(result.powerLevel).toBe(1);
 
     const agentsDir = path.join(testDir, '.claude', 'agents');
-    const files = fs.readdirSync(agentsDir).filter(f => f.endsWith('.md'));
-    for (const file of files) {
+    for (const file of HEAVYWEIGHT_AGENTS) {
+      const content = fs.readFileSync(path.join(agentsDir, file), 'utf-8');
+      expect(content).toMatch(/^model:\s*sonnet$/m);
+    }
+    for (const file of LIGHTWEIGHT_AGENTS) {
       const content = fs.readFileSync(path.join(agentsDir, file), 'utf-8');
       expect(content).toMatch(/^model:\s*haiku$/m);
     }
@@ -345,17 +394,18 @@ describe('installBlueprints with power level', () => {
     }
   });
 
-  it('power level 4 uses sonnet for research, opus for others', async () => {
+  it('power level 4: heavyweight gets opus, others get sonnet', async () => {
     await installBlueprints(testDir, 4);
 
     const agentsDir = path.join(testDir, '.claude', 'agents');
-    for (const researchFile of RESEARCH_AGENTS) {
-      const content = fs.readFileSync(path.join(agentsDir, researchFile), 'utf-8');
+    for (const file of HEAVYWEIGHT_AGENTS) {
+      const content = fs.readFileSync(path.join(agentsDir, file), 'utf-8');
+      expect(content).toMatch(/^model:\s*opus$/m);
+    }
+    for (const file of [...RESEARCH_AGENTS, ...LIGHTWEIGHT_AGENTS]) {
+      const content = fs.readFileSync(path.join(agentsDir, file), 'utf-8');
       expect(content).toMatch(/^model:\s*sonnet$/m);
     }
-
-    const auditContent = fs.readFileSync(path.join(agentsDir, 'audit.md'), 'utf-8');
-    expect(auditContent).toMatch(/^model:\s*opus$/m);
   });
 });
 
