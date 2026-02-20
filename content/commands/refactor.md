@@ -1,14 +1,14 @@
 ---
-description: Safely refactor code with DRY analysis, pattern extraction, and validation
-argument-hint: [operation] [target] (e.g., "dry-check", "rename:old:new", "extract:ComponentName")
+description: Safely rename, extract, inline, or move code with validation
+argument-hint: [operation] [target] (e.g., "rename:old:new", "extract:ComponentName", "move:src:dest")
 author: "@markoradak"
 ---
 
 # Refactor Assistant
 
-I'll help you safely refactor code with a focus on DRY principles, pattern extraction, and thorough validation.
+I'll help you safely restructure code — renaming, extracting, inlining, or moving — with validation after every change.
 
-> **When to use**: You want to rename, extract, move, or restructure code. Use `/dry` to find and consolidate duplications, `/cleanup` to remove dead/unused code, or `/audit` to review changes before committing.
+> **When to use**: You know what structural change you want to make. Use `/dry` to find and consolidate duplications, `/cleanup` to remove dead/unused code, or `/audit` to review changes before committing.
 
 ## Current State
 
@@ -29,7 +29,6 @@ $ARGUMENTS
 
 ## Supported Operations
 
-- `dry-check` — Analyze codebase for DRY violations
 - `rename:oldName:newName` — Safe rename across all references
 - `extract:Name` — Extract repeated code into reusable unit
 - `inline:Name` — Inline unnecessary abstraction
