@@ -45,7 +45,7 @@ Parse `$ARGUMENTS` for:
 - **Plan name**: If the first remaining word matches an existing plan in `{{PLANS_DIR}}/PLAN_{NAME}.md`, treat it as a plan name to execute.
 - **Feature description**: Otherwise, treat remaining arguments as a feature description for brainstorming.
 
-Store the `--full` preference — you'll check it at every decision point (Step 6 commit, and any future gates).
+Store the `--full` preference — you'll check it at every commit checkpoint and decision point.
 
 ---
 
@@ -113,10 +113,18 @@ After the bootstrap agent completes, ask the user: "Bootstrap script is ready. S
 - If yes → run `bash bootstrap.sh`
 - If no → note it and continue
 
+**COMMIT CHECKPOINT**: After bootstrap completes, commit the scaffolding:
+- Stage all new project files
+- Use the Task tool to launch the commit agent (`subagent_type="commit"`) with context: "chore: bootstrap {NAME} project scaffolding"
+
 **If existing project:**
 Use the Task tool to launch the plan agent (`subagent_type="plan"`) with the feature name and brainstorm context. This will generate `{{PLANS_DIR}}/PLAN_{NAME}.md` and update `{{STATE_FILE}}`.
 
 Wait for the plan agent to complete, then load and display a brief summary of the plan.
+
+**COMMIT CHECKPOINT**: After plan is created, commit it:
+- Stage the plan file and STATE.md
+- Use the Task tool to launch the commit agent (`subagent_type="commit"`) with context: "docs: add implementation plan for {NAME}"
 
 ---
 
@@ -137,37 +145,52 @@ Report: "Working on branch: `feat/{name}`"
 
 ---
 
-### Step 4: Execute the Plan
+### Step 4: Execute the Plan (Phase by Phase)
 
-Load the plan from `{{PLANS_DIR}}/PLAN_{NAME}.md` and assess its size:
+Load the plan from `{{PLANS_DIR}}/PLAN_{NAME}.md` and identify all phases.
 
-#### Count Tasks
+**For each phase**, repeat this cycle:
 
-Parse all `- [ ]` uncompleted tasks across all phases.
+#### 4a. Assess the Phase
 
-#### Choose Execution Mode
+Count the `- [ ]` uncompleted tasks in the current phase.
 
-| Uncompleted Tasks | Mode | Rationale |
+#### 4b. Execute the Phase
+
+| Phase Tasks | Mode | Rationale |
 |---|---|---|
 | 1-5 tasks | `/implement` | Small enough for a single agent |
 | 6+ tasks | `/parallelize` | Benefits from concurrent execution |
 
 **For `/implement` mode:**
-Use the Task tool to launch the implement agent (`subagent_type="implement"`) with the plan name. Let it work autonomously.
+Use the Task tool to launch the implement agent (`subagent_type="implement"`) with the plan name and instruction to work on the current phase only (e.g., "Execute Phase 1 only, then stop").
 
 **For `/parallelize` mode:**
-Use the Task tool to launch the parallelize orchestrator (`subagent_type="parallelize"`) with the plan name. Let it analyze dependencies and spawn worker agents.
+Use the Task tool to launch the parallelize orchestrator (`subagent_type="parallelize"`) with the plan name and instruction to work on the current phase only.
 
-Wait for the execution agent(s) to complete. Review their summary report.
+Wait for the agent to complete. Review its summary.
 
 **If the agent reports blockers:**
-Present the blockers to the user and ask how to proceed. Do NOT continue to Step 5 until blockers are resolved or the user says to skip them.
+Present the blockers to the user and ask how to proceed. Do NOT continue until blockers are resolved or the user says to skip them.
+
+#### 4c. Commit the Phase
+
+**COMMIT CHECKPOINT**: After each phase completes:
+- Use the Task tool to launch the commit agent (`subagent_type="commit"`) with context describing what was accomplished in this phase
+- The commit agent will determine the appropriate prefix (`feat:`, `fix:`, `refactor:`, `chore:`, etc.) based on the nature of the changes
+- The commit message should reference the plan and phase (e.g., "feat: implement user authentication (PLAN_AUTH Phase 1)")
+
+#### 4d. Continue to Next Phase
+
+After committing, check if there are more phases remaining:
+- **More phases** → loop back to 4a for the next phase
+- **All phases done** → proceed to Step 5
 
 ---
 
-### Step 5: Validate
+### Step 5: Validate & Fix
 
-After implementation completes, run validation in sequence. Each step uses a subagent:
+After all phases are implemented and committed, run validation. Each step uses a subagent:
 
 #### 5a. Audit
 
@@ -178,6 +201,9 @@ Review the audit report. If it finds **critical or important issues**:
 - Re-run typecheck/lint after fixes
 - If issues persist after 2 fix attempts → report to user and ask whether to proceed
 
+**COMMIT CHECKPOINT**: If the audit resulted in fixes, commit them:
+- Use the commit agent with context: "fix: address audit findings for {NAME}"
+
 #### 5b. Test
 
 Use the Task tool to launch the test agent (`subagent_type="test"`).
@@ -187,6 +213,9 @@ Review test results:
 - If tests fail → attempt to fix (max 2 attempts)
 - If tests still fail → report to user with failure details and ask whether to proceed
 
+**COMMIT CHECKPOINT**: If test fixes were made, commit them:
+- Use the commit agent with context: "fix: resolve test failures for {NAME}"
+
 #### 5c. Security
 
 Use the Task tool to launch the secure agent (`subagent_type="secure"`).
@@ -195,6 +224,9 @@ Review security report:
 - If no critical/high findings → continue
 - If critical findings → attempt to fix and re-scan (max 2 attempts)
 - If still failing → report to user and ask whether to proceed
+
+**COMMIT CHECKPOINT**: If security fixes were made, commit them:
+- Use the commit agent with context: "fix: address security findings for {NAME}"
 
 **If ALL validation passes cleanly**, report:
 ```markdown
@@ -206,46 +238,7 @@ Review security report:
 
 ---
 
-### Step 6: Commit
-
-Check the auto-commit preference from Step 0.
-
-#### If `--full` was set:
-
-Use the Task tool to launch the commit agent (`subagent_type="commit"`) with context about what was implemented (plan name, phases completed, key changes).
-
-#### If `--full` was NOT set (default):
-
-Show the user a summary of everything that was done:
-
-```markdown
-**Ready to Commit**
-
-**Branch**: `feat/{name}`
-**Plan**: {NAME}
-**Phases Completed**: {X}/{Y}
-**Files Changed**: {count}
-
-**Summary**:
-- [Key change 1]
-- [Key change 2]
-- [Key change 3]
-
-**Validation**:
-- Audit: {status}
-- Tests: {status}
-- Security: {status}
-
-Commit these changes? (yes / no / review first)
-```
-
-- If **yes** → launch commit agent
-- If **review first** → show `git diff --stat` and wait for confirmation
-- If **no** → stop here, changes are uncommitted on the feature branch
-
----
-
-### Step 7: Report
+### Step 6: Report
 
 After everything is done (or stopped), provide a final summary:
 
@@ -254,7 +247,12 @@ After everything is done (or stopped), provide a final summary:
 
 **Branch**: `feat/{name}`
 **Plan**: {NAME}
-**Status**: {Committed / Uncommitted / Partially Complete}
+**Status**: {Complete / Partially Complete}
+
+**Commits Made**:
+- `{hash}` {commit message 1}
+- `{hash}` {commit message 2}
+- `{hash}` {commit message 3}
 
 **What Was Done**:
 - [Phase 1 summary]
@@ -266,10 +264,30 @@ After everything is done (or stopped), provide a final summary:
 - Security: {result}
 
 **Next Steps**:
-- Review changes: `git diff main..feat/{name}`
+- Review changes: `git log main..feat/{name} --oneline`
 - Create PR when ready: `gh pr create`
 - Or continue working: `/auto` (will resume from STATE.md)
 ```
+
+---
+
+## Commit Checkpoint Rules
+
+Auto mode commits **early and often** using the commit agent (`subagent_type="commit"`). The commit agent determines the right prefix (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, etc.) based on the changes.
+
+**When to commit:**
+- After bootstrap scaffolding is created
+- After plan document is generated
+- After each implementation phase completes
+- After audit/test/security fixes are applied
+
+**When NOT to commit:**
+- If there are no changes (empty diff)
+- If validation is failing and fixes haven't been applied yet
+
+**`--full` behavior at commit checkpoints:**
+- With `--full`: commit agent runs automatically at every checkpoint, no user prompt
+- Without `--full` (default): commit agent still runs automatically — commits are non-destructive and keep work safe. The `--full` flag controls other approval gates (like blocker decisions), not commits.
 
 ---
 
@@ -277,12 +295,14 @@ After everything is done (or stopped), provide a final summary:
 
 ### Be Autonomous But Not Reckless
 - Execute the full loop without unnecessary user prompts
-- BUT always stop for: blockers, validation failures that can't be auto-fixed, commit confirmation (unless --full)
+- Commit after every major milestone to keep work safe
+- BUT always stop for: blockers and validation failures that can't be auto-fixed
 - Never force-push, delete branches, or make destructive changes without asking
 
 ### Compose Existing Agents
 - Use the existing subagent types: `bootstrap`, `plan`, `implement`, `parallelize`, `audit`, `test`, `secure`, `commit`
 - Do NOT try to do their jobs inline — delegate to specialists
+- Always use the commit agent for commits — it writes proper conventional commit messages (`feat:`, `fix:`, `refactor:`, etc.)
 
 ### Handle Failures Gracefully
 - Max 2 auto-fix retry attempts per validation step
@@ -292,7 +312,7 @@ After everything is done (or stopped), provide a final summary:
 ### Track State
 - STATE.md should always reflect current progress
 - Plan document checkboxes should be updated by the implement/parallelize agents
-- If interrupted, `/auto` can resume from where it left off
+- If interrupted, `/auto` can resume from where it left off — each phase is committed separately
 
 ### Keep the User Informed
 - Brief status updates between major steps
