@@ -15,13 +15,13 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prepublishOnly": "pnpm run build && pnpm run test",
-    "release:beta": "pnpm run build && pnpm run test && npm version prerelease --preid beta && npm publish --tag beta && git push && git push --tags",
-    "release:beta:patch": "pnpm run build && pnpm run test && npm version prepatch --preid beta && npm publish --tag beta && git push && git push --tags",
-    "release:beta:minor": "pnpm run build && pnpm run test && npm version preminor --preid beta && npm publish --tag beta && git push && git push --tags",
-    "release:beta:major": "pnpm run build && pnpm run test && npm version premajor --preid beta && npm publish --tag beta && git push && git push --tags",
-    "release:patch": "pnpm run build && pnpm run test && npm version patch && npm publish && git push && git push --tags",
-    "release:minor": "pnpm run build && pnpm run test && npm version minor && npm publish && git push && git push --tags",
-    "release:major": "pnpm run build && pnpm run test && npm version major && npm publish && git push && git push --tags"
+    "release:beta": "pnpm run build && pnpm run test && npm version prerelease --preid beta && git push && git push --tags",
+    "release:beta:patch": "pnpm run build && pnpm run test && npm version prepatch --preid beta && git push && git push --tags",
+    "release:beta:minor": "pnpm run build && pnpm run test && npm version preminor --preid beta && git push && git push --tags",
+    "release:beta:major": "pnpm run build && pnpm run test && npm version premajor --preid beta && git push && git push --tags",
+    "release:patch": "pnpm run build && pnpm run test && npm version patch && git push && git push --tags",
+    "release:minor": "pnpm run build && pnpm run test && npm version minor && git push && git push --tags",
+    "release:major": "pnpm run build && pnpm run test && npm version major && git push && git push --tags"
   },
   "keywords": [
     "claude",
