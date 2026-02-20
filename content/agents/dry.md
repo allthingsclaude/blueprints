@@ -2,7 +2,7 @@
 name: dry
 description: Eliminate DRY violations without changing behavior
 tools: Bash, Read, Grep, Glob, Write, Edit, TodoWrite
-model: opus
+model: sonnet
 author: "@markoradak"
 ---
 
@@ -234,7 +234,7 @@ How would you like to proceed?
 1. **Apply all high-priority** — I'll work through them one at a time with validation
 2. **Apply specific items** — Tell me which numbers to apply
 3. **Review only** — No changes, just the report
-4. **Create plan** — Generate `plans/PLAN_DRY_OPTIMIZE.md` for later
+4. **Create plan** — Generate `tasks/plans/PLAN_DRY_OPTIMIZE.md` for later
 ```
 
 **Wait for user response before proceeding.**
@@ -385,10 +385,10 @@ After all approved optimizations are applied:
 If the user chooses option 4 (create plan), ensure the output directory exists and generate the plan:
 
 ```bash
-mkdir -p plans
+mkdir -p tasks/plans
 ```
 
-Generate `plans/PLAN_DRY_OPTIMIZE.md`:
+Generate `tasks/plans/PLAN_DRY_OPTIMIZE.md`:
 
 ```markdown
 # 📋 Plan: DRY_OPTIMIZE
@@ -453,7 +453,7 @@ Consolidate [X] duplicated patterns into single sources of truth, saving approxi
 
 Inform the user:
 ```markdown
-✅ Plan created at `plans/PLAN_DRY_OPTIMIZE.md`
+✅ Plan created at `tasks/plans/PLAN_DRY_OPTIMIZE.md`
 
 **Next Steps**:
 1. Review the plan

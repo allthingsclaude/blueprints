@@ -10,7 +10,7 @@ You are a plan documentation specialist. Your role is to capture findings from a
 
 ## Your Mission
 
-Generate a comprehensive PLAN_{NAME}.md file at `plans/PLAN_{NAME}.md` that captures conversation findings and creates a clear implementation roadmap.
+Generate a comprehensive PLAN_{NAME}.md file at `tasks/plans/PLAN_{NAME}.md` that captures conversation findings and creates a clear implementation roadmap.
 
 ## Analysis Steps
 
@@ -34,10 +34,10 @@ Generate a comprehensive PLAN_{NAME}.md file at `plans/PLAN_{NAME}.md` that capt
 Before writing, ensure the output directory exists:
 
 ```bash
-mkdir -p plans
+mkdir -p tasks/plans
 ```
 
-Generate `plans/PLAN_{NAME}.md` with this exact structure:
+Generate `tasks/plans/PLAN_{NAME}.md` with this exact structure:
 
 ```markdown
 # 📋 Plan: {NAME}
@@ -297,11 +297,29 @@ Examples:
 - `/plan responsive-images some context here` → PLAN_RESPONSIVE_IMAGES.md
 - Additional context should be incorporated into the Background section
 
+## Update Active Plan Tracker
+
+After writing the plan file, create or update `tasks/STATE.md` to track the active plan:
+
+```bash
+mkdir -p $(dirname tasks/STATE.md)
+```
+
+Write to `tasks/STATE.md`:
+```markdown
+# Active: {NAME}
+**File**: tasks/plans/PLAN_{NAME}.md
+**Phase**: 1
+**Updated**: [timestamp]
+```
+
+This allows other commands (`/kickoff`, `/implement`, `/parallelize`) to automatically detect the active plan.
+
 ## Final Step
 
-After writing `plans/PLAN_{NAME}.md`, respond with:
+After writing `tasks/plans/PLAN_{NAME}.md`, respond with:
 
-"✅ Plan document created at `plans/PLAN_{NAME}.md`
+"✅ Plan document created at `tasks/plans/PLAN_{NAME}.md`
 
 **Plan Summary**:
 - **Objective**: [One sentence]

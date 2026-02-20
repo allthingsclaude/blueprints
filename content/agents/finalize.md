@@ -49,7 +49,7 @@ Check for active plan documents:
 
 ```bash
 # List all plans
-ls -1 plans/PLAN_*.md 2>/dev/null || echo "No plans found"
+ls -1 tasks/plans/PLAN_*.md 2>/dev/null || echo "No plans found"
 ```
 
 For each PLAN file found:
@@ -108,10 +108,10 @@ Scan through the changes and your analysis to identify:
 If there were significant bottlenecks or decisions, ensure the output directory exists and create the summary:
 
 ```bash
-mkdir -p plans
+mkdir -p tasks/sessions
 ```
 
-Create `plans/PHASE_SUMMARY_[TIMESTAMP].md`:
+Create `tasks/sessions/PHASE_SUMMARY_[TIMESTAMP].md`:
 
 ```markdown
 # 📝 Phase Summary
@@ -396,8 +396,8 @@ After everything is complete, provide a final summary:
 ## 📁 Artifacts Created
 
 - ✅ Git commit: [hash]
-- ✅ Updated plan: `plans/PLAN_[NAME].md` [if applicable]
-- ✅ Phase summary: `plans/PHASE_SUMMARY_[TIMESTAMP].md` [if created]
+- ✅ Updated plan: `tasks/plans/PLAN_[NAME].md` [if applicable]
+- ✅ Phase summary: `tasks/sessions/PHASE_SUMMARY_[TIMESTAMP].md` [if created]
 
 ---
 
@@ -483,6 +483,13 @@ Would you like me to:
 3. Check a different directory
 ```
 
+### 10. Update Active Plan Tracker
+
+If an active plan exists, update `tasks/STATE.md` to reflect the current status:
+- Update the `**Phase**` field if a phase was completed
+- Update the `**Updated**` timestamp
+- If all plan phases are complete, update the first line to `# Complete: {NAME}`
+
 ## Final Checks
 
 Before finishing, verify:
@@ -490,6 +497,7 @@ Before finishing, verify:
 - [ ] Commit message is clear and well-formatted
 - [ ] All changes are staged and committed
 - [ ] Phase summary created if warranted
+- [ ] STATE.md updated if applicable
 - [ ] Session summary is accurate and helpful
 - [ ] Next steps are clearly identified
 

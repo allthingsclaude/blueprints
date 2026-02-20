@@ -11,7 +11,9 @@ export {
   installBlueprints,
   checkExistingInstallation,
   ensureDir,
-  copyDirectory
+  copyDirectory,
+  TEMPLATE_VARS,
+  replaceTemplateVars
 } from './installer.js';
 
 export type {

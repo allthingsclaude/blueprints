@@ -1,25 +1,25 @@
 ---
-description: Flush all plan artifacts from plans/
+description: Flush all task artifacts from tasks/
 argument-hint:
 author: "@markoradak"
 ---
 
-# Flush Plan Artifacts
+# Flush Task Artifacts
 
-I'll flush all plan artifacts from `plans/`.
+I'll flush all task artifacts from `tasks/`.
 
 ## Current Contents
 
-!`ls -lh plans/ 2>/dev/null || echo "Plans directory is empty or doesn't exist"`
+!`ls -lhR tasks/ 2>/dev/null || echo "Tasks directory is empty or doesn't exist"`
 
 ---
 
 ## Confirmation Required
 
-Before deleting, list all files in `plans/` to the user and ask for explicit confirmation.
+Before deleting, list all files in `tasks/` to the user and ask for explicit confirmation.
 
-If the user confirms, delete all files using Bash: `rm -rf plans/*`
+If the user confirms, delete all files using Bash: `rm -rf tasks/*`
 
-Then verify the directory is empty using Bash: `ls -lh plans/ 2>/dev/null || echo "Plans directory is now empty"`
+Then verify the directory is empty using Bash: `ls -lhR tasks/ 2>/dev/null || echo "Tasks directory is now empty"`
 
 **Do NOT delete anything without user confirmation.**

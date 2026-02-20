@@ -12,7 +12,9 @@ import {
   checkExistingInstallation,
   getModelForAgent,
   copyAgentsWithPowerLevel,
-  RESEARCH_AGENTS
+  RESEARCH_AGENTS,
+  TEMPLATE_VARS,
+  replaceTemplateVars
 } from '../installer.js';
 
 describe('getDefaultClaudeDir', () => {
@@ -354,5 +356,91 @@ describe('installBlueprints with power level', () => {
 
     const auditContent = fs.readFileSync(path.join(agentsDir, 'audit.md'), 'utf-8');
     expect(auditContent).toMatch(/^model:\s*opus$/m);
+  });
+});
+
+describe('replaceTemplateVars', () => {
+  it('replaces {{TASKS_DIR}} with tasks', () => {
+    expect(replaceTemplateVars('Save to {{TASKS_DIR}}/')).toBe('Save to tasks/');
+  });
+
+  it('replaces {{PLANS_DIR}} with tasks/plans', () => {
+    expect(replaceTemplateVars('Write to {{PLANS_DIR}}/PLAN_FOO.md')).toBe('Write to tasks/plans/PLAN_FOO.md');
+  });
+
+  it('replaces {{SESSIONS_DIR}} with tasks/sessions', () => {
+    expect(replaceTemplateVars('Write to {{SESSIONS_DIR}}/HANDOFF.md')).toBe('Write to tasks/sessions/HANDOFF.md');
+  });
+
+  it('replaces {{STATE_FILE}} with tasks/STATE.md', () => {
+    expect(replaceTemplateVars('Read {{STATE_FILE}}')).toBe('Read tasks/STATE.md');
+  });
+
+  it('replaces multiple occurrences', () => {
+    const input = '{{PLANS_DIR}}/A.md and {{PLANS_DIR}}/B.md';
+    expect(replaceTemplateVars(input)).toBe('tasks/plans/A.md and tasks/plans/B.md');
+  });
+
+  it('replaces multiple different variables', () => {
+    const input = '{{PLANS_DIR}}/PLAN.md and {{SESSIONS_DIR}}/HANDOFF.md';
+    expect(replaceTemplateVars(input)).toBe('tasks/plans/PLAN.md and tasks/sessions/HANDOFF.md');
+  });
+
+  it('returns unchanged content when no variables present', () => {
+    expect(replaceTemplateVars('no variables here')).toBe('no variables here');
+  });
+});
+
+describe('copyDirectory with template vars', () => {
+  const srcDir = path.join(os.tmpdir(), 'blueprints-test-tmpl-src');
+  const destDir = path.join(os.tmpdir(), 'blueprints-test-tmpl-dest');
+
+  beforeEach(() => {
+    fs.mkdirSync(srcDir, { recursive: true });
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(srcDir)) fs.rmSync(srcDir, { recursive: true });
+    if (fs.existsSync(destDir)) fs.rmSync(destDir, { recursive: true });
+  });
+
+  it('replaces template variables in .md files', () => {
+    fs.writeFileSync(path.join(srcDir, 'test.md'), 'Save to {{PLANS_DIR}}/PLAN_FOO.md');
+    copyDirectory(srcDir, destDir);
+    const content = fs.readFileSync(path.join(destDir, 'test.md'), 'utf-8');
+    expect(content).toBe('Save to tasks/plans/PLAN_FOO.md');
+  });
+
+  it('does not replace template variables in non-.md files', () => {
+    fs.writeFileSync(path.join(srcDir, 'test.txt'), 'Save to {{PLANS_DIR}}/PLAN_FOO.md');
+    copyDirectory(srcDir, destDir);
+    const content = fs.readFileSync(path.join(destDir, 'test.txt'), 'utf-8');
+    expect(content).toBe('Save to {{PLANS_DIR}}/PLAN_FOO.md');
+  });
+});
+
+describe('copyAgentsWithPowerLevel with template vars', () => {
+  const srcDir = path.join(os.tmpdir(), 'blueprints-test-agents-tmpl-src');
+  const destDir = path.join(os.tmpdir(), 'blueprints-test-agents-tmpl-dest');
+
+  beforeEach(() => {
+    fs.mkdirSync(srcDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(srcDir, 'implement.md'),
+      '---\nname: implement\nmodel: sonnet\n---\nLoad from {{PLANS_DIR}}/PLAN_{NAME}.md'
+    );
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(srcDir)) fs.rmSync(srcDir, { recursive: true });
+    if (fs.existsSync(destDir)) fs.rmSync(destDir, { recursive: true });
+  });
+
+  it('applies both model rewriting and template replacement', () => {
+    copyAgentsWithPowerLevel(srcDir, destDir, 5);
+    const content = fs.readFileSync(path.join(destDir, 'implement.md'), 'utf-8');
+    expect(content).toContain('model: opus');
+    expect(content).toContain('tasks/plans/PLAN_{NAME}.md');
+    expect(content).not.toContain('{{PLANS_DIR}}');
   });
 });

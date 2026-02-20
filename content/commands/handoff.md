@@ -34,7 +34,7 @@ $ARGUMENTS
 
 ## Generating Handoff
 
-Launching the handoff agent to analyze your work session and generate `plans/HANDOFF.md`...
+Launching the handoff agent to analyze your work session and generate `tasks/sessions/HANDOFF.md`...
 
 The agent will:
 - ✅ Review recent commits and current changes

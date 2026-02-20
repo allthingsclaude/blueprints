@@ -128,10 +128,10 @@ Derive the spec name from the video filename:
 Before writing, ensure the output directory exists:
 
 ```bash
-mkdir -p plans
+mkdir -p tasks/sessions
 ```
 
-Write the spec to `plans/INTERACTION_SPEC_{NAME}.md` using this format:
+Write the spec to `tasks/sessions/INTERACTION_SPEC_{NAME}.md` using this format:
 
 ```markdown
 # Interaction Spec: {Name}
@@ -214,7 +214,7 @@ Write the spec to `plans/INTERACTION_SPEC_{NAME}.md` using this format:
 When the spec is written, report:
 
 ```markdown
-Interaction spec written to: plans/INTERACTION_SPEC_{NAME}.md
+Interaction spec written to: tasks/sessions/INTERACTION_SPEC_{NAME}.md
 
 **Summary**: [One sentence about what the interaction shows]
 **States detected**: {count}

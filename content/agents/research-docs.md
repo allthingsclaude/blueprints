@@ -2,7 +2,7 @@
 name: docs-research
 description: Use PROACTIVELY when user asks about library APIs, framework documentation, package usage, dependency documentation, or how to use a specific library/framework. Triggers on keywords - library docs, API reference, how to use [library], [framework] documentation, package documentation, dependency usage, official docs for [library].
 tools: mcp__context7__get-library-docs, mcp__context7__resolve-library-id, Read, Grep
-model: haiku
+model: sonnet
 author: "@markoradak"
 ---
 

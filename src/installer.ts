@@ -40,6 +40,21 @@ export const RESEARCH_AGENTS = [
   'research-web.md',
 ];
 
+export const TEMPLATE_VARS: Record<string, string> = {
+  '{{TASKS_DIR}}': 'tasks',
+  '{{PLANS_DIR}}': 'tasks/plans',
+  '{{SESSIONS_DIR}}': 'tasks/sessions',
+  '{{STATE_FILE}}': 'tasks/STATE.md',
+};
+
+export function replaceTemplateVars(content: string): string {
+  let result = content;
+  for (const [key, value] of Object.entries(TEMPLATE_VARS)) {
+    result = result.replaceAll(key, value);
+  }
+  return result;
+}
+
 
 export interface ExistingInstallation {
   hasCommands: boolean;
@@ -128,7 +143,12 @@ export function copyDirectory(srcDir: string, destDir: string): number {
 
     const stat = fs.statSync(srcFile);
 
-    if (stat.isFile()) {
+    if (stat.isFile() && file.endsWith('.md')) {
+      const content = fs.readFileSync(srcFile, 'utf-8');
+      const updated = replaceTemplateVars(content);
+      fs.writeFileSync(destFile, updated, 'utf-8');
+      copiedCount++;
+    } else if (stat.isFile()) {
       fs.copyFileSync(srcFile, destFile);
       copiedCount++;
     } else if (stat.isDirectory()) {
@@ -176,7 +196,8 @@ export function copyAgentsWithPowerLevel(srcDir: string, destDir: string, powerL
     } else if (stat.isFile() && file.endsWith('.md')) {
       const content = fs.readFileSync(srcFile, 'utf-8');
       const model = getModelForAgent(file, powerLevel);
-      const updated = content.replace(/^(model:\s*).+$/m, `$1${model}`);
+      let updated = content.replace(/^(model:\s*).+$/m, `$1${model}`);
+      updated = replaceTemplateVars(updated);
       fs.writeFileSync(destFile, updated, 'utf-8');
       copiedCount++;
     } else if (stat.isFile()) {

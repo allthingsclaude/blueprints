@@ -15,7 +15,7 @@ I'll analyze your plan or task, identify parallelization opportunities, and spaw
 **Branch**: !`git branch --show-current`
 
 **Available Plans**:
-!`ls -1 plans/PLAN_*.md 2>/dev/null || echo "No plans found"`
+!`ls -1 tasks/plans/PLAN_*.md 2>/dev/null || echo "No plans found"`
 
 ---
 

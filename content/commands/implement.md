@@ -16,8 +16,8 @@ $ARGUMENTS
 
 ## Available Plans
 
-**Plans in plans/**:
-!`ls -1 plans/PLAN_*.md 2>/dev/null || echo "No plans found"`
+**Plans in tasks/plans/**:
+!`ls -1 tasks/plans/PLAN_*.md 2>/dev/null || echo "No plans found"`
 
 **Current Branch**: !`git branch --show-current`
 
@@ -31,7 +31,7 @@ Launching the **implement agent** which will work independently in a separate co
 
 ### What the Agent Will Do
 
-- ✅ Load `plans/PLAN_{NAME}.md`
+- ✅ Load `tasks/plans/PLAN_{NAME}.md`
 - ✅ Parse all phases, tasks, and dependencies
 - ✅ Create comprehensive task tracking (TodoWrite)
 - ✅ Execute tasks systematically with validation
