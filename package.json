@@ -1,6 +1,6 @@
 {
   "name": "@allthingsclaude/blueprints",
-  "version": "0.3.0-beta.11",
+  "version": "0.3.0-beta.12",
   "description": "Claude Code commands and agents for enhanced AI-assisted development workflows",
   "type": "module",
   "main": "dist/index.js",
