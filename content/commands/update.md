@@ -1,12 +1,12 @@
 ---
-description: Update CLAUDE.md to reflect current project state
+description: Update CLAUDE.md and STATE.md to reflect current project state
 argument-hint: [optional: section to focus on]
 author: "@markoradak"
 ---
 
 # Update CLAUDE.md
 
-I'll scan the project and update CLAUDE.md to reflect the current state — tech stack, structure, patterns, and conventions.
+I'll scan the project and update CLAUDE.md and STATE.md to reflect the current state — tech stack, structure, patterns, conventions, and plan progress.
 
 ## Current Context
 
@@ -37,6 +37,7 @@ The update agent will:
 - ✅ Detect patterns, conventions, and coding standards
 - ✅ Read existing CLAUDE.md and preserve user-written sections
 - ✅ Update or create auto-generated sections with current project state
+- ✅ Reconcile STATE.md with actual plan files on disk — sync task completion, add missing plans, remove stale entries
 - ✅ Never overwrite manual notes or custom instructions
 
 Use the Task tool to launch the update agent (subagent_type="update") which will scan the project and update CLAUDE.md.
