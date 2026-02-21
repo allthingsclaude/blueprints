@@ -80,15 +80,33 @@ Start by understanding what the user wants to build, then **always ask about the
 - What research or investigation is needed?
 - What would the implementation phases look like?
 
+## Critical Thinking (Always Active)
+
+Throughout brainstorming, actively use the `/critique`, `/verify`, and `/challenge` commands to stress-test ideas **as they emerge**. Don't wait until the end — run these after each step.
+
+### When to invoke each command
+
+- **`/critique`** — After exploring approaches (Steps 2-3). Run this against the ideas on the table to get direct, unfiltered feedback on what's wrong or suboptimal.
+- **`/verify`** — After converging on a direction (Steps 3-4). Run this to sanity-check that we're solving the right problem the right way, and to catch gotchas.
+- **`/challenge`** — After the user proposes or agrees to an approach (any step). Run this to question assumptions, surface trade-offs, and suggest alternatives.
+
+### How to apply
+
+- Invoke these commands naturally throughout the conversation — not as a rigid sequence
+- You can run them multiple times as ideas evolve
+- The goal is **unfiltered, honest exploration** — not polite agreement with whatever the user suggests
+- If an idea survives all three, it's probably solid
+
 ## Discussion Guidelines
 
-- **Ask questions** to clarify and probe deeper
-- **Suggest alternatives** even if they seem unconventional
-- **Challenge assumptions** constructively
+- **Be direct** — if an idea is bad, say so and explain why
+- **Ask hard questions** to probe deeper and expose weak spots
+- **Suggest alternatives** even if they contradict the user's initial direction
 - **Think out loud** about trade-offs and implications
 - **Reference existing code** when relevant for context
 - **Draw connections** to similar patterns in the codebase
 - **Be thorough** - we're not rushing to implementation
+- **Don't hedge** — if you're confident something won't work, say it plainly
 
 ## Tools You CAN Use
 - ✅ Read files for context and understanding
