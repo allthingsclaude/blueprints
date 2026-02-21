@@ -65,7 +65,7 @@ Read `{{STATE_FILE}}`. If it contains an active plan (status is `In Progress` or
 
 If a plan name was provided, find the matching plan file in `{{PLANS_DIR}}/` (match by name portion, e.g., `AUTH` matches `PLAN_01_AUTH.md`):
 - Load that plan
-- **STATE UPDATE**: Update `{{STATE_FILE}}` to activate this plan. Read the existing STATE.md first to preserve the Plans table and other plan sections. Update the header fields:
+- **STATE UPDATE**: Update `{{STATE_FILE}}` to activate this plan. Read the existing STATE.md first to preserve the `## Overview` table and `## Plans` sections. Update the header fields:
   ```markdown
   **Active**: {NN}_{NAME}
   **File**: {{PLANS_DIR}}/PLAN_{NN}_{NAME}.md
@@ -73,7 +73,7 @@ If a plan name was provided, find the matching plan file in `{{PLANS_DIR}}/` (ma
   **Status**: 🚧 In Progress
   **Updated**: [ISO timestamp]
   ```
-- Update the plan's status in the Plans table to `🚧 In Progress`
+- Update the plan's status in the Overview table to `🚧 In Progress`
 - Skip to **Step 3** (branch) then **Step 4** (execute)
 
 #### 1c. No Active Work — Enter Brainstorm
@@ -192,9 +192,9 @@ Present the blockers to the user and ask how to proceed. Do NOT continue until b
 - Increment `**Phase**` to the next phase number
 - Keep `**Status**` as `🚧 In Progress`
 - Update `**Updated**` timestamp
-- Mark completed tasks as `✅` in the per-plan task tables
+- Mark completed tasks as `✅` in the task tables under `## Plans`
 - Update completed phase headers from `🚧` to `✅`
-- Update the Progress column in the Plans overview table
+- Update the Progress column in the Overview table
 
 #### 4d. Continue to Next Phase
 
@@ -257,11 +257,11 @@ Review security report:
 ### Step 6: Report
 
 **STATE UPDATE**: Before reporting, read and update `{{STATE_FILE}}` to reflect final status:
-- If all phases and validation passed: set `**Active**` to `None`, update plan's status to `✅ Complete` in Plans table, set `**Status**: ✅ Complete`
+- If all phases and validation passed: set `**Active**` to `None`, update plan's status to `✅ Complete` in Overview table, set `**Status**: ✅ Complete`
 - If partially complete (blockers, user stopped): keep `**Active**` pointing to the plan, set `**Status**: ⏸️ Paused`
 - Update `**Phase**` to the last completed phase number
 - Update `**Updated**` timestamp
-- Update all task statuses in the per-plan task tables to reflect final state
+- Update all task statuses in the task tables under `## Plans` to reflect final state
 
 After everything is done (or stopped), provide a final summary:
 
@@ -342,7 +342,7 @@ Auto mode commits **early and often** using the commit agent (`subagent_type="co
 
 **STATE.md header fields** (always keep these parseable at the top):
 ```markdown
-# Project State
+# State
 
 **Active**: {NN}_{NAME}
 **File**: {{PLANS_DIR}}/PLAN_{NN}_{NAME}.md
@@ -352,16 +352,16 @@ Auto mode commits **early and often** using the commit agent (`subagent_type="co
 ```
 
 **When updating STATE.md**:
-- Always READ existing STATE.md first to preserve the Plans table and per-plan task sections
+- Always READ existing STATE.md first to preserve `## Overview` table and `## Plans` sections
 - Update the header fields (Active, File, Phase, Status, Updated)
-- Update the active plan's status in the Plans overview table
-- Update task statuses (`⏳` → `🚧` → `✅`) in the per-plan task tables
+- Update the active plan's status in `## Overview` table
+- Update task statuses (`⏳` → `🚧` → `✅`) in the task tables under `## Plans`
 - Update phase status emoji in phase headers (`⏳` → `🚧` → `✅`)
-- Update the Progress column in the Plans table (e.g., `5/18 tasks`)
+- Update the Progress column in `## Overview` table (e.g., `5/18 tasks`)
 
 **When all work on a plan is done**:
 - Set `**Active**` to `None` (or the next plan if one exists)
-- Update the plan's status in the Plans table to `✅ Complete`
+- Update the plan's status in the Overview table to `✅ Complete`
 - Mark all tasks as `✅` in the plan's task tables
 - Set `**Status**` to `✅ Complete`
 

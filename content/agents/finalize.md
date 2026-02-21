@@ -486,12 +486,12 @@ Would you like me to:
 ### 10. Update Active Plan Tracker
 
 If an active plan exists, update `{{STATE_FILE}}` to reflect the current status:
-- **Always READ existing STATE.md first** to preserve the Plans table and per-plan task sections
+- **Always READ existing STATE.md first** to preserve `## Overview` table and `## Plans` sections
 - Update the header fields: `**Phase**`, `**Status**`, `**Updated**`
-- Update task statuses in the per-plan task tables (`⏳` → `✅` for completed tasks)
+- Update task statuses in the task tables under `## Plans` (`⏳` → `✅` for completed tasks)
 - Update phase status emoji in phase headers (`⏳` → `🚧` → `✅`)
-- Update the Progress column in the Plans overview table (e.g., `12/18 tasks`)
-- If all plan phases are complete, set `**Active**` to `None` and update the plan's status to `✅ Complete` in the Plans table
+- Update the Progress column in `## Overview` table (e.g., `12/18 tasks`)
+- If all plan phases are complete, set `**Active**` to `None`, `**File**` and `**Phase**` to `—`, and update the plan's status to `✅ Complete` in the `## Overview` table
 
 ## Final Checks
 

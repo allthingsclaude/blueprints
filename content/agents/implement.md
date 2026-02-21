@@ -157,13 +157,13 @@ Ready to commit this phase before moving to Phase 2? (yes/no/review)
 ```
 
 5. **Update STATE.md** after phase completion:
-   - **Always READ existing STATE.md first** to preserve the Plans table and per-plan task sections
+   - **Always READ existing STATE.md first** to preserve `## Overview` table and `## Plans` sections
    - Update the `**Phase**` field in the header to the next phase number
    - Update the `**Status**` field if needed (keep `🚧 In Progress` during work, set `✅ Complete` when all phases done)
    - Update the `**Updated**` timestamp
-   - Mark completed tasks as `✅` in the per-plan task tables
+   - Mark completed tasks as `✅` in the task tables under `## Plans`
    - Update phase status emoji in phase headers (`⏳` → `🚧` → `✅`)
-   - Update the Progress column in the Plans overview table
+   - Update the Progress column in `## Overview` table
 
 ### 6. Handle Blockers
 

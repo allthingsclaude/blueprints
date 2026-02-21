@@ -329,10 +329,10 @@ Examples (assuming 2 plans already exist — `PLAN_00_INITIAL.md` and `PLAN_01_A
 mkdir -p $(dirname {{STATE_FILE}})
 ```
 
-Write to `{{STATE_FILE}}` using this **exact format** (other agents parse the header fields):
+Write to `{{STATE_FILE}}` using this **exact format**. This format MUST be followed precisely — other agents parse the header fields and the structure.
 
 ```markdown
-# Project State
+# State
 
 **Active**: {NN}_{NAME}
 **File**: {{PLANS_DIR}}/PLAN_{NN}_{NAME}.md
@@ -342,7 +342,7 @@ Write to `{{STATE_FILE}}` using this **exact format** (other agents parse the he
 
 ---
 
-## Plans
+## Overview
 
 | # | Plan | File | Status | Progress |
 |---|------|------|--------|----------|
@@ -350,16 +350,18 @@ Write to `{{STATE_FILE}}` using this **exact format** (other agents parse the he
 
 ---
 
-## PLAN_{NN}_{NAME}
+## Plans
 
-### Phase 1: {Phase Name} 🚧
+### PLAN_{NN}_{NAME}
+
+#### Phase 1: {Phase Name} 🚧
 
 | Task | Status |
 |------|--------|
 | {Task 1 from plan} | ⏳ |
 | {Task 2 from plan} | ⏳ |
 
-### Phase 2: {Phase Name} ⏳
+#### Phase 2: {Phase Name} ⏳
 
 | Task | Status |
 |------|--------|
@@ -369,12 +371,24 @@ Write to `{{STATE_FILE}}` using this **exact format** (other agents parse the he
 [Continue for all phases...]
 ```
 
-**If previous plans already exist in STATE.md**, read the existing STATE.md first and **append** the new plan to the Plans table and add its phase/task sections below the existing ones. Update the **Active** field to point to the new plan.
+**When no plan is active** (all complete or none started), use `—` for empty fields:
+```markdown
+**Active**: None
+**File**: —
+**Phase**: —
+**Status**: ✅ Complete
+```
+
+**If previous plans already exist in STATE.md**, read the existing STATE.md first and:
+- **Append** the new plan row to the Overview table
+- **Append** the new plan's phase/task sections under `## Plans`
+- **Update** the header fields (`Active`, `File`, `Phase`, `Status`, `Updated`) to point to the new plan
+- **Never remove or rewrite** existing plan sections — only append and update statuses
 
 **STATE.md contract** — all agents MUST preserve these parseable header fields:
 - **Active** — the currently active plan identifier (`{NN}_{NAME}`) or `None`
-- **File** — path to the active plan document (must be valid, readable path)
-- **Phase** — current phase number of the active plan (starts at 1, incremented after each phase)
+- **File** — path to the active plan document, or `—` if none active
+- **Phase** — current phase number of the active plan, or `—` if none active
 - **Status** — one of: `🚧 In Progress`, `⏸️ Paused`, `✅ Complete`
 - **Updated** — ISO timestamp of last update (e.g., `2025-01-15T14:30:00Z`)
 
