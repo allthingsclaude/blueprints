@@ -31,7 +31,7 @@ Launching the **implement agent** which will work independently in a separate co
 
 ### What the Agent Will Do
 
-- ✅ Load `{{PLANS_DIR}}/PLAN_{NAME}.md`
+- ✅ Load `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md`
 - ✅ Parse all phases, tasks, and dependencies
 - ✅ Create comprehensive task tracking (TodoWrite)
 - ✅ Execute tasks systematically with validation

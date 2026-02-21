@@ -42,7 +42,7 @@ You are now in **AUTO MODE** — a full development loop that orchestrates the e
 
 Parse `$ARGUMENTS` for:
 - **`--full`** flag: If present, run the entire loop without stopping for confirmation — commit automatically, skip approval prompts, maximize autonomy. Remove this flag from the remaining arguments before further processing.
-- **Plan name**: If the first remaining word matches an existing plan in `{{PLANS_DIR}}/PLAN_{NAME}.md`, treat it as a plan name to execute.
+- **Plan name**: If the first remaining word matches an existing plan in `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md`, treat it as a plan name to execute.
 - **Feature description**: Otherwise, treat remaining arguments as a feature description for brainstorming.
 
 Store the `--full` preference — you'll check it at every commit checkpoint and decision point.
@@ -63,16 +63,17 @@ Read `{{STATE_FILE}}`. If it contains an active plan (status is `In Progress` or
 
 #### 1b. Check if Arguments Match an Existing Plan
 
-If a plan name was provided and `{{PLANS_DIR}}/PLAN_{NAME}.md` exists:
+If a plan name was provided, find the matching plan file in `{{PLANS_DIR}}/` (match by name portion, e.g., `AUTH` matches `PLAN_01_AUTH.md`):
 - Load that plan
-- **STATE UPDATE**: Write `{{STATE_FILE}}` to activate this plan:
+- **STATE UPDATE**: Update `{{STATE_FILE}}` to activate this plan. Read the existing STATE.md first to preserve the Plans table and other plan sections. Update the header fields:
   ```markdown
-  # Active: {NAME}
-  **File**: {{PLANS_DIR}}/PLAN_{NAME}.md
+  **Active**: {NN}_{NAME}
+  **File**: {{PLANS_DIR}}/PLAN_{NN}_{NAME}.md
   **Phase**: 1
   **Status**: 🚧 In Progress
   **Updated**: [ISO timestamp]
   ```
+- Update the plan's status in the Plans table to `🚧 In Progress`
 - Skip to **Step 3** (branch) then **Step 4** (execute)
 
 #### 1c. No Active Work — Enter Brainstorm
@@ -125,7 +126,7 @@ After the bootstrap agent completes, ask the user: "Bootstrap script is ready. S
 - Use the Task tool to launch the commit agent (`subagent_type="commit"`) with context: "chore: bootstrap {NAME} project scaffolding"
 
 **If existing project:**
-Use the Task tool to launch the plan agent (`subagent_type="plan"`) with the feature name and brainstorm context. This will generate `{{PLANS_DIR}}/PLAN_{NAME}.md` and update `{{STATE_FILE}}`.
+Use the Task tool to launch the plan agent (`subagent_type="plan"`) with the feature name and brainstorm context. This will generate `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md` and update `{{STATE_FILE}}`.
 
 Wait for the plan agent to complete, then load and display a brief summary of the plan.
 
@@ -154,7 +155,7 @@ Report: "Working on branch: `feat/{name}`"
 
 ### Step 4: Execute the Plan (Phase by Phase)
 
-Load the plan from `{{PLANS_DIR}}/PLAN_{NAME}.md` and identify all phases.
+Load the plan from `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md` and identify all phases.
 
 **For each phase**, repeat this cycle:
 
@@ -187,10 +188,13 @@ Present the blockers to the user and ask how to proceed. Do NOT continue until b
 - The commit agent will determine the appropriate prefix (`feat:`, `fix:`, `refactor:`, `chore:`, etc.) based on the nature of the changes
 - The commit message should reference the plan and phase (e.g., "feat: implement user authentication (PLAN_AUTH Phase 1)")
 
-**STATE UPDATE**: After committing, update `{{STATE_FILE}}`:
+**STATE UPDATE**: Read and update `{{STATE_FILE}}`:
 - Increment `**Phase**` to the next phase number
 - Keep `**Status**` as `🚧 In Progress`
 - Update `**Updated**` timestamp
+- Mark completed tasks as `✅` in the per-plan task tables
+- Update completed phase headers from `🚧` to `✅`
+- Update the Progress column in the Plans overview table
 
 #### 4d. Continue to Next Phase
 
@@ -252,11 +256,12 @@ Review security report:
 
 ### Step 6: Report
 
-**STATE UPDATE**: Before reporting, update `{{STATE_FILE}}` to reflect final status:
-- If all phases and validation passed: change first line to `# Complete: {NAME}` and set `**Status**: ✅ Complete`
-- If partially complete (blockers, user stopped): keep `# Active: {NAME}` and set `**Status**: ⏸️ Paused`
+**STATE UPDATE**: Before reporting, read and update `{{STATE_FILE}}` to reflect final status:
+- If all phases and validation passed: set `**Active**` to `None`, update plan's status to `✅ Complete` in Plans table, set `**Status**: ✅ Complete`
+- If partially complete (blockers, user stopped): keep `**Active**` pointing to the plan, set `**Status**: ⏸️ Paused`
 - Update `**Phase**` to the last completed phase number
 - Update `**Updated**` timestamp
+- Update all task statuses in the per-plan task tables to reflect final state
 
 After everything is done (or stopped), provide a final summary:
 
@@ -332,26 +337,33 @@ Auto mode commits **early and often** using the commit agent (`subagent_type="co
 `{{STATE_FILE}}` must ALWAYS reflect current progress. Update it at these points:
 1. **Step 1b** — when activating an existing plan (set Phase 1, Status In Progress)
 2. **Step 2** — plan agent creates it (verify it exists after plan agent completes)
-3. **Step 4c** — after each phase commit (increment Phase, update timestamp)
+3. **Step 4c** — after each phase commit (increment Phase, update timestamp, mark completed tasks as ✅ in task tables)
 4. **Step 6** — final status (Complete or Paused)
 
-**STATE.md format** (never deviate):
+**STATE.md header fields** (always keep these parseable at the top):
 ```markdown
-# Active: {NAME}
-**File**: {{PLANS_DIR}}/PLAN_{NAME}.md
+# Project State
+
+**Active**: {NN}_{NAME}
+**File**: {{PLANS_DIR}}/PLAN_{NN}_{NAME}.md
 **Phase**: {current_phase_number}
 **Status**: 🚧 In Progress
 **Updated**: {ISO timestamp}
 ```
 
-When all work is done, change to:
-```markdown
-# Complete: {NAME}
-**File**: {{PLANS_DIR}}/PLAN_{NAME}.md
-**Phase**: {final_phase_number}
-**Status**: ✅ Complete
-**Updated**: {ISO timestamp}
-```
+**When updating STATE.md**:
+- Always READ existing STATE.md first to preserve the Plans table and per-plan task sections
+- Update the header fields (Active, File, Phase, Status, Updated)
+- Update the active plan's status in the Plans overview table
+- Update task statuses (`⏳` → `🚧` → `✅`) in the per-plan task tables
+- Update phase status emoji in phase headers (`⏳` → `🚧` → `✅`)
+- Update the Progress column in the Plans table (e.g., `5/18 tasks`)
+
+**When all work on a plan is done**:
+- Set `**Active**` to `None` (or the next plan if one exists)
+- Update the plan's status in the Plans table to `✅ Complete`
+- Mark all tasks as `✅` in the plan's task tables
+- Set `**Status**` to `✅ Complete`
 
 If `/auto` is interrupted or paused, ensure STATE.md reflects where it stopped so the next `/auto` run can resume correctly. Plan document checkboxes are updated by the implement/parallelize agents.
 

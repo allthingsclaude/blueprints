@@ -10,13 +10,22 @@ You are a plan documentation specialist. Your role is to capture findings from a
 
 ## Your Mission
 
-Generate a comprehensive PLAN_{NAME}.md file at `{{PLANS_DIR}}/PLAN_{NAME}.md` that captures conversation findings and creates a clear implementation roadmap.
+Generate a comprehensive PLAN_{NN}_{NAME}.md file at `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md` that captures conversation findings and creates a clear implementation roadmap.
 
 ## Analysis Steps
 
-1. **Extract Plan Name**
+1. **Extract Plan Name & Determine Number**
    - Parse the plan name from the arguments (first word after /plan)
    - If no name provided, use "UNTITLED"
+   - Scan existing plans to determine the next sequence number:
+     ```bash
+     ls -1 {{PLANS_DIR}}/PLAN_*.md 2>/dev/null | sort -t_ -k2 -n | tail -1
+     ```
+   - Extract the highest number from existing plans (e.g., `PLAN_02_AUTH.md` → 02)
+   - Use the next number (e.g., 03) for the new plan
+   - If no plans exist, start at `00`
+   - Zero-pad to 2 digits: `00`, `01`, `02`, ... `09`, `10`, etc.
+   - Final filename: `PLAN_{NN}_{NAME}.md` (e.g., `PLAN_03_PAYMENTS.md`)
 
 2. **Collect Reference Files**
    - Check if the conversation includes any reference files (images, videos, screenshots, mockups, PDFs, etc.)
@@ -47,7 +56,7 @@ Before writing, ensure the output directory exists:
 mkdir -p {{PLANS_DIR}}
 ```
 
-Generate `{{PLANS_DIR}}/PLAN_{NAME}.md` with this exact structure:
+Generate `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md` with this exact structure:
 
 ```markdown
 # 📋 Plan: {NAME}
@@ -307,9 +316,9 @@ Generate `{{PLANS_DIR}}/PLAN_{NAME}.md` with this exact structure:
 
 The first word after `/plan` is the plan name. Everything after is additional context.
 
-Examples:
-- `/plan AUTH` → PLAN_AUTH.md
-- `/plan responsive-images some context here` → PLAN_RESPONSIVE_IMAGES.md
+Examples (assuming 2 plans already exist — `PLAN_00_INITIAL.md` and `PLAN_01_AUTH.md`):
+- `/plan PAYMENTS` → `PLAN_02_PAYMENTS.md`
+- `/plan responsive-images some context here` → `PLAN_02_RESPONSIVE_IMAGES.md`
 - Additional context should be incorporated into the Background section
 
 ## Update Active Plan Tracker (MANDATORY)
@@ -320,27 +329,70 @@ Examples:
 mkdir -p $(dirname {{STATE_FILE}})
 ```
 
-Write to `{{STATE_FILE}}` using this **exact format** (other agents parse these fields):
+Write to `{{STATE_FILE}}` using this **exact format** (other agents parse the header fields):
+
 ```markdown
-# Active: {NAME}
-**File**: {{PLANS_DIR}}/PLAN_{NAME}.md
+# Project State
+
+**Active**: {NN}_{NAME}
+**File**: {{PLANS_DIR}}/PLAN_{NN}_{NAME}.md
 **Phase**: 1
 **Status**: 🚧 In Progress
 **Updated**: [ISO timestamp]
+
+---
+
+## Plans
+
+| # | Plan | File | Status | Progress |
+|---|------|------|--------|----------|
+| {NN} | {NAME} | PLAN_{NN}_{NAME}.md | 🚧 In Progress | 0/{total} tasks |
+
+---
+
+## PLAN_{NN}_{NAME}
+
+### Phase 1: {Phase Name} 🚧
+
+| Task | Status |
+|------|--------|
+| {Task 1 from plan} | ⏳ |
+| {Task 2 from plan} | ⏳ |
+
+### Phase 2: {Phase Name} ⏳
+
+| Task | Status |
+|------|--------|
+| {Task 1 from plan} | ⏳ |
+| {Task 2 from plan} | ⏳ |
+
+[Continue for all phases...]
 ```
 
-**STATE.md contract** — all agents MUST follow this format:
-- Line 1 is always `# Active: {NAME}` or `# Complete: {NAME}`
-- **File** — path to the plan document (must be valid, readable path)
-- **Phase** — current phase number (starts at 1, incremented after each phase by `/auto`, `/implement`, `/finalize`)
+**If previous plans already exist in STATE.md**, read the existing STATE.md first and **append** the new plan to the Plans table and add its phase/task sections below the existing ones. Update the **Active** field to point to the new plan.
+
+**STATE.md contract** — all agents MUST preserve these parseable header fields:
+- **Active** — the currently active plan identifier (`{NN}_{NAME}`) or `None`
+- **File** — path to the active plan document (must be valid, readable path)
+- **Phase** — current phase number of the active plan (starts at 1, incremented after each phase)
 - **Status** — one of: `🚧 In Progress`, `⏸️ Paused`, `✅ Complete`
 - **Updated** — ISO timestamp of last update (e.g., `2025-01-15T14:30:00Z`)
 
+**Task status symbols**:
+- `✅` — completed
+- `🚧` — in progress
+- `⏳` — pending
+
+**Phase status symbols** (appended to phase header):
+- `✅` — all tasks complete
+- `🚧` — currently being worked on
+- `⏳` — not started yet
+
 ## Final Step
 
-After writing `{{PLANS_DIR}}/PLAN_{NAME}.md`, respond with:
+After writing `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md`, respond with:
 
-"✅ Plan document created at `{{PLANS_DIR}}/PLAN_{NAME}.md`
+"✅ Plan document created at `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md`
 
 **Plan Summary**:
 - **Objective**: [One sentence]

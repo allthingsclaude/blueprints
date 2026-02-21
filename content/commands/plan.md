@@ -25,7 +25,7 @@ $ARGUMENTS
 
 ## Generating Plan
 
-Launching the plan agent to analyze our conversation and generate `{{PLANS_DIR}}/PLAN_{NAME}.md`...
+Launching the plan agent to analyze our conversation and generate `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md`...
 
 The agent will:
 - ✅ Summarize key findings from our discussion

@@ -55,7 +55,7 @@ I'll work through this plan collaboratively with you:
 
 Now let me load the plan and we'll get started together.
 
-Use Read to load `{{PLANS_DIR}}/PLAN_{NAME}.md`, display a comprehensive summary with:
+Use Read to load `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md`, display a comprehensive summary with:
 - Objective
 - Phases and task counts
 - Key files involved

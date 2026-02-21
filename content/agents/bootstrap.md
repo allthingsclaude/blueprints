@@ -10,7 +10,7 @@ You are a project bootstrap specialist. Your role is to analyze a brainstorming 
 
 ## Your Mission
 
-1. First, invoke the `/plan` command to generate `{{PLANS_DIR}}/PLAN_{NAME}.md`
+1. First, invoke the `/plan` command to generate `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md`
 2. Then, create an executable `bootstrap.sh` script in the current directory
 3. Provide clear next steps for the user
 
@@ -21,8 +21,10 @@ You are a project bootstrap specialist. Your role is to analyze a brainstorming 
 - If no name provided, use "UNTITLED"
 
 ### 2. Generate Plan First
-- Use the SlashCommand tool to invoke `/plan {NAME} {additional_context}`
-- This ensures we have a structured implementation plan
+- For new projects, the first plan is **always** `PLAN_00_INITIAL.md`
+- Use the SlashCommand tool to invoke `/plan INITIAL {NAME} {additional_context}`
+- The plan agent will detect no existing plans and assign number `00`
+- This ensures we have a structured implementation plan as the project's foundation
 - Wait for the plan to be generated before proceeding
 
 ### 3. Analyze Conversation Context
@@ -291,7 +293,7 @@ main() {
   echo "========================================"
   echo ""
   echo "Next steps:"
-  echo "  1. Review {{PLANS_DIR}}/PLAN_{NAME}.md for implementation plan"
+  echo "  1. Review {{PLANS_DIR}}/PLAN_{NN}_{NAME}.md for implementation plan"
   echo "  2. Update environment variables in .env"
   echo "  3. Start development: $PKG_MANAGER dev"
   echo ""
@@ -326,7 +328,7 @@ Based on the conversation, customize:
 After creating both the plan and bootstrap script, respond with:
 
 ```
-✅ Plan generated at `{{PLANS_DIR}}/PLAN_{NAME}.md`
+✅ Plan generated at `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md`
 ✅ Bootstrap script created at `./bootstrap.sh`
 
 **Project Summary**:
@@ -339,7 +341,7 @@ After creating both the plan and bootstrap script, respond with:
 
 1. Review the plan:
    \`\`\`bash
-   cat {{PLANS_DIR}}/PLAN_{NAME}.md
+   cat {{PLANS_DIR}}/PLAN_{NN}_{NAME}.md
    \`\`\`
 
 2. Review the bootstrap script:
@@ -362,7 +364,7 @@ After creating both the plan and bootstrap script, respond with:
 
 **After bootstrap completes**:
 - Run `{package_manager} dev` to start development server
-- Review PLAN_{NAME}.md for implementation phases
+- Review PLAN_{NN}_{NAME}.md for implementation phases
 - Use `/kickoff {NAME}` when ready to start coding
 ```
 
@@ -398,7 +400,7 @@ If the required Node.js version, package manager, or other tools aren't installe
 
 ## Execution Order
 
-1. Use SlashCommand to invoke `/plan {NAME} {context}`
+1. Use SlashCommand to invoke `/plan INITIAL {NAME} {context}` (always `PLAN_00_INITIAL` for new projects)
 2. Wait for plan completion
 3. Analyze conversation for project requirements
 4. Generate bootstrap.sh with all necessary steps

@@ -10,7 +10,7 @@ You are an implementation execution specialist. Your role is to systematically e
 
 ## Your Mission
 
-Load a PLAN_{NAME}.md file from `{{PLANS_DIR}}/` and execute it methodically, task by task, phase by phase, until complete or blocked.
+Load a PLAN_{NN}_{NAME}.md file from `{{PLANS_DIR}}/` and execute it methodically, task by task, phase by phase, until complete or blocked.
 
 ## Execution Steps
 
@@ -32,7 +32,7 @@ cat package.json 2>/dev/null | head -30
 ### 1. Load the Plan
 
 Extract the plan name from the arguments (first word after /kickoff):
-- Read `{{PLANS_DIR}}/PLAN_{NAME}.md`
+- Read `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md`
 - If no plan name given, check `{{STATE_FILE}}` for the active plan
 - If file doesn't exist, list available plans and ask user to specify
 - Parse the plan structure (Objective, Phases, Tasks, Files)
@@ -157,9 +157,13 @@ Ready to commit this phase before moving to Phase 2? (yes/no/review)
 ```
 
 5. **Update STATE.md** after phase completion:
-   - Update the `**Phase**` field in `{{STATE_FILE}}` to the next phase number
+   - **Always READ existing STATE.md first** to preserve the Plans table and per-plan task sections
+   - Update the `**Phase**` field in the header to the next phase number
    - Update the `**Status**` field if needed (keep `🚧 In Progress` during work, set `✅ Complete` when all phases done)
    - Update the `**Updated**` timestamp
+   - Mark completed tasks as `✅` in the per-plan task tables
+   - Update phase status emoji in phase headers (`⏳` → `🚧` → `✅`)
+   - Update the Progress column in the Plans overview table
 
 ### 6. Handle Blockers
 
