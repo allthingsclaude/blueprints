@@ -124,7 +124,7 @@ async function main(): Promise<void> {
           { name: '1 - Economy     (haiku + sonnet heavyweight — fastest, lowest cost)', value: 1 },
           { name: '2 - Balanced    (haiku light, sonnet everything else)', value: 2 },
           { name: '3 - Standard    (all sonnet)', value: 3 },
-          { name: '4 - Enhanced    (sonnet light, opus everything else — recommended)', value: 4 },
+          { name: '4 - Enhanced    (sonnet light + research, opus everything else — recommended)', value: 4 },
           { name: '5 - Maximum     (all opus — most capable, highest cost)', value: 5 },
         ],
         default: 3 // 0-indexed, so index 3 = value 4
