@@ -34,5 +34,6 @@ The agent will:
 - ✅ Break down tasks into actionable steps
 - ✅ Note technical considerations and constraints
 - ✅ List relevant files and references
+- ✅ Copy any reference files (images, videos, mockups) to `{{TASKS_DIR}}/references/` and link them in the plan so implementing agents can consume them
 
 Use the Task tool to launch the plan agent (subagent_type="plan") which will autonomously generate the plan document.

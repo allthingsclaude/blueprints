@@ -18,12 +18,22 @@ Generate a comprehensive PLAN_{NAME}.md file at `{{PLANS_DIR}}/PLAN_{NAME}.md` t
    - Parse the plan name from the arguments (first word after /plan)
    - If no name provided, use "UNTITLED"
 
-2. **Review Context**
+2. **Collect Reference Files**
+   - Check if the conversation includes any reference files (images, videos, screenshots, mockups, PDFs, etc.)
+   - If references exist, create the references directory and copy them there:
+     ```bash
+     mkdir -p {{TASKS_DIR}}/references
+     ```
+   - Copy each reference file to `{{TASKS_DIR}}/references/`, preserving the original filename
+   - In the plan document, reference these files using their new path (e.g., `{{TASKS_DIR}}/references/mockup.png`)
+   - This ensures implementing agents can access the references directly from the plan
+
+3. **Review Context**
    - Check git status for current state
    - Review recent commits if relevant to the discussion
    - Read any files that were discussed
 
-3. **Synthesize Findings**
+4. **Synthesize Findings**
    - What problem or opportunity was identified?
    - What approach was discussed or decided?
    - What technical considerations were raised?
@@ -201,6 +211,10 @@ Generate `{{PLANS_DIR}}/PLAN_{NAME}.md` with this exact structure:
 
 ## 📚 References
 
+### Reference Files
+[If reference images, videos, mockups, or other files were provided, list them here with descriptions]
+- `{{TASKS_DIR}}/references/[filename]` - [What this reference shows and how it relates to the plan]
+
 ### Documentation
 - [Link to CLAUDE.md sections]
 - [Link to external docs/resources]
@@ -280,6 +294,7 @@ Generate `{{PLANS_DIR}}/PLAN_{NAME}.md` with this exact structure:
 - Testing and validation approach
 - Open questions and risks
 - Success criteria
+- Reference files (images, videos, mockups, PDFs) — copy to `{{TASKS_DIR}}/references/` and link from the plan
 
 ❌ **Don't Capture**:
 - Full conversation transcript
