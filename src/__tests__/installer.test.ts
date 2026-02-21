@@ -264,9 +264,9 @@ describe('getModelForAgent', () => {
     expect(getModelForAgent('secure.md', 3)).toBe('sonnet');
   });
 
-  it('level 4: lightweight sonnet, research/standard/heavyweight opus', () => {
+  it('level 4: lightweight/research sonnet, standard/heavyweight opus', () => {
     expect(getModelForAgent('commit.md', 4)).toBe('sonnet');
-    expect(getModelForAgent('research-codebase.md', 4)).toBe('opus');
+    expect(getModelForAgent('research-codebase.md', 4)).toBe('sonnet');
     expect(getModelForAgent('parallelize.md', 4)).toBe('opus');
     expect(getModelForAgent('audit.md', 4)).toBe('opus');
     expect(getModelForAgent('debug.md', 4)).toBe('opus');
@@ -326,11 +326,11 @@ describe('copyAgentsWithPowerLevel', () => {
     expect(fs.readFileSync(path.join(destDir, 'implement.md'), 'utf-8')).toContain('model: haiku');
   });
 
-  it('level 4: lightweight sonnet, everything else opus', () => {
+  it('level 4: lightweight/research sonnet, standard/heavyweight opus', () => {
     copyAgentsWithPowerLevel(srcDir, destDir, 4);
     expect(fs.readFileSync(path.join(destDir, 'audit.md'), 'utf-8')).toContain('model: opus');
     expect(fs.readFileSync(path.join(destDir, 'commit.md'), 'utf-8')).toContain('model: sonnet');
-    expect(fs.readFileSync(path.join(destDir, 'research-codebase.md'), 'utf-8')).toContain('model: opus');
+    expect(fs.readFileSync(path.join(destDir, 'research-codebase.md'), 'utf-8')).toContain('model: sonnet');
     expect(fs.readFileSync(path.join(destDir, 'implement.md'), 'utf-8')).toContain('model: opus');
   });
 
@@ -394,15 +394,15 @@ describe('installBlueprints with power level', () => {
     }
   });
 
-  it('power level 4: lightweight gets sonnet, everything else gets opus', async () => {
+  it('power level 4: lightweight and research get sonnet, standard and heavyweight get opus', async () => {
     await installBlueprints(testDir, 4);
 
     const agentsDir = path.join(testDir, '.claude', 'agents');
-    for (const file of [...HEAVYWEIGHT_AGENTS, ...RESEARCH_AGENTS]) {
+    for (const file of HEAVYWEIGHT_AGENTS) {
       const content = fs.readFileSync(path.join(agentsDir, file), 'utf-8');
       expect(content).toMatch(/^model:\s*opus$/m);
     }
-    for (const file of LIGHTWEIGHT_AGENTS) {
+    for (const file of [...LIGHTWEIGHT_AGENTS, ...RESEARCH_AGENTS]) {
       const content = fs.readFileSync(path.join(agentsDir, file), 'utf-8');
       expect(content).toMatch(/^model:\s*sonnet$/m);
     }
