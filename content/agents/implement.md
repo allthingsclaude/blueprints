@@ -83,6 +83,8 @@ Use TodoWrite to create todos for ALL tasks from the plan:
 
 For each task in the current phase:
 
+**Specialist Detection**: Before implementing a task, check if it involves landing page / marketing page / homepage design work (look for keywords: "landing page", "homepage", "marketing page", "hero section", "showcase"). If so, delegate to the showcase agent (`subagent_type="showcase"`) via the Task tool instead of implementing inline — it specializes in high-end page design with animations and micro-interactions.
+
 #### A. Read Context
 - Read all files mentioned in the task
 - Read related files (imports, dependencies)

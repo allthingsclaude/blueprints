@@ -194,22 +194,33 @@ You are implementing Stream [N] of a parallelized plan execution.
 - Clear summary of what was done
 ```
 
-#### 3.2 Spawn Agents
+#### 3.2 Choose Agent Type Per Stream
+
+For each stream, select the appropriate agent type:
+
+| Stream Content | Agent Type | Rationale |
+|---|---|---|
+| Landing page / marketing page / homepage design | `showcase` | Specialized for high-end page design with animations |
+| Everything else | `implement` | General-purpose implementation |
+
+Check stream task descriptions for keywords: "landing page", "homepage", "marketing page", "hero section", "showcase page". If a stream is primarily about building a landing page, use the showcase agent.
+
+#### 3.3 Spawn Agents
 
 Use the Task tool to spawn agents for each stream:
 
 ```typescript
 // Spawn all streams in parallel (single message with multiple Task calls)
 Task({
-  subagent_type: "implement",
-  description: "Stream 1: Auth system",
+  subagent_type: "showcase",  // or "implement" based on stream content
+  description: "Stream 1: Landing page",
   prompt: stream1Prompt,
   run_in_background: true
 })
 
 Task({
   subagent_type: "implement",
-  description: "Stream 2: User profile",
+  description: "Stream 2: API endpoints",
   prompt: stream2Prompt,
   run_in_background: true
 })

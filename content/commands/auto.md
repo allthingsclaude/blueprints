@@ -168,10 +168,16 @@ Count the `- [ ]` uncompleted tasks in the current phase.
 
 #### 4b. Execute the Phase
 
-| Phase Tasks | Mode | Rationale |
-|---|---|---|
-| 1-5 tasks | `/implement` | Small enough for a single agent |
-| 6+ tasks | `/parallelize` | Benefits from concurrent execution |
+**First, check if this phase involves landing page / marketing page / homepage design work.** Look for task descriptions containing: "landing page", "homepage", "marketing page", "hero section", "showcase page", or similar. If the phase is primarily about designing/building a landing page, use the **showcase agent** instead of the generic implement agent.
+
+| Phase Type | Phase Tasks | Mode | Rationale |
+|---|---|---|---|
+| Landing page | Any | `/showcase` | Specialized for high-end landing page design with animations |
+| Regular | 1-5 tasks | `/implement` | Small enough for a single agent |
+| Regular | 6+ tasks | `/parallelize` | Benefits from concurrent execution |
+
+**For `/showcase` mode:**
+Use the Task tool to launch the showcase agent (`subagent_type="showcase"`) with the plan context and any reference files from `{{TASKS_DIR}}/references/`.
 
 **For `/implement` mode:**
 Use the Task tool to launch the implement agent (`subagent_type="implement"`) with the plan name and instruction to work on the current phase only (e.g., "Execute Phase 1 only, then stop").
@@ -330,7 +336,7 @@ Auto mode commits **early and often** using the commit agent (`subagent_type="co
 - Never force-push, delete branches, or make destructive changes without asking
 
 ### Compose Existing Agents
-- Use the existing subagent types: `bootstrap`, `plan`, `implement`, `parallelize`, `audit`, `test`, `secure`, `commit`, `update`
+- Use the existing subagent types: `bootstrap`, `plan`, `implement`, `parallelize`, `showcase`, `audit`, `test`, `secure`, `commit`, `update`
 - Do NOT try to do their jobs inline — delegate to specialists
 - Always use the commit agent for commits — it writes proper conventional commit messages (`feat:`, `fix:`, `refactor:`, etc.)
 

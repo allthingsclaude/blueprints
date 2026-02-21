@@ -51,6 +51,10 @@ I'll work through this plan collaboratively with you:
 
 **This is collaborative implementation in the main conversation.**
 
+### Specialist Agents
+
+For tasks involving landing page / marketing page / homepage design, I'll suggest using the **showcase agent** (`/showcase`) which specializes in high-end page design with animations and micro-interactions. You can approve or override this.
+
 ---
 
 Now let me load the plan and we'll get started together.
