@@ -121,8 +121,11 @@ After the bootstrap agent completes, ask the user: "Bootstrap script is ready. S
 - If yes → run `bash bootstrap.sh`
 - If no → note it and continue
 
-**COMMIT CHECKPOINT**: After bootstrap completes, commit the scaffolding:
-- Stage all new project files
+**UPDATE CLAUDE.md**: After bootstrap completes, run the update agent to generate an initial CLAUDE.md:
+- Use the Task tool to launch the update agent (`subagent_type="update"`) to scan the newly bootstrapped project and create CLAUDE.md
+
+**COMMIT CHECKPOINT**: After bootstrap and CLAUDE.md update complete, commit the scaffolding:
+- Stage all new project files (including CLAUDE.md)
 - Use the Task tool to launch the commit agent (`subagent_type="commit"`) with context: "chore: bootstrap {NAME} project scaffolding"
 
 **If existing project:**
@@ -254,9 +257,13 @@ Review security report:
 
 ---
 
-### Step 6: Report
+### Step 6: Update & Report
 
-**STATE UPDATE**: Before reporting, read and update `{{STATE_FILE}}` to reflect final status:
+**UPDATE CLAUDE.md**: Before reporting, sync CLAUDE.md with the current project state:
+- Use the Task tool to launch the update agent (`subagent_type="update"`) to scan the project and update CLAUDE.md with any new patterns, dependencies, or structural changes from this session
+- If CLAUDE.md was updated, include it in the final commit
+
+**STATE UPDATE**: Read and update `{{STATE_FILE}}` to reflect final status:
 - If all phases and validation passed: set `**Active**` to `None`, update plan's status to `✅ Complete` in Overview table, set `**Status**: ✅ Complete`
 - If partially complete (blockers, user stopped): keep `**Active**` pointing to the plan, set `**Status**: ⏸️ Paused`
 - Update `**Phase**` to the last completed phase number
@@ -323,7 +330,7 @@ Auto mode commits **early and often** using the commit agent (`subagent_type="co
 - Never force-push, delete branches, or make destructive changes without asking
 
 ### Compose Existing Agents
-- Use the existing subagent types: `bootstrap`, `plan`, `implement`, `parallelize`, `audit`, `test`, `secure`, `commit`
+- Use the existing subagent types: `bootstrap`, `plan`, `implement`, `parallelize`, `audit`, `test`, `secure`, `commit`, `update`
 - Do NOT try to do their jobs inline — delegate to specialists
 - Always use the commit agent for commits — it writes proper conventional commit messages (`feat:`, `fix:`, `refactor:`, etc.)
 
