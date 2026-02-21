@@ -208,7 +208,7 @@ export function getModelForAgent(filename: string, powerLevel: AgentPowerLevel):
   const modelMap: Record<AgentPowerLevel, Record<AgentTier, 'haiku' | 'sonnet' | 'opus'>> = {
     1: { lightweight: 'haiku',  research: 'haiku',  standard: 'haiku',  heavyweight: 'sonnet' },
     2: { lightweight: 'haiku',  research: 'haiku',  standard: 'sonnet', heavyweight: 'sonnet' },
-    3: { lightweight: 'haiku',  research: 'sonnet', standard: 'sonnet', heavyweight: 'sonnet' },
+    3: { lightweight: 'sonnet', research: 'sonnet', standard: 'sonnet', heavyweight: 'sonnet' },
     4: { lightweight: 'sonnet', research: 'opus',   standard: 'opus',   heavyweight: 'opus' },
     5: { lightweight: 'opus',   research: 'opus',   standard: 'opus',   heavyweight: 'opus' },
   };

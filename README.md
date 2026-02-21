@@ -55,7 +55,7 @@ Control which models power your agents:
 |-------|------|-------------|----------|----------|-------------|
 | 1 | Economy | Haiku | Haiku | Haiku | Sonnet |
 | 2 | Balanced | Haiku | Haiku | Sonnet | Sonnet |
-| 3 | Standard | Haiku | Sonnet | Sonnet | Sonnet |
+| 3 | Standard | Sonnet | Sonnet | Sonnet | Sonnet |
 | **4** | **Enhanced (default)** | **Sonnet** | **Opus** | **Opus** | **Opus** |
 | 5 | Maximum | Opus | Opus | Opus | Opus |
 

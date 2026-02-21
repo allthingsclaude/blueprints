@@ -256,9 +256,9 @@ describe('getModelForAgent', () => {
     expect(getModelForAgent('audit.md', 2)).toBe('sonnet');
   });
 
-  it('level 3: lightweight haiku, research/standard/heavyweight sonnet', () => {
-    expect(getModelForAgent('commit.md', 3)).toBe('haiku');
-    expect(getModelForAgent('changelog.md', 3)).toBe('haiku');
+  it('level 3: all sonnet', () => {
+    expect(getModelForAgent('commit.md', 3)).toBe('sonnet');
+    expect(getModelForAgent('changelog.md', 3)).toBe('sonnet');
     expect(getModelForAgent('research-web.md', 3)).toBe('sonnet');
     expect(getModelForAgent('plan.md', 3)).toBe('sonnet');
     expect(getModelForAgent('secure.md', 3)).toBe('sonnet');
