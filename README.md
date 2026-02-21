@@ -39,11 +39,29 @@ npx @allthingsclaude/blueprints --path /path/to/install
 
 # Skip confirmation prompts
 npx @allthingsclaude/blueprints --global --yes
+
+# Set agent power level (1-5, default: 4)
+npx @allthingsclaude/blueprints --power 5
+
+# Customize tasks directory name (default: tasks)
+npx @allthingsclaude/blueprints --tasks-dir my-tasks
 ```
+
+### Agent Power Levels
+
+Control which models power your agents:
+
+| Level | Name | Lightweight | Research | Standard | Heavyweight |
+|-------|------|-------------|----------|----------|-------------|
+| 1 | Economy | Haiku | Haiku | Haiku | Sonnet |
+| 2 | Balanced | Haiku | Haiku | Sonnet | Sonnet |
+| 3 | Standard | Haiku | Sonnet | Sonnet | Sonnet |
+| **4** | **Enhanced (default)** | **Sonnet** | **Opus** | **Opus** | **Opus** |
+| 5 | Maximum | Opus | Opus | Opus | Opus |
 
 ---
 
-## Commands by Category
+## Commands (29)
 
 ### Planning & Execution
 
@@ -53,6 +71,7 @@ npx @allthingsclaude/blueprints --global --yes
 | `/kickoff` | Execute a plan interactively with approval gates (collaborative) |
 | `/implement` | Execute a plan autonomously (hands-off) |
 | `/parallelize` | Execute independent plan tasks across multiple agents simultaneously |
+| `/auto` | Full autonomous development loop — from idea to committed code |
 | `/finalize` | Complete a work phase - update plans, commit changes, document decisions |
 
 ### Project Setup
@@ -75,7 +94,18 @@ npx @allthingsclaude/blueprints --global --yes
 | `/audit` | Pre-commit security and quality review |
 | `/test` | Run tests, analyze failures, generate test coverage |
 | `/cleanup` | Find and remove dead code, unused imports, technical debt |
-| `/refactor` | DRY analysis, pattern extraction, safe refactoring with validation |
+| `/refactor` | Safe refactoring — rename, extract, inline, or move code with validation |
+| `/dry` | Eliminate DRY violations without changing behavior |
+| `/secure` | Run a focused security scan on your codebase |
+
+### Code Operations
+
+| Command | Description |
+|---------|-------------|
+| `/commit` | Create a well-crafted git commit from your current changes |
+| `/changelog` | Generate a changelog from git history |
+| `/docs` | Generate or update project documentation |
+| `/migrate` | Upgrade dependencies or migrate between framework versions |
 
 ### Thinking Modes
 
@@ -91,6 +121,13 @@ npx @allthingsclaude/blueprints --global --yes
 | Command | Description |
 |---------|-------------|
 | `/debug` | Systematic investigation with root cause analysis and fix options |
+
+### Creative
+
+| Command | Description |
+|---------|-------------|
+| `/imagine` | Generate images using Nano Banana Pro (Gemini/fal.ai) |
+| `/storyboard` | Extract UI interaction specs from video mockups |
 
 ### Session Management
 
@@ -349,25 +386,50 @@ When you have a plan, choose how to execute it:
 | **Interactive** | `/kickoff` | Complex changes where you want approval gates and collaboration |
 | **Autonomous** | `/implement` | Well-defined tasks you trust to run hands-off |
 | **Parallel** | `/parallelize` | Plans with independent tasks that can run simultaneously |
+| **Full Auto** | `/auto` | End-to-end: idea → plan → implement → test → commit |
 
 ---
 
-## Agents (10)
+## Agents (23)
 
-Agents are specialized workers launched by commands:
+Agents are specialized workers launched by commands. Each agent is assigned a model based on your chosen power level and its tier classification.
+
+### Agent Tiers
+
+| Tier | Agents | Description |
+|------|--------|-------------|
+| **Lightweight** | commit, changelog, handoff, cleanup, imagine | Rote tasks — fast models suffice |
+| **Research** | research-codebase, research-docs, research-web | Search and synthesize |
+| **Standard** | plan, implement, parallelize, bootstrap, refactor, test, explain, docs, dry, storyboard | Balanced reasoning |
+| **Heavyweight** | audit, debug, secure | Deep reasoning, high-stakes analysis |
+
+### Agent List
 
 | Agent | Used By | Purpose |
 |-------|---------|---------|
 | `audit` | `/audit` | Code quality and security analysis |
 | `bootstrap` | `/bootstrap` | Project scaffolding and setup |
+| `changelog` | `/changelog` | Changelog generation from git history |
+| `cleanup` | `/cleanup` | Dead code and unused import removal |
+| `commit` | `/commit` | Git commit message crafting |
+| `debug` | `/debug` | Systematic root cause investigation |
+| `docs` | `/docs` | Documentation generation and updates |
+| `dry` | `/dry` | DRY violation detection and elimination |
+| `explain` | `/explain` | Code and architecture explanations |
 | `finalize` | `/finalize` | Session wrap-up and commits |
 | `handoff` | `/handoff` | Context documentation |
+| `imagine` | `/imagine` | Image generation via Nano Banana Pro |
 | `implement` | `/implement` | Autonomous plan execution |
+| `migrate` | `/migrate` | Dependency upgrades and migrations |
 | `parallelize` | `/parallelize` | Multi-agent orchestration |
 | `plan` | `/plan` | Structured plan creation |
+| `refactor` | `/refactor` | Safe code refactoring with validation |
 | `research-codebase` | `/research` | Code exploration |
 | `research-docs` | `/research` | Library documentation lookup |
 | `research-web` | `/research` | Online resource research |
+| `secure` | `/secure` | Security scanning and vulnerability detection |
+| `storyboard` | `/storyboard` | UI interaction spec extraction |
+| `test` | `/test` | Test execution and failure analysis |
 
 ---
 
@@ -377,15 +439,16 @@ After installation, your `.claude` directory will contain:
 
 ```
 .claude/
-├── commands/          # 20 command files
+├── commands/          # 29 command files
 │   ├── audit.md
+│   ├── auto.md
 │   ├── bootstrap.md
 │   ├── brainstorm.md
 │   └── ...
-├── agents/            # 10 agent files
+├── agents/            # 23 agent files
 │   ├── audit.md
 │   ├── bootstrap.md
-│   ├── finalize.md
+│   ├── changelog.md
 │   └── ...
 tasks/                         # Runtime artifacts (created during use)
 ├── plans/
@@ -395,6 +458,8 @@ tasks/                         # Runtime artifacts (created during use)
 │   └── PHASE_SUMMARY_*.md    # Phase summaries
 └── STATE.md                   # Active plan tracker
 ```
+
+> The `tasks/` directory name is configurable during installation via `--tasks-dir`. Template variables (`{{TASKS_DIR}}`, `{{PLANS_DIR}}`, `{{SESSIONS_DIR}}`) are resolved at install time.
 
 ---
 
