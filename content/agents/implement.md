@@ -88,6 +88,7 @@ For each task in the current phase:
 #### A. Read Context
 - Read all files mentioned in the task
 - Read related files (imports, dependencies)
+- Check `{{TASKS_DIR}}/references/` for design references (images, mockups, wireframes) — if they exist and are relevant to the task, read them to understand the intended design
 - Understand the current state
 
 #### B. Implement

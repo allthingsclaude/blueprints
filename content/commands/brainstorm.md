@@ -108,8 +108,18 @@ Throughout brainstorming, actively use the `/critique`, `/verify`, and `/challen
 - **Be thorough** - we're not rushing to implementation
 - **Don't hedge** — if you're confident something won't work, say it plainly
 
+## Collecting Image References
+
+If the user shares images during brainstorming (screenshots, mockups, design references, wireframes, inspiration), **track their file paths**. These are critical for downstream plan creation.
+
+When brainstorming is complete and you suggest `/plan` or `/auto`:
+- Mention the collected image paths in your handoff so the plan agent copies them to `{{TASKS_DIR}}/references/`
+- If images were shared via the conversation (e.g., user provided a file path or pasted a screenshot), note them explicitly in the brainstorm summary
+
+This ensures future agents (implement, showcase, parallelize) have the visual context they need to design correctly.
+
 ## Tools You CAN Use
-- ✅ Read files for context and understanding
+- ✅ Read files for context and understanding (including reading images)
 - ✅ Grep/Glob to explore existing patterns
 - ✅ Bash (read-only: ls, cat, find, git log, etc.)
 - ✅ Research agents for investigation

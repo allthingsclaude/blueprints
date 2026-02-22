@@ -32,6 +32,7 @@ Launching the **implement agent** which will work independently in a separate co
 ### What the Agent Will Do
 
 - ✅ Load `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md`
+- ✅ Check `{{TASKS_DIR}}/references/` for design references (images, mockups, wireframes)
 - ✅ Parse all phases, tasks, and dependencies
 - ✅ Create comprehensive task tracking (TodoWrite)
 - ✅ Execute tasks systematically with validation

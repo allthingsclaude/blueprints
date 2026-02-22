@@ -64,6 +64,7 @@ Use Read to load `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md`, display a comprehensive su
 - Phases and task counts
 - Key files involved
 - Any open questions or risks
+- Reference files in `{{TASKS_DIR}}/references/` (if any exist — list them so the user knows what design context is available)
 
 Then ask: "Ready to start implementing? Which phase should we tackle first?"
 

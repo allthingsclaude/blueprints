@@ -173,6 +173,7 @@ You are implementing Stream [N] of a parallelized plan execution.
 - Other streams are running in parallel
 - Do NOT modify files outside your assigned scope
 - Follow project patterns from CLAUDE.md
+- Check `{{TASKS_DIR}}/references/` for design references (images, mockups, wireframes) relevant to your tasks
 - Run `pnpm typecheck` after each task
 - Mark tasks complete in your response
 

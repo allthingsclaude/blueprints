@@ -95,6 +95,7 @@ Then proceed with brainstorm as above once they respond.
 - DO NOT create, modify, or implement any code
 - DO ask clarifying questions (scope, approach, edge cases)
 - DO explore existing code for context
+- DO track any image references the user shares (screenshots, mockups, design references, wireframes) — note their file paths so the plan agent can copy them to `{{TASKS_DIR}}/references/`
 - Keep it to 2-3 rounds of questions max, then converge
 - Once the approach is clear, move to Step 2
 
@@ -129,7 +130,7 @@ After the bootstrap agent completes, ask the user: "Bootstrap script is ready. S
 - Use the Task tool to launch the commit agent (`subagent_type="commit"`) with context: "chore: bootstrap {NAME} project scaffolding"
 
 **If existing project:**
-Use the Task tool to launch the plan agent (`subagent_type="plan"`) with the feature name and brainstorm context. This will generate `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md` and update `{{STATE_FILE}}`.
+Use the Task tool to launch the plan agent (`subagent_type="plan"`) with the feature name and brainstorm context. **Include any image file paths collected during brainstorming** so the plan agent copies them to `{{TASKS_DIR}}/references/` and links them in the plan. This will generate `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md` and update `{{STATE_FILE}}`.
 
 Wait for the plan agent to complete, then load and display a brief summary of the plan.
 

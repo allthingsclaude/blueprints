@@ -211,10 +211,24 @@ Write the spec to `{{SESSIONS_DIR}}/INTERACTION_SPEC_{NAME}.md` using this forma
 
 ## Completion
 
+### Step 5: Copy Frames to References
+
+After writing the spec, copy the extracted key frames to `{{TASKS_DIR}}/references/` so they're available to future agents (implement, showcase, parallelize) for design reference:
+
+```bash
+mkdir -p {{TASKS_DIR}}/references
+cp /tmp/storyboard_<ts>/frame_*.png {{TASKS_DIR}}/references/
+```
+
+This ensures implementing agents can view the actual UI frames when building the interaction.
+
+## Completion
+
 When the spec is written, report:
 
 ```markdown
 Interaction spec written to: {{SESSIONS_DIR}}/INTERACTION_SPEC_{NAME}.md
+Key frames copied to: {{TASKS_DIR}}/references/
 
 **Summary**: [One sentence about what the interaction shows]
 **States detected**: {count}
