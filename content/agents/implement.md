@@ -37,6 +37,31 @@ Extract the plan name from the arguments (first word after /kickoff):
 - If file doesn't exist, list available plans and ask user to specify
 - Parse the plan structure (Objective, Phases, Tasks, Files)
 
+### 1.5 Discover Codebase Conventions
+
+Before writing any code, scan the existing codebase to understand established patterns. This prevents introducing inconsistent approaches (e.g., inline styles in a SCSS project, `alert()` in a project with a toast library).
+
+**What to look for:**
+- **Error handling / user feedback**: Search for toast libraries, error boundaries, notification systems, `alert(` usage
+- **Styling method**: Check for CSS modules (`.module.css`), SCSS (`.scss`), Tailwind, styled-components, inline styles — which is dominant?
+- **State management**: Context, stores, reducers, signals — what pattern does the project use?
+- **Component structure**: File naming, export patterns, colocation conventions
+- **Data fetching**: Custom hooks, direct API calls, query libraries — what's the established pattern?
+- **Test infrastructure**: Search for `describe(`, `it(`, `test(`, check for test config files — what framework exists and where do tests live?
+
+**Method**: Use Grep/Glob to sample patterns:
+```bash
+# Examples — adapt to the project
+grep -r "toast\|alert(" src/ --include="*.ts" --include="*.tsx" -l
+ls src/**/*.module.css src/**/*.scss 2>/dev/null
+grep -r "describe(\|it(\|test(" --include="*.test.*" -l
+```
+
+**Store findings** as a mental checklist to reference throughout implementation:
+- Note which patterns are **authoritative** (used consistently across the codebase) vs. **one-off** (used in a single file)
+- Authoritative patterns are mandatory to follow; one-offs can be ignored
+- If the project has no established pattern for a concern, note that too — you have freedom to choose
+
 ### 2. Initial Assessment
 
 Before starting implementation:
@@ -102,6 +127,9 @@ For each task in the current phase:
 - Run linter (if applicable, using detected package manager)
 - Check git diff to review changes
 - Verify the change works as expected
+- **Convention adherence**: Does this code follow the patterns discovered in Step 1.5? If the project uses a specific styling method, did you use it? If there's an established feedback/notification system, did you use it instead of a raw alternative? If there's a custom hook or data fetching pattern, did you follow it?
+- **Accessibility basics** (for UI tasks — modals, forms, dialogs, interactive elements): Labels associated with inputs, ARIA roles on overlays/modals, keyboard handling (Escape to close, focus trap in modals), visible focus indicators
+- **Data access patterns** (for tasks involving data fetching or transformation): No per-item queries inside loops or list iterations, batch operations where possible, efficient relationship loading
 
 #### D. Update Progress
 - Mark current task as `completed` in TodoWrite
@@ -133,7 +161,13 @@ At the end of each phase:
 1. **Run validation checks** from the plan's "Validation" section
 2. **Review all changes** in the phase: `git diff`
 3. **Run full checks**: typecheck and lint using the detected package manager
-4. **Ask user for approval** before moving to next phase:
+4. **Consistency review**: Before presenting to the user, review all code written in this phase as a cohesive whole. Check for:
+   - Same error handling approach across all new code
+   - Same styling method throughout
+   - No unnecessary duplication (e.g., identical handler functions across components that could be shared)
+   - Consistent component structure and naming
+   - If any inconsistencies are found, fix them before moving on
+5. **Ask user for approval** before moving to next phase:
 
 ```markdown
 🎯 **Phase 1 Complete**
@@ -253,6 +287,7 @@ Use Edit tool to update checkboxes in the plan.
 - Match existing code style and patterns
 - Use the same libraries and approaches as existing code
 - Check similar implementations in the codebase
+- When you encounter a concern that already has a solved pattern in the codebase (error feedback, styling, data fetching, state management), always use the existing pattern. Never introduce a parallel approach for the same concern — if the project uses a particular styling method, don't use inline styles; if it has a notification system, don't use `alert()`; if it has a data fetching pattern, don't make raw calls
 
 ### Handle Dependencies
 - If Task B depends on Task A, complete A first

@@ -65,7 +65,23 @@ Parse the plan and create a comprehensive task list:
 | T4 | Add settings component | 2 | src/components/Settings.tsx | None |
 ```
 
-#### 1.3 Build Dependency Graph
+#### 1.3 Discover Codebase Conventions
+
+Before partitioning work, scan the existing codebase to understand established patterns. These conventions will be injected into every stream prompt so all agents produce consistent code.
+
+**Scan for:**
+- **Error handling / user feedback**: Toast libraries, error boundaries, notification systems vs. raw `alert()`
+- **Styling method**: CSS modules, SCSS, Tailwind, styled-components, inline styles — which is dominant?
+- **State management**: Context, stores, reducers, signals — what pattern does the project use?
+- **Data fetching**: Custom hooks, direct API calls, query libraries
+- **Component structure**: File naming, export patterns, colocation conventions
+- **Test infrastructure**: Test framework, file naming conventions (`.test.`, `.spec.`), test location
+
+**Method**: Use Grep/Glob to sample patterns across the codebase. Note which patterns are authoritative (used consistently) vs. one-off.
+
+Store these findings — they'll be included in every stream prompt in Phase 3.
+
+#### 1.4 Build Dependency Graph
 
 Identify dependencies between tasks:
 
@@ -84,7 +100,7 @@ T4 (independent)
 - **File**: Tasks modify the same file (MUST be sequential)
 - **Logical**: Task B assumes Task A's changes exist
 
-#### 1.4 Identify File Conflicts
+#### 1.5 Identify File Conflicts
 
 ```bash
 # For each task, list files it will modify
@@ -167,6 +183,12 @@ You are implementing Stream [N] of a parallelized plan execution.
    - File: `path/to/file.ts`
    - Details: [What to implement]
    - Validation: [How to verify]
+
+## Codebase Conventions (MUST follow)
+
+[Inject discovered conventions from Phase 1.3 here — e.g., "This project uses SCSS modules for styling (not inline styles)", "Error feedback uses the toast system (not alert())", "Data fetching uses custom hooks in src/hooks/", "Tests use Vitest and live in __tests__/ directories"]
+
+These are authoritative patterns from the existing codebase. Always follow them — never introduce a parallel approach for the same concern.
 
 ## Important Context
 
@@ -299,7 +321,17 @@ git status
 git diff --stat
 ```
 
-#### 5.3 Conflict Resolution
+#### 5.3 Cross-Stream Consistency Review
+
+After type check and lint pass, review code from all streams for pattern alignment. Different agents may have solved the same concern differently despite receiving convention instructions. Check for:
+- **Styling consistency**: All streams using the same styling approach
+- **Error handling consistency**: Same feedback/notification pattern across streams
+- **Component structure**: Consistent naming, export patterns, file organization
+- **Data patterns**: Same fetching/state management approach
+
+If any drift is found between streams, fix it to match the project's established conventions before reporting results.
+
+#### 5.4 Conflict Resolution
 
 If conflicts exist (shouldn't if partitioning was correct):
 1. Identify conflicting changes
@@ -307,7 +339,7 @@ If conflicts exist (shouldn't if partitioning was correct):
 3. Apply manual fix
 4. Document what happened
 
-#### 5.4 Update Plan
+#### 5.5 Update Plan
 
 Mark completed tasks in the plan document:
 

@@ -254,12 +254,28 @@ Review security report:
 **COMMIT CHECKPOINT**: If security fixes were made, commit them:
 - Use the commit agent with context: "fix: address security findings for {NAME}"
 
+#### 5d. Accessibility
+
+**Conditional** — only when frontend/UI code was modified in this plan.
+
+**Detection**: Check if any modified files (from `git diff --name-only main...HEAD` or the plan's file list) are in typical frontend paths (`.tsx`, `.jsx`, `.vue`, `.svelte`, `.html`, component directories).
+
+- **If frontend code exists**: Use the Task tool to launch the a11y agent (`subagent_type="a11y"`).
+  - Review the a11y report
+  - If critical findings → attempt auto-fix (max 2 retries)
+  - If still failing → report to user and ask whether to proceed
+- **If no frontend code was touched**: Skip with note "No frontend changes — skipping accessibility audit"
+
+**COMMIT CHECKPOINT**: If accessibility fixes were made, commit them:
+- Use the commit agent with context: "fix: address accessibility findings for {NAME}"
+
 **If ALL validation passes cleanly**, report:
 ```markdown
 **Validation Complete**
 - Audit: Passed
 - Tests: Passed
 - Security: Passed
+- Accessibility: Passed (or Skipped — no frontend changes)
 ```
 
 ---
@@ -337,7 +353,7 @@ Auto mode commits **early and often** using the commit agent (`subagent_type="co
 - Never force-push, delete branches, or make destructive changes without asking
 
 ### Compose Existing Agents
-- Use the existing subagent types: `bootstrap`, `plan`, `implement`, `parallelize`, `showcase`, `audit`, `test`, `secure`, `commit`, `update`
+- Use the existing subagent types: `bootstrap`, `plan`, `implement`, `parallelize`, `showcase`, `audit`, `test`, `secure`, `a11y`, `commit`, `update`
 - Do NOT try to do their jobs inline — delegate to specialists
 - Always use the commit agent for commits — it writes proper conventional commit messages (`feat:`, `fix:`, `refactor:`, etc.)
 
