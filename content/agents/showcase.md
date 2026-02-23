@@ -326,7 +326,7 @@ The hero is the first impression — make it count.
 
 ## Integration with Other Commands
 
-When called from `/auto`, `/implement`, or `/parallelize`:
+When called from `/autopilot`, `/implement`, or `/parallelize`:
 - This agent handles any plan task tagged as "landing page", "homepage design", "marketing page", or similar
 - It replaces the generic implement agent for these specific tasks
 - After completion, control returns to the calling workflow

@@ -26,7 +26,7 @@ Before brainstorming, quickly assess the current project:
 **Is this an empty/new project?** If there are fewer than 5 source files and no meaningful project configuration, this is likely a **new project**. In that case:
 - Mention to the user that this looks like a new project and brainstorming is a great starting point
 - The brainstorm should focus heavily on **tech stack decisions** (see Step 1 below)
-- When brainstorming is complete, suggest `/auto` which will handle planning, bootstrapping, and implementation end-to-end
+- When brainstorming is complete, suggest `/autopilot` which will handle planning, bootstrapping, and implementation end-to-end
 
 ## Brainstorming Framework
 
@@ -112,7 +112,7 @@ Throughout brainstorming, actively use the `/critique`, `/verify`, and `/challen
 
 If the user shares images during brainstorming (screenshots, mockups, design references, wireframes, inspiration), **track their file paths**. These are critical for downstream plan creation.
 
-When brainstorming is complete and you suggest `/plan` or `/auto`:
+When brainstorming is complete and you suggest `/plan` or `/autopilot`:
 - Mention the collected image paths in your handoff so the plan agent copies them to `{{TASKS_DIR}}/references/`
 - If images were shared via the conversation (e.g., user provided a file path or pasted a screenshot), note them explicitly in the brainstorm summary
 
@@ -140,14 +140,14 @@ Once we've thoroughly explored the problem space, settled on a tech stack, and c
 | Command | What it does |
 |---|---|
 | `/bootstrap {NAME}` | Generate a plan + bootstrap script to scaffold the project. Good when you want to review the scaffolding before building. |
-| `/auto {NAME}` | Full autonomous loop — planning, bootstrapping, implementation, and commit. Good when you want to go hands-off. |
+| `/autopilot {NAME}` | Full autonomous loop — planning, bootstrapping, implementation, and commit. Good when you want to go hands-off. |
 
 **For existing projects:**
 
 | Command | What it does |
 |---|---|
 | `/plan {NAME}` | Capture brainstorming findings into a structured implementation plan. Good when you want to review before implementing. |
-| `/auto {NAME}` | Full autonomous loop — planning, implementation, validation, and commit. Good when you want to go hands-off. |
+| `/autopilot {NAME}` | Full autonomous loop — planning, implementation, validation, and commit. Good when you want to go hands-off. |
 
 Always present the relevant options and let the user choose how they want to proceed.
 

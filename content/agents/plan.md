@@ -323,7 +323,7 @@ Examples (assuming 2 plans already exist — `PLAN_00_INITIAL.md` and `PLAN_01_A
 
 ## Update Active Plan Tracker (MANDATORY)
 
-**This step is NOT optional.** After writing the plan file, you MUST create or update `{{STATE_FILE}}`. Other commands (`/auto`, `/kickoff`, `/implement`, `/parallelize`) depend on this file to detect the active plan. If STATE.md is missing, the entire workflow breaks.
+**This step is NOT optional.** After writing the plan file, you MUST create or update `{{STATE_FILE}}`. Other commands (`/autopilot`, `/kickoff`, `/implement`, `/parallelize`) depend on this file to detect the active plan. If STATE.md is missing, the entire workflow breaks.
 
 ```bash
 mkdir -p $(dirname {{STATE_FILE}})

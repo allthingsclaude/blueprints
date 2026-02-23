@@ -49,7 +49,7 @@ If no references are provided, the agent will ask you to choose a style directio
 
 ### How It Integrates
 
-- In `/auto` or `/implement` — if the plan includes a landing page task, the showcase agent is used instead of the generic implement agent for that task
+- In `/autopilot` or `/implement` — if the plan includes a landing page task, the showcase agent is used instead of the generic implement agent for that task
 - In `/parallelize` — landing page work can be a dedicated stream using the showcase agent
 - Standalone — run `/showcase` directly to design a landing page from scratch or redesign an existing one
 

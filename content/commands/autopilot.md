@@ -4,7 +4,7 @@ argument-hint: [--full] [feature description or plan name]
 author: "@markoradak"
 ---
 
-# Auto Mode
+# Autopilot Mode
 
 Full autonomous development loop. I'll take it from idea to committed code on a feature branch.
 
@@ -34,9 +34,9 @@ $ARGUMENTS
 
 ---
 
-## Auto Mode Protocol
+## Autopilot Protocol
 
-You are now in **AUTO MODE** — a full development loop that orchestrates the entire workflow from idea to committed code. Follow these steps precisely and in order.
+You are now in **AUTOPILOT MODE** — a full development loop that orchestrates the entire workflow from idea to committed code. Follow these steps precisely and in order.
 
 ### Step 0: Parse Arguments
 
@@ -296,7 +296,7 @@ Review security report:
 After everything is done (or stopped), provide a final summary:
 
 ```markdown
-**Auto Mode Complete**
+**Autopilot Complete**
 
 **Branch**: `feat/{name}`
 **Plan**: {NAME}
@@ -319,14 +319,14 @@ After everything is done (or stopped), provide a final summary:
 **Next Steps**:
 - Review changes: `git log main..feat/{name} --oneline`
 - Create PR when ready: `gh pr create`
-- Or continue working: `/auto` (will resume from STATE.md)
+- Or continue working: `/autopilot` (will resume from STATE.md)
 ```
 
 ---
 
 ## Commit Checkpoint Rules
 
-Auto mode commits **early and often** using the commit agent (`subagent_type="commit"`). The commit agent determines the right prefix (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, etc.) based on the changes.
+Autopilot commits **early and often** using the commit agent (`subagent_type="commit"`). The commit agent determines the right prefix (`feat:`, `fix:`, `refactor:`, `chore:`, `docs:`, etc.) based on the changes.
 
 **When to commit:**
 - After bootstrap scaffolding is created
@@ -395,7 +395,7 @@ Auto mode commits **early and often** using the commit agent (`subagent_type="co
 - Mark all tasks as `✅` in the plan's task tables
 - Set `**Status**` to `✅ Complete`
 
-If `/auto` is interrupted or paused, ensure STATE.md reflects where it stopped so the next `/auto` run can resume correctly. Plan document checkboxes are updated by the implement/parallelize agents.
+If `/autopilot` is interrupted or paused, ensure STATE.md reflects where it stopped so the next `/autopilot` run can resume correctly. Plan document checkboxes are updated by the implement/parallelize agents.
 
 ### Keep the User Informed
 - Brief status updates between major steps
