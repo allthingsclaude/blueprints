@@ -227,9 +227,6 @@ Files modified:
 - path/to/file.ts - what changed
 - path/to/other.ts - what changed
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
 **Commit Message Guidelines**:
@@ -263,9 +260,6 @@ Files modified:
 - src/lib/jwt.ts - Token generation and validation
 - src/types/auth.ts - Auth type definitions
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
 ```
@@ -285,9 +279,6 @@ Files modified:
 - src/components/FeaturedProduct.tsx - Now uses ProductCard
 - src/app/[domain]/products/ProductGrid.tsx - Simplified to use ProductCard
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
 ```
 
 ### 8. Create Git Commit
@@ -317,9 +308,6 @@ Detailed explanation:
 Files modified:
 - path/file.ts - what changed
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>
 EOF
 )"
 ```

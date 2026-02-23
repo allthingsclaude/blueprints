@@ -40,6 +40,8 @@ The commit agent will:
 - Stage the relevant files and create the commit
 - Verify the commit was created successfully
 
+**IMPORTANT: Do NOT add a `Co-Authored-By` line to the commit message.**
+
 **This will create a git commit.** The agent will show you the proposed message before committing.
 
 Use the Task tool to launch the commit agent (subagent_type="commit") with any additional context from arguments.
