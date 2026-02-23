@@ -93,6 +93,20 @@ Go through each change systematically:
   - Type coercion bugs
 
 #### 🟡 Important Issues (Should Fix)
+- **Convention consistency**
+  - Do the changes introduce a different pattern for a concern the codebase already solves? (e.g., different styling method, different error feedback mechanism, different data fetching approach)
+  - Scan the codebase to identify authoritative patterns: styling method, error/notification system, state management, data fetching, component structure
+  - Flag any new code that uses a parallel approach for the same concern (e.g., inline styles in a CSS modules project, `alert()` in a project with a toast library, raw fetch in a project with custom hooks)
+  - Check that all new code is internally consistent (same approach used across all changed files)
+
+- **Accessibility** (for changes involving UI — components, pages, modals, forms, dialogs)
+  - Labels associated with inputs
+  - ARIA roles on overlays, modals, and interactive widgets
+  - Keyboard handling (Escape to close, focus trap in modals, Tab order)
+  - Visible focus indicators
+  - Color contrast (if new colors introduced)
+  - Screen reader considerations (meaningful alt text, aria-labels)
+
 - **DRY violations**
   - Duplicated code that should be extracted
   - Repeated logic across files
@@ -112,7 +126,7 @@ Go through each change systematically:
   - Missing error logging
 
 - **Performance issues**
-  - N+1 queries
+  - N+1 queries — per-item database calls inside loops or list transformations
   - Missing database indexes
   - Inefficient algorithms
   - Memory leaks
@@ -136,7 +150,6 @@ Go through each change systematically:
   - Missing const/readonly
   - Use of deprecated APIs
   - Suboptimal patterns
-  - Missing accessibility (a11y)
 
 - **Testing**
   - Missing test coverage for new code
