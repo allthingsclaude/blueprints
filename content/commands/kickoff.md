@@ -36,7 +36,7 @@ I'll work through this plan collaboratively with you:
 
 1. **Load & Review**: I'll load the plan and show you a summary
 2. **Environment Check**: Verify git status and project state
-3. **Convention Discovery**: Scan the codebase for established patterns (error handling, styling, state management, data fetching, test infrastructure) and share findings so we're aligned on which patterns to follow
+3. **Convention Discovery**: Scan the codebase for established patterns (error handling, styling, state management, data fetching, test infrastructure) and share findings so we're aligned on which patterns to follow. Look at how existing code is structured — never add inline styles unless absolutely necessary, always use the project's established styling method
 4. **Task Tracking**: Set up TodoWrite for all plan tasks
 5. **Step-by-Step**: Execute tasks one at a time with your input
 6. **Validation**: Run type checks and lints after each task
@@ -74,3 +74,5 @@ Then ask: "Ready to start implementing? Which phase should we tackle first?"
 Use TodoWrite to create todos for all tasks from the plan once user confirms.
 
 Then begin executing tasks step-by-step, staying in the main context, validating as you go.
+
+After completing each phase, run `/dry` to check if any repeated patterns or duplicated code should be extracted into shared utilities, components, or constants. Fix any DRY violations before moving to the next phase.

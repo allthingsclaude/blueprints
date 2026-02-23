@@ -190,6 +190,8 @@ You are implementing Stream [N] of a parallelized plan execution.
 
 These are authoritative patterns from the existing codebase. Always follow them — never introduce a parallel approach for the same concern.
 
+**Inline styles**: Never add inline styles unless absolutely necessary (e.g., a truly dynamic value that can't be expressed as a class). Look at how existing components are styled and use the same approach.
+
 ## Important Context
 
 - Other streams are running in parallel
@@ -331,7 +333,17 @@ After type check and lint pass, review code from all streams for pattern alignme
 
 If any drift is found between streams, fix it to match the project's established conventions before reporting results.
 
-#### 5.4 Conflict Resolution
+#### 5.4 DRY Check
+
+After cross-stream consistency review, audit the combined code for DRY violations. Different agents may have independently created similar utilities, components, or patterns. Look for:
+- Duplicated helper functions or utilities across streams
+- Similar component patterns that could share a base
+- Repeated constants, types, or configurations
+- Any code that should be extracted into shared modules
+
+Fix violations before reporting results — consolidate duplicates into shared code.
+
+#### 5.5 Conflict Resolution
 
 If conflicts exist (shouldn't if partitioning was correct):
 1. Identify conflicting changes
@@ -339,7 +351,7 @@ If conflicts exist (shouldn't if partitioning was correct):
 3. Apply manual fix
 4. Document what happened
 
-#### 5.5 Update Plan
+#### 5.6 Update Plan
 
 Mark completed tasks in the plan document:
 

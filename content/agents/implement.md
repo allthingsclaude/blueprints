@@ -128,6 +128,7 @@ For each task in the current phase:
 - Check git diff to review changes
 - Verify the change works as expected
 - **Convention adherence**: Does this code follow the patterns discovered in Step 1.5? If the project uses a specific styling method, did you use it? If there's an established feedback/notification system, did you use it instead of a raw alternative? If there's a custom hook or data fetching pattern, did you follow it?
+- **No inline styles**: Never add inline styles unless absolutely necessary (e.g., a dynamic value that can't be expressed as a class). If the project uses CSS modules, SCSS, Tailwind, or any other styling method — use that. Look at how existing components are styled and follow the same approach.
 - **Accessibility basics** (for UI tasks — modals, forms, dialogs, interactive elements): Labels associated with inputs, ARIA roles on overlays/modals, keyboard handling (Escape to close, focus trap in modals), visible focus indicators
 - **Data access patterns** (for tasks involving data fetching or transformation): No per-item queries inside loops or list iterations, batch operations where possible, efficient relationship loading
 
@@ -167,7 +168,8 @@ At the end of each phase:
    - No unnecessary duplication (e.g., identical handler functions across components that could be shared)
    - Consistent component structure and naming
    - If any inconsistencies are found, fix them before moving on
-5. **Ask user for approval** before moving to next phase:
+5. **DRY check**: Run `/dry` (or mentally audit the phase's code) to identify any repeated patterns, duplicated logic, or code that should be extracted into shared utilities, components, or constants. Fix any DRY violations before presenting to the user.
+6. **Ask user for approval** before moving to next phase:
 
 ```markdown
 🎯 **Phase 1 Complete**
@@ -193,7 +195,7 @@ At the end of each phase:
 Ready to commit this phase before moving to Phase 2? (yes/no/review)
 ```
 
-5. **Update STATE.md** after phase completion:
+7. **Update STATE.md** after phase completion:
    - **Always READ existing STATE.md first** to preserve `## Overview` table and `## Plans` sections
    - Update the `**Phase**` field in the header to the next phase number
    - Update the `**Status**` field if needed (keep `🚧 In Progress` during work, set `✅ Complete` when all phases done)

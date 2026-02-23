@@ -41,6 +41,7 @@ Launching the **implement agent** which will work independently in a separate co
 - ✅ Validate each phase before proceeding
 - ✅ Handle blockers (will pause and report)
 - ✅ Adapt plan if better approaches discovered
+- ✅ Run DRY checks after each phase to extract shared patterns
 - ✅ Return comprehensive summary when complete
 
 ### What You'll See
