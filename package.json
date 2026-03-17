@@ -45,7 +45,7 @@
     "url": "https://github.com/allthingsclaude/blueprints/issues"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=20.0.0"
   },
   "files": [
     "bin/",
