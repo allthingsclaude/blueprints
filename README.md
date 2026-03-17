@@ -61,7 +61,7 @@ Control which models power your agents:
 
 ---
 
-## Commands (29)
+## Commands (40)
 
 ### Planning & Execution
 
@@ -71,7 +71,7 @@ Control which models power your agents:
 | `/kickoff` | Execute a plan interactively with approval gates (collaborative) |
 | `/implement` | Execute a plan autonomously (hands-off) |
 | `/parallelize` | Execute independent plan tasks across multiple agents simultaneously |
-| `/auto` | Full autonomous development loop — from idea to committed code |
+| `/autopilot` | Full autonomous development loop — from idea to committed code |
 | `/finalize` | Complete a work phase - update plans, commit changes, document decisions |
 
 ### Project Setup
@@ -79,6 +79,8 @@ Control which models power your agents:
 | Command | Description |
 |---------|-------------|
 | `/bootstrap` | Initialize new projects with generated plans and executable setup scripts |
+| `/onboard` | Generate a developer onboarding guide for this project |
+| `/update` | Update CLAUDE.md and STATE.md to reflect current project state |
 
 ### Research & Learning
 
@@ -86,6 +88,7 @@ Control which models power your agents:
 |---------|-------------|
 | `/research` | Smart routing to codebase, documentation, or web research |
 | `/explain` | Generate detailed explanations of code, architecture, or features |
+| `/history` | Tell the narrative story of a file or function through its git history |
 
 ### Code Quality
 
@@ -97,6 +100,8 @@ Control which models power your agents:
 | `/refactor` | Safe refactoring — rename, extract, inline, or move code with validation |
 | `/dry` | Eliminate DRY violations without changing behavior |
 | `/secure` | Run a focused security scan on your codebase |
+| `/a11y` | Audit your frontend for accessibility issues |
+| `/todo` | Scan codebase for TODO/FIXME/HACK markers and present an organized summary |
 
 ### Code Operations
 
@@ -106,6 +111,9 @@ Control which models power your agents:
 | `/changelog` | Generate a changelog from git history |
 | `/docs` | Generate or update project documentation |
 | `/migrate` | Upgrade dependencies or migrate between framework versions |
+| `/merge` | Detect parent branch and merge the current branch into it |
+| `/release` | Create a release — version bump, changelog, tag, and publish |
+| `/i18n` | Audit and set up internationalization for your project |
 
 ### Thinking Modes
 
@@ -128,6 +136,8 @@ Control which models power your agents:
 |---------|-------------|
 | `/imagine` | Generate images using Nano Banana Pro (Gemini/fal.ai) |
 | `/storyboard` | Extract UI interaction specs from video mockups |
+| `/showcase` | Design an award-winning landing page with animations and micro-interactions |
+| `/diagram` | Generate Mermaid diagrams from your codebase |
 
 ### Session Management
 
@@ -136,6 +146,7 @@ Control which models power your agents:
 | `/handoff` | Generate comprehensive documentation for context switching |
 | `/pickup` | Resume work from a previous handoff document |
 | `/flush` | Clear all task artifacts from `tasks/` |
+| `/standup` | Generate a standup summary from recent git activity |
 
 ---
 
@@ -386,11 +397,11 @@ When you have a plan, choose how to execute it:
 | **Interactive** | `/kickoff` | Complex changes where you want approval gates and collaboration |
 | **Autonomous** | `/implement` | Well-defined tasks you trust to run hands-off |
 | **Parallel** | `/parallelize` | Plans with independent tasks that can run simultaneously |
-| **Full Auto** | `/auto` | End-to-end: idea → plan → implement → test → commit |
+| **Full Auto** | `/autopilot` | End-to-end: idea → plan → implement → test → commit |
 
 ---
 
-## Agents (23)
+## Agents (30)
 
 Agents are specialized workers launched by commands. Each agent is assigned a model based on your chosen power level and its tier classification.
 
@@ -400,36 +411,43 @@ Agents are specialized workers launched by commands. Each agent is assigned a mo
 |------|--------|-------------|
 | **Lightweight** | commit, changelog, handoff, cleanup, imagine | Rote tasks — fast models suffice |
 | **Research** | research-codebase, research-docs, research-web | Search and synthesize |
-| **Standard** | plan, implement, parallelize, bootstrap, refactor, test, explain, docs, dry, storyboard | Balanced reasoning |
+| **Standard** | plan, implement, parallelize, bootstrap, refactor, test, explain, docs, dry, storyboard, finalize, migrate, a11y, diagram, i18n, onboard, release, showcase, update | Balanced reasoning |
 | **Heavyweight** | audit, debug, secure | Deep reasoning, high-stakes analysis |
 
 ### Agent List
 
 | Agent | Used By | Purpose |
 |-------|---------|---------|
+| `a11y` | `/a11y` | Frontend accessibility auditing |
 | `audit` | `/audit` | Code quality and security analysis |
 | `bootstrap` | `/bootstrap` | Project scaffolding and setup |
 | `changelog` | `/changelog` | Changelog generation from git history |
 | `cleanup` | `/cleanup` | Dead code and unused import removal |
 | `commit` | `/commit` | Git commit message crafting |
 | `debug` | `/debug` | Systematic root cause investigation |
+| `diagram` | `/diagram` | Mermaid diagram generation from codebase |
 | `docs` | `/docs` | Documentation generation and updates |
 | `dry` | `/dry` | DRY violation detection and elimination |
 | `explain` | `/explain` | Code and architecture explanations |
 | `finalize` | `/finalize` | Session wrap-up and commits |
 | `handoff` | `/handoff` | Context documentation |
+| `i18n` | `/i18n` | Internationalization auditing and setup |
 | `imagine` | `/imagine` | Image generation via Nano Banana Pro |
 | `implement` | `/implement` | Autonomous plan execution |
 | `migrate` | `/migrate` | Dependency upgrades and migrations |
+| `onboard` | `/onboard` | Developer onboarding guide generation |
 | `parallelize` | `/parallelize` | Multi-agent orchestration |
 | `plan` | `/plan` | Structured plan creation |
 | `refactor` | `/refactor` | Safe code refactoring with validation |
+| `release` | `/release` | Version bumps, changelogs, tags, and publishing |
 | `research-codebase` | `/research` | Code exploration |
 | `research-docs` | `/research` | Library documentation lookup |
 | `research-web` | `/research` | Online resource research |
 | `secure` | `/secure` | Security scanning and vulnerability detection |
+| `showcase` | `/showcase` | Landing page design and development |
 | `storyboard` | `/storyboard` | UI interaction spec extraction |
 | `test` | `/test` | Test execution and failure analysis |
+| `update` | `/update` | CLAUDE.md and STATE.md synchronization |
 
 ---
 
@@ -439,13 +457,13 @@ After installation, your `.claude` directory will contain:
 
 ```
 .claude/
-├── commands/          # 29 command files
+├── commands/          # 40 command files
 │   ├── audit.md
-│   ├── auto.md
+│   ├── autopilot.md
 │   ├── bootstrap.md
 │   ├── brainstorm.md
 │   └── ...
-├── agents/            # 23 agent files
+├── agents/            # 30 agent files
 │   ├── audit.md
 │   ├── bootstrap.md
 │   ├── changelog.md
@@ -471,7 +489,7 @@ tasks/                         # Runtime artifacts (created during use)
 
 ## Requirements
 
-- Node.js 16.0.0 or higher
+- Node.js 20.0.0 or higher
 - Claude Code CLI
 
 ## License
