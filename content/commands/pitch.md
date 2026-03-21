@@ -19,13 +19,13 @@ I'll create an on-brand, self-contained HTML presentation deck with keyboard nav
 !`cat README.md 2>/dev/null | head -30 || echo "No README found"`
 
 **Package Description**:
-!`node -e 'var p=require("./package.json");console.log("Name:",p.name||"n/a");console.log("Description:",p.description||"n/a");console.log("Homepage:",p.homepage||"n/a")' 2>/dev/null || echo "No package.json found"`
+!`node -p 'var p=require("./package.json");[p.name,p.description,p.homepage].filter(Boolean).join(" | ")' 2>/dev/null || echo "No package.json found"`
 
 **Product Features & Stats**:
 !`grep -rh "<h2\|<h3\|<strong\|features\|pricing\|stats\|metric" src/app/page.tsx src/components/*.tsx README.md 2>/dev/null | head -20 || echo "No product features detected"`
 
 **Design Directory**:
-!`ls design/ 2>/dev/null && echo "---existing campaigns---" && ls -d design/*/ 2>/dev/null || echo "No existing design directory"`
+!`ls design/ 2>/dev/null && echo == existing campaigns == && ls -d design/*/ 2>/dev/null || echo "No existing design directory"`
 
 ---
 

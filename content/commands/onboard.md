@@ -21,7 +21,7 @@ I'll analyze your project and generate a comprehensive onboarding guide for new 
 !`ls -la`
 
 **Git Info**:
-!`git log --oneline -5 2>/dev/null; echo "---"; git branch -a 2>/dev/null | head -10`
+!`git log --oneline -5 2>/dev/null; echo ===; git branch -a 2>/dev/null | head -10`
 
 **Existing Docs**:
 !`ls README* CONTRIBUTING* CLAUDE.md docs/ 2>/dev/null | head -10`

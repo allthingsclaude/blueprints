@@ -16,7 +16,7 @@ I'll create or document a comprehensive brand identity system — colors, typogr
 !`ls tailwind.config.* src/app/globals.css src/styles/*.css styles/*.css public/images/*.svg public/*.svg 2>/dev/null | head -20 || echo "No brand files detected"`
 
 **Design Directory**:
-!`ls design/ 2>/dev/null && echo "---existing brand docs---" && ls design/brand-brief.md design/brand-guide.md design/tokens.css 2>/dev/null || echo "No existing design directory"`
+!`ls design/ 2>/dev/null && echo == existing brand docs == && ls design/brand-brief.md design/brand-guide.md design/tokens.css 2>/dev/null || echo "No existing design directory"`
 
 **Previous Brand Brief**:
 !`cat design/brand-brief.md 2>/dev/null | head -40 || echo "No brand brief yet"`
@@ -35,7 +35,7 @@ I'll create or document a comprehensive brand identity system — colors, typogr
 
 **README / Package Info**:
 !`cat README.md 2>/dev/null | head -20 || echo "No README"`
-!`node -e 'var p=require("./package.json");console.log(p.name,"—",p.description||"no description")' 2>/dev/null || echo "No package.json"`
+!`node -p 'var p=require("./package.json");p.name+" — "+(p.description||"no description")' 2>/dev/null || echo "No package.json"`
 
 ---
 

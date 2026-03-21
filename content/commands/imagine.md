@@ -10,8 +10,8 @@ $ARGUMENTS
 
 ## API Keys
 
-- GEMINI_API_KEY: !`node -e 'console.log(process.env.GEMINI_API_KEY ? "AVAILABLE" : "NOT SET")'`
-- FAL_KEY: !`node -e 'console.log(process.env.FAL_KEY ? "AVAILABLE" : "NOT SET")'`
+- GEMINI_API_KEY: !`test -n "$GEMINI_API_KEY" && echo AVAILABLE || echo NOT_SET`
+- FAL_KEY: !`test -n "$FAL_KEY" && echo AVAILABLE || echo NOT_SET`
 
 ---
 

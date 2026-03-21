@@ -16,14 +16,14 @@ I'll create on-brand design and marketing assets — social media banners, ad cr
 !`ls tailwind.config.* src/app/globals.css src/styles/*.css public/images/*.svg 2>/dev/null | head -15 || echo "No brand files detected"`
 
 **Design Directory**:
-!`ls design/ 2>/dev/null && echo "---existing campaigns---" && ls -d design/*/ 2>/dev/null || echo "No existing design directory"`
+!`ls design/ 2>/dev/null && echo == existing campaigns == && ls -d design/*/ 2>/dev/null || echo "No existing design directory"`
 
 **Previous Brand Brief**:
 !`cat design/brand-brief.md 2>/dev/null | head -30 || echo "No brand brief yet"`
 
 **Image Generation APIs**:
-- GEMINI_API_KEY: !`node -e 'console.log(process.env.GEMINI_API_KEY ? "AVAILABLE" : "NOT SET")'`
-- FAL_KEY: !`node -e 'console.log(process.env.FAL_KEY ? "AVAILABLE" : "NOT SET")'`
+- GEMINI_API_KEY: !`test -n "$GEMINI_API_KEY" && echo AVAILABLE || echo NOT_SET`
+- FAL_KEY: !`test -n "$FAL_KEY" && echo AVAILABLE || echo NOT_SET`
 
 ---
 

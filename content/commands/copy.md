@@ -19,16 +19,16 @@ I'll write on-brand marketing copy — social captions, ad copy, email subject l
 !`cat README.md 2>/dev/null | head -30 || echo "No README found"`
 
 **Package Description**:
-!`node -e 'var p=require("./package.json");console.log("Name:",p.name||"n/a");console.log("Description:",p.description||"n/a");console.log("Homepage:",p.homepage||"n/a")' 2>/dev/null || echo "No package.json found"`
+!`node -p 'var p=require("./package.json");[p.name,p.description,p.homepage].filter(Boolean).join(" | ")' 2>/dev/null || echo "No package.json found"`
 
 **Existing Copy & Messaging**:
-!`grep -rh "content=\|<title>\|<meta name=\"description" src/app/layout.tsx src/app/page.tsx index.html 2>/dev/null | head -10 || echo "No meta/title tags detected"`
+!`grep -rh 'content=\|<title>\|<meta name=.description' src/app/layout.tsx src/app/page.tsx index.html 2>/dev/null | head -10 || echo "No meta/title tags detected"`
 
 **Landing Page Copy**:
 !`grep -rh "<h1\|<h2\|<p class.*hero\|<p class.*subtitle\|<p class.*tagline" src/app/page.tsx src/components/Hero.tsx src/components/Landing.tsx index.html 2>/dev/null | head -15 || echo "No landing page copy detected"`
 
 **Design Directory**:
-!`ls design/ 2>/dev/null && echo "---existing campaigns---" && ls -d design/*/ 2>/dev/null || echo "No existing design directory"`
+!`ls design/ 2>/dev/null && echo == existing campaigns == && ls -d design/*/ 2>/dev/null || echo "No existing design directory"`
 
 ---
 
