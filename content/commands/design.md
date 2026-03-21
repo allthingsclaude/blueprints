@@ -22,8 +22,8 @@ I'll create on-brand design and marketing assets — social media banners, ad cr
 !`cat design/brand-brief.md 2>/dev/null | head -30 || echo "No brand brief yet"`
 
 **Image Generation APIs**:
-- GEMINI_API_KEY: !`test -n "$GEMINI_API_KEY" && echo AVAILABLE || echo NOT_SET`
-- FAL_KEY: !`test -n "$FAL_KEY" && echo AVAILABLE || echo NOT_SET`
+- GEMINI_API_KEY: !`echo ${GEMINI_API_KEY:+AVAILABLE}`
+- FAL_KEY: !`echo ${FAL_KEY:+AVAILABLE}`
 
 ---
 

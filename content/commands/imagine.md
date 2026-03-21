@@ -10,8 +10,8 @@ $ARGUMENTS
 
 ## API Keys
 
-- GEMINI_API_KEY: !`test -n "$GEMINI_API_KEY" && echo AVAILABLE || echo NOT_SET`
-- FAL_KEY: !`test -n "$FAL_KEY" && echo AVAILABLE || echo NOT_SET`
+- GEMINI_API_KEY: !`echo ${GEMINI_API_KEY:+AVAILABLE}`
+- FAL_KEY: !`echo ${FAL_KEY:+AVAILABLE}`
 
 ---
 
