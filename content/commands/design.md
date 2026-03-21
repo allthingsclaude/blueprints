@@ -39,74 +39,91 @@ Parse the brief for: asset type, platform(s), goal, style direction, messaging, 
 
 ### If the brief is empty or vague:
 
-Conduct a focused discovery questionnaire. Ask questions **one at a time**, adapting based on previous answers. Don't dump all questions at once — this should feel like a conversation.
+Conduct a focused discovery using the **AskUserQuestion tool** for interactive selection. The user should be able to click/select options rather than typing numbers. Adapt follow-up questions based on previous answers.
 
 #### First, determine the repo context:
 
 Check the "Existing Brand Assets" and "Previous Brand Brief" sections above. If brand files were detected (CSS, Tailwind config, SVGs, design tokens, or an existing `design/brand-brief.md`), this is a **brand-rich repo** — the codebase contains enough to derive brand identity, visual style, and messaging automatically.
 
-#### Always ask (every context):
+#### Round 1 — Core questions (single AskUserQuestion call, 3 questions):
 
-**Q1: What are we creating?**
-- Social media banners (Instagram, Twitter/X, LinkedIn, etc.)
-- Ad creatives (display, retargeting)
-- Email headers / newsletter graphics
-- Open Graph / social preview images
-- App store screenshots
-- Presentation slides / pitch deck graphics
-- Product Hunt launch assets
-- Custom (describe)
+**Q1** (header: "Asset type", multiSelect: false):
+Question: "What type of design asset do you need?"
+Options:
+- label: "Social media banners" / description: "Instagram, Twitter/X, LinkedIn, Facebook"
+- label: "Ad creatives & email" / description: "Display ads, retargeting, email headers, newsletter graphics"
+- label: "Product assets" / description: "Open Graph images, App Store screenshots, Product Hunt"
+- label: "Presentation graphics" / description: "Pitch deck slides, keynote visuals"
 
-**Q2: For which platform(s)?**
-Offer platform-specific dimensions — these will be auto-applied:
-| Platform | Format | Dimensions |
-|----------|--------|------------|
-| Instagram Post | Square | 1080×1080 |
-| Instagram Story | Vertical | 1080×1920 |
-| Twitter/X Post | Landscape | 1200×675 |
-| Twitter/X Header | Wide | 1500×500 |
-| LinkedIn Post | Landscape | 1200×627 |
-| LinkedIn Cover | Wide | 1584×396 |
-| Facebook Post | Landscape | 1200×630 |
-| YouTube Thumbnail | Landscape | 1280×720 |
-| Product Hunt | Landscape | 1270×760 |
-| Open Graph | Landscape | 1200×630 |
+**Q2** (header: "Goal", multiSelect: false):
+Question: "What's the campaign goal?"
+Options:
+- label: "Launch / announcement" / description: "New product, feature, or version release"
+- label: "Feature spotlight" / description: "Highlight a specific capability or use case"
+- label: "Brand awareness" / description: "General brand visibility and recognition"
+- label: "Event / hiring / culture" / description: "Promote events, open roles, or team culture"
 
-**Q3: What's the campaign goal?**
-- Product launch / announcement
-- Feature spotlight
-- Brand awareness
-- Event promotion
-- Testimonial / social proof
-- Tutorial / how-to
-- Hiring / team culture
+**Q3** (header: "Count", multiSelect: false):
+Question: "How many designs should I create?"
+Options:
+- label: "3 designs" / description: "Focused, tight set"
+- label: "6 designs (Recommended)" / description: "Balanced variety for a campaign"
+- label: "9 designs" / description: "Extended campaign coverage"
+- label: "12 designs" / description: "Full campaign suite with maximum variety"
 
-**Q4: How many designs?** (default: 6)
+#### Round 2 — Platform selection (single AskUserQuestion call, 1 question):
 
-#### Only ask in bare repos (no brand files detected):
+Ask a **multiSelect: true** question for platform(s). Offer the 4 most relevant platforms based on the asset type from Round 1:
 
-If no CSS, Tailwind config, design tokens, or brand assets were found, the agent has nothing to analyze — so you need to ask:
+If **social media banners**:
+- label: "Instagram Post" / description: "Square — 1080×1080"
+- label: "Instagram Story" / description: "Vertical — 1080×1920"
+- label: "Twitter/X Post" / description: "Landscape — 1200×675"
+- label: "LinkedIn Post" / description: "Landscape — 1200×627"
 
-**Q5: Where should brand identity come from?**
-- **I'll describe it** — you'll provide colors, fonts, tone
-- **Start from scratch** — design freely, establish a new visual identity
+If **ad creatives & email**:
+- label: "Email header" / description: "Wide — 600×200"
+- label: "Newsletter graphic" / description: "Landscape — 1200×630"
+- label: "Display ad" / description: "Landscape — 1200×628"
+- label: "Retargeting banner" / description: "Rectangle — 300×250"
 
-**Q6: What visual style?**
-- Minimal / editorial (whitespace, typography-driven, structural grids)
-- Bold / high-contrast (oversized type, strong colors, dramatic)
-- Dark / premium (dark backgrounds, glow effects, sleek)
-- Playful / colorful (gradients, rounded shapes, vibrant)
-- Technical / developer (terminal mockups, monospace, code aesthetics)
-- Photo-centric (imagery-driven, lifestyle)
+If **product assets**:
+- label: "Open Graph" / description: "Landscape — 1200×630"
+- label: "Product Hunt" / description: "Landscape — 1270×760"
+- label: "YouTube Thumbnail" / description: "Landscape — 1280×720"
+- label: "App Store screenshot" / description: "Portrait — 1284×2778"
 
-**Q7: What's the primary headline or message?**
-(Free text — the core copy direction)
+If **presentation graphics**:
+- label: "Slide 16:9" / description: "Widescreen — 1920×1080"
+- label: "Slide 4:3" / description: "Standard — 1024×768"
+- label: "LinkedIn Post" / description: "Landscape — 1200×627"
+- label: "Twitter/X Post" / description: "Landscape — 1200×675"
 
-#### In brand-rich repos, skip Q5-Q7:
+#### Round 3 — Brand & style (only for bare repos, single AskUserQuestion call):
+
+Only ask these if **no brand files were detected**. In brand-rich repos, skip to confirmation.
+
+**Q1** (header: "Style", multiSelect: false):
+Question: "What visual style fits your brand?"
+Options:
+- label: "Minimal / editorial" / description: "Whitespace, typography-driven, structural grids"
+- label: "Bold / dark premium" / description: "High-contrast, oversized type, dark backgrounds, glow effects"
+- label: "Playful / colorful" / description: "Gradients, rounded shapes, vibrant colors"
+- label: "Technical / developer" / description: "Terminal mockups, monospace, code aesthetics"
+
+**Q2** (header: "Headline", multiSelect: false):
+Question: "What's the primary headline direction?"
+Options:
+- label: "Product name + tagline" / description: "Lead with brand identity and value prop"
+- label: "Feature benefit" / description: "Lead with what the product does for users"
+- label: "Call to action" / description: "Lead with urgency — try it, sign up, launch day"
+- label: "I'll write it" / description: "Select Other to provide your own headline"
+
+#### In brand-rich repos, skip Round 3:
 
 The agent will automatically analyze the codebase for colors, typography, design patterns, logos, and product copy. Brand identity, visual style, and messaging will be derived from the existing design system and content. The user can still override any of these when confirming the brief.
 
-After gathering answers, **summarize the complete brief and ask for confirmation** before launching the agent. Include what will be auto-derived from the codebase so the user can correct anything.
+After gathering all answers, **summarize the complete brief and ask for confirmation** before launching the agent. Include what will be auto-derived from the codebase so the user can correct anything.
 
 ### Launching the Agent
 
