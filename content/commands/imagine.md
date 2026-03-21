@@ -1,5 +1,5 @@
 ---
-description: Generate images using Nano Banana Pro (Gemini/fal.ai)
+description: Generate images using Nano Banana 2 (Gemini/fal.ai)
 argument-hint: <what you want to see> [optional: path/to/reference.png]
 author: "@markoradak"
 ---
@@ -10,8 +10,8 @@ $ARGUMENTS
 
 ## API Keys
 
-- GEMINI_API_KEY: !`node -e "console.log(process.env.GEMINI_API_KEY ? 'AVAILABLE' : 'NOT SET')"`
-- FAL_KEY: !`node -e "console.log(process.env.FAL_KEY ? 'AVAILABLE' : 'NOT SET')"`
+- GEMINI_API_KEY: !`node -e 'console.log(process.env.GEMINI_API_KEY ? "AVAILABLE" : "NOT SET")'`
+- FAL_KEY: !`node -e 'console.log(process.env.FAL_KEY ? "AVAILABLE" : "NOT SET")'`
 
 ---
 
