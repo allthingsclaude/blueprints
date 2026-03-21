@@ -340,7 +340,6 @@ for html_file in "$OG_DIR"/*.html; do
   "$CHROME" \
     --headless=new \
     --disable-gpu \
-    --no-sandbox \
     --hide-scrollbars \
     --window-size=1200,630 \
     --screenshot="$output_file" \

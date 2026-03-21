@@ -469,13 +469,13 @@ After installation, your `.claude` directory will contain:
 
 ```
 .claude/
-├── commands/          # 40 command files
+├── commands/          # 46 command files
 │   ├── audit.md
 │   ├── autopilot.md
 │   ├── bootstrap.md
 │   ├── brainstorm.md
 │   └── ...
-├── agents/            # 30 agent files
+├── agents/            # 36 agent files
 │   ├── audit.md
 │   ├── bootstrap.md
 │   ├── changelog.md
