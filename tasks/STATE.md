@@ -1,16 +1,16 @@
 # State
 
-**Active**: CREATIVE_SUITE
+**Active**: None
 **File**: tasks/plans/PLAN_CREATIVE_SUITE.md
 **Phase**: 2
-**Status**: 🚧 In Progress
-**Updated**: 2026-03-21T01:00:00Z
+**Status**: ✅ Complete
+**Updated**: 2026-03-21T02:00:00Z
 
 ## Overview
 
 | # | Plan | Status | Progress |
 |---|------|--------|----------|
-| 1 | Creative Suite | 🚧 In Progress | 9/9 tasks |
+| 1 | Creative Suite | ✅ Complete | 9/9 tasks |
 
 ## Plans
 
@@ -28,5 +28,5 @@
 
 - [x] Task 6: Update README.md (Creative section + Agent List + Tier table)
 - [x] Task 7: Update `src/installer.ts` (add `og.md` to LIGHTWEIGHT_AGENTS)
-- [x] Task 8: Verify counts in README
+- [x] Task 8: Verify counts in README (46 commands, 36 agents)
 - [x] Task 9: Run tests (`npm test`) — 49/49 passed
