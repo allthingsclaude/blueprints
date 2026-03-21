@@ -14,7 +14,7 @@ Investigating the history of: **$ARGUMENTS**
 
 **Working Directory**: !`pwd`
 
-**File Exists**: !`test -f "$ARGUMENTS" && echo "Yes" || echo "File not found — check the path"`
+**File Exists**: !`ls "$ARGUMENTS" 2>/dev/null || echo "File not found — check the path"`
 
 **File Size**: !`wc -l < "$ARGUMENTS" 2>/dev/null || echo "N/A"`
 
@@ -33,7 +33,7 @@ Investigating the history of: **$ARGUMENTS**
 !`git log --since="30 days ago" --follow --format="%h %s (%ar)" -- "$ARGUMENTS" 2>/dev/null || echo "No recent changes"`
 
 **Change Frequency**:
-!`echo "Total commits: $(git log --follow --oneline -- "$ARGUMENTS" 2>/dev/null | wc -l | tr -d ' ')"`
+!`git log --follow --oneline -- "$ARGUMENTS" 2>/dev/null | wc -l`
 
 ---
 

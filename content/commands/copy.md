@@ -19,7 +19,7 @@ I'll write on-brand marketing copy — social captions, ad copy, email subject l
 !`cat README.md 2>/dev/null | head -30 || echo "No README found"`
 
 **Package Description**:
-!`node -p 'var p=require("./package.json");[p.name,p.description,p.homepage].filter(Boolean).join(" | ")' 2>/dev/null || echo "No package.json found"`
+!`cat package.json 2>/dev/null | head -10 || echo "No package.json found"`
 
 **Existing Copy & Messaging**:
 !`grep -rh 'content=\|<title>\|<meta name=.description' src/app/layout.tsx src/app/page.tsx index.html 2>/dev/null | head -10 || echo "No meta/title tags detected"`

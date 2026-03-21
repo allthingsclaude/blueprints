@@ -8,10 +8,7 @@ author: "@markoradak"
 
 $ARGUMENTS
 
-## API Keys
-
-- GEMINI_API_KEY: !`echo ${GEMINI_API_KEY:+AVAILABLE}`
-- FAL_KEY: !`echo ${FAL_KEY:+AVAILABLE}`
+## API Keys (agent will check GEMINI_API_KEY and FAL_KEY availability at runtime)
 
 ---
 

@@ -26,7 +26,7 @@ I'll orchestrate a complete release for your project — detecting existing rele
 !`git tag --sort=-version:refname 2>/dev/null | head -5 || echo "No tags found"`
 
 **Commits Since Last Tag**:
-!`git log $(git describe --tags --abbrev=0 2>/dev/null)..HEAD --oneline 2>/dev/null | head -15 || git log --oneline -10 2>/dev/null`
+!`git log --oneline 2>/dev/null | head -15`
 
 **Release Scripts Detected**:
 !`cat package.json 2>/dev/null | grep -E '"(release|version|bump|publish|prepublish|postpublish|preversion|postversion|prepublishOnly)"' || echo "None in package.json"`

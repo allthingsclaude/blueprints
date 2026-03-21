@@ -35,7 +35,7 @@ I'll create or document a comprehensive brand identity system — colors, typogr
 
 **README / Package Info**:
 !`cat README.md 2>/dev/null | head -20 || echo "No README"`
-!`node -p 'var p=require("./package.json");p.name+" — "+(p.description||"no description")' 2>/dev/null || echo "No package.json"`
+!`cat package.json 2>/dev/null | head -10 || echo "No package.json"`
 
 ---
 
