@@ -61,7 +61,7 @@ Control which models power your agents:
 
 ---
 
-## Commands (40)
+## Commands (40+)
 
 ### Planning & Execution
 
@@ -134,6 +134,7 @@ Control which models power your agents:
 
 | Command | Description |
 |---------|-------------|
+| `/design` | Create on-brand design and marketing assets (social media, banners, ads) |
 | `/imagine` | Generate images using Nano Banana Pro (Gemini/fal.ai) |
 | `/storyboard` | Extract UI interaction specs from video mockups |
 | `/showcase` | Design an award-winning landing page with animations and micro-interactions |
@@ -401,7 +402,7 @@ When you have a plan, choose how to execute it:
 
 ---
 
-## Agents (30)
+## Agents (30+)
 
 Agents are specialized workers launched by commands. Each agent is assigned a model based on your chosen power level and its tier classification.
 
@@ -411,7 +412,7 @@ Agents are specialized workers launched by commands. Each agent is assigned a mo
 |------|--------|-------------|
 | **Lightweight** | commit, changelog, handoff, cleanup, imagine | Rote tasks — fast models suffice |
 | **Research** | research-codebase, research-docs, research-web | Search and synthesize |
-| **Standard** | plan, implement, parallelize, bootstrap, refactor, test, explain, docs, dry, storyboard, finalize, migrate, a11y, diagram, i18n, onboard, release, showcase, update | Balanced reasoning |
+| **Standard** | plan, implement, parallelize, bootstrap, refactor, test, explain, docs, dry, storyboard, finalize, migrate, a11y, diagram, i18n, onboard, release, showcase, design, update | Balanced reasoning |
 | **Heavyweight** | audit, debug, secure | Deep reasoning, high-stakes analysis |
 
 ### Agent List
@@ -425,6 +426,7 @@ Agents are specialized workers launched by commands. Each agent is assigned a mo
 | `cleanup` | `/cleanup` | Dead code and unused import removal |
 | `commit` | `/commit` | Git commit message crafting |
 | `debug` | `/debug` | Systematic root cause investigation |
+| `design` | `/design` | On-brand marketing asset creation (social media, banners, ads) |
 | `diagram` | `/diagram` | Mermaid diagram generation from codebase |
 | `docs` | `/docs` | Documentation generation and updates |
 | `dry` | `/dry` | DRY violation detection and elimination |
