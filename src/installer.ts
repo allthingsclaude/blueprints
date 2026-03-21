@@ -46,6 +46,7 @@ export const LIGHTWEIGHT_AGENTS = [
   'handoff.md',
   'cleanup.md',
   'imagine.md',
+  'og.md',
 ];
 
 export const HEAVYWEIGHT_AGENTS = [

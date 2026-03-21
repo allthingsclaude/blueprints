@@ -135,7 +135,12 @@ Control which models power your agents:
 | Command | Description |
 |---------|-------------|
 | `/design` | Create on-brand design and marketing assets (social media, banners, ads) |
-| `/imagine` | Generate images using Nano Banana Pro (Gemini/fal.ai) |
+| `/brand` | Create or document a comprehensive brand identity system |
+| `/copy` | Write on-brand marketing copy for social media, ads, emails, and landing pages |
+| `/email` | Create on-brand HTML email templates (newsletters, announcements, transactional) |
+| `/pitch` | Create an on-brand HTML presentation deck with speaker notes |
+| `/og` | Auto-generate Open Graph images for all pages in your project |
+| `/imagine` | Generate images using Nano Banana 2 (Gemini/fal.ai) |
 | `/storyboard` | Extract UI interaction specs from video mockups |
 | `/showcase` | Design an award-winning landing page with animations and micro-interactions |
 | `/diagram` | Generate Mermaid diagrams from your codebase |
@@ -410,9 +415,9 @@ Agents are specialized workers launched by commands. Each agent is assigned a mo
 
 | Tier | Agents | Description |
 |------|--------|-------------|
-| **Lightweight** | commit, changelog, handoff, cleanup, imagine | Rote tasks — fast models suffice |
+| **Lightweight** | commit, changelog, handoff, cleanup, imagine, og | Rote tasks — fast models suffice |
 | **Research** | research-codebase, research-docs, research-web | Search and synthesize |
-| **Standard** | plan, implement, parallelize, bootstrap, refactor, test, explain, docs, dry, storyboard, finalize, migrate, a11y, diagram, i18n, onboard, release, showcase, design, update | Balanced reasoning |
+| **Standard** | plan, implement, parallelize, bootstrap, refactor, test, explain, docs, dry, storyboard, finalize, migrate, a11y, diagram, i18n, onboard, release, showcase, design, update, brand, copy, email, pitch | Balanced reasoning |
 | **Heavyweight** | audit, debug, secure | Deep reasoning, high-stakes analysis |
 
 ### Agent List
@@ -422,23 +427,28 @@ Agents are specialized workers launched by commands. Each agent is assigned a mo
 | `a11y` | `/a11y` | Frontend accessibility auditing |
 | `audit` | `/audit` | Code quality and security analysis |
 | `bootstrap` | `/bootstrap` | Project scaffolding and setup |
+| `brand` | `/brand` | Brand identity documentation and creation |
 | `changelog` | `/changelog` | Changelog generation from git history |
 | `cleanup` | `/cleanup` | Dead code and unused import removal |
 | `commit` | `/commit` | Git commit message crafting |
+| `copy` | `/copy` | On-brand marketing copy for social, ads, emails, landing pages |
 | `debug` | `/debug` | Systematic root cause investigation |
 | `design` | `/design` | On-brand marketing asset creation (social media, banners, ads) |
 | `diagram` | `/diagram` | Mermaid diagram generation from codebase |
 | `docs` | `/docs` | Documentation generation and updates |
 | `dry` | `/dry` | DRY violation detection and elimination |
+| `email` | `/email` | On-brand HTML email template creation |
 | `explain` | `/explain` | Code and architecture explanations |
 | `finalize` | `/finalize` | Session wrap-up and commits |
 | `handoff` | `/handoff` | Context documentation |
 | `i18n` | `/i18n` | Internationalization auditing and setup |
-| `imagine` | `/imagine` | Image generation via Nano Banana Pro |
+| `imagine` | `/imagine` | Image generation via Nano Banana 2 |
 | `implement` | `/implement` | Autonomous plan execution |
 | `migrate` | `/migrate` | Dependency upgrades and migrations |
+| `og` | `/og` | Open Graph image generation for all pages |
 | `onboard` | `/onboard` | Developer onboarding guide generation |
 | `parallelize` | `/parallelize` | Multi-agent orchestration |
+| `pitch` | `/pitch` | On-brand HTML presentation deck creation |
 | `plan` | `/plan` | Structured plan creation |
 | `refactor` | `/refactor` | Safe code refactoring with validation |
 | `release` | `/release` | Version bumps, changelogs, tags, and publishing |
