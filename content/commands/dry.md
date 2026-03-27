@@ -20,7 +20,7 @@ I'll find and eliminate DRY violations across your codebase while guaranteeing i
 !`git status --short`
 
 **Files to Analyze**:
-!`find . -maxdepth 5 -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" 2>/dev/null | grep -v node_modules | wc -l` source files
+!`find . -maxdepth 5 -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -not -path "*/node_modules/*" 2>/dev/null` source files
 
 ---
 

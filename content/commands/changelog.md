@@ -17,7 +17,7 @@ I'll analyze your git history and generate a well-structured changelog.
 **Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Latest Tags**:
-!`git tag --sort=-version:refname 2>/dev/null | head -5 || echo "No tags found"`
+!`git tag --sort=-version:refname -n5 2>/dev/null || echo "No tags found"`
 
 **Recent Commits**:
 !`git log --oneline -10 2>/dev/null`

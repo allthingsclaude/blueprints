@@ -20,7 +20,7 @@ I'll perform a focused security audit of your codebase, checking for vulnerabili
 !`git status --short`
 
 **Dependencies**:
-!`cat package.json 2>/dev/null | grep -c '"dependencies\|"devDependencies"' || echo "No package.json"`
+!`grep -c '"dependencies\|"devDependencies"' package.json 2>/dev/null || echo "No package.json"`
 
 ---
 

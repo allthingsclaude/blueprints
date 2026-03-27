@@ -13,22 +13,22 @@ I'll write on-brand marketing copy — social captions, ad copy, email subject l
 **Working Directory**: !`pwd`
 
 **Existing Brand Brief**:
-!`cat design/brand-brief.md 2>/dev/null | head -40 || echo "No brand brief yet"`
+!`head -40 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
 
 **Project Identity**:
-!`cat README.md 2>/dev/null | head -30 || echo "No README found"`
+!`head -30 README.md 2>/dev/null || echo "No README found"`
 
 **Package Description**:
-!`cat package.json 2>/dev/null | head -10 || echo "No package.json found"`
+!`head -10 package.json 2>/dev/null || echo "No package.json found"`
 
 **Existing Copy & Messaging**:
-!`grep -rh 'content=\|<title>\|<meta name=.description' src/app/layout.tsx src/app/page.tsx index.html 2>/dev/null | head -10 || echo "No meta/title tags detected"`
+!`grep -rh 'content=\|<title>\|<meta name=.description' src/app/layout.tsx src/app/page.tsx index.html 2>/dev/null || echo "No meta/title tags detected"`
 
 **Landing Page Copy**:
-!`grep -rh "<h1\|<h2\|<p class.*hero\|<p class.*subtitle\|<p class.*tagline" src/app/page.tsx src/components/Hero.tsx src/components/Landing.tsx index.html 2>/dev/null | head -15 || echo "No landing page copy detected"`
+!`grep -rh "<h1\|<h2\|<p class.*hero\|<p class.*subtitle\|<p class.*tagline" src/app/page.tsx src/components/Hero.tsx src/components/Landing.tsx index.html 2>/dev/null || echo "No landing page copy detected"`
 
 **Design Directory**:
-!`ls design/ 2>/dev/null && echo == existing campaigns == && ls -d design/*/ 2>/dev/null || echo "No existing design directory"`
+!`ls design/ 2>/dev/null || echo "No existing design directory"`
 
 ---
 

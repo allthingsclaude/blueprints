@@ -27,13 +27,13 @@ Investigating the history of: **$ARGUMENTS**
 !`git log --follow --diff-filter=A --format="%h %an (%ar): %s" -- "$ARGUMENTS" 2>/dev/null || echo "Unable to determine creation"`
 
 **Contributors**:
-!`git log --follow --format="%an" -- "$ARGUMENTS" 2>/dev/null | sort | uniq -c | sort -rn || echo "N/A"`
+!`git log --follow --format="%an" -- "$ARGUMENTS" 2>/dev/null || echo "N/A"`
 
 **Recent Activity (last 30 days)**:
 !`git log --since="30 days ago" --follow --format="%h %s (%ar)" -- "$ARGUMENTS" 2>/dev/null || echo "No recent changes"`
 
 **Change Frequency**:
-!`git log --follow --oneline -- "$ARGUMENTS" 2>/dev/null | wc -l`
+!`git log --follow --oneline -- "$ARGUMENTS" 2>/dev/null`
 
 ---
 

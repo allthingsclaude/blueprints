@@ -20,10 +20,10 @@ I'll help you upgrade dependencies or migrate between framework versions safely.
 !`git status --short`
 
 **Current Dependencies**:
-!`cat package.json 2>/dev/null | head -40`
+!`head -40 package.json 2>/dev/null`
 
 **Lock File**:
-!`ls pnpm-lock.yaml yarn.lock bun.lockb package-lock.json 2>/dev/null | head -1 || echo "No lock file found"`
+!`ls pnpm-lock.yaml yarn.lock bun.lockb package-lock.json 2>/dev/null || echo "No lock file found"`
 
 ---
 

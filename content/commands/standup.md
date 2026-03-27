@@ -17,7 +17,7 @@ Generating a standup summary from recent activity.
 **Author**: !`git config user.name 2>/dev/null || echo "Unknown"`
 
 **Commits (last 48 hours)**:
-!`git log --since="48 hours ago" --format="%h %an: %s (%ar)" 2>/dev/null | head -20 || echo "No recent commits"`
+!`git log --since="48 hours ago" --format="%h %an: %s (%ar)" 2>/dev/null || echo "No recent commits"`
 
 **Uncommitted Changes**:
 !`git diff --stat 2>/dev/null || echo "None"`

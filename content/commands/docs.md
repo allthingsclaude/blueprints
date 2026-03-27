@@ -15,10 +15,11 @@ I'll analyze your codebase and generate or update documentation.
 **Working Directory**: !`pwd`
 
 **Project**:
-!`ls README* 2>/dev/null; ls docs/ 2>/dev/null | head -10; echo ===; cat package.json 2>/dev/null | head -5`
+!`ls README* 2>/dev/null || echo "No README found"`
+!`ls docs/ 2>/dev/null || echo "No docs/ directory"`
 
 **Existing Docs**:
-!`find . -maxdepth 3 -name "*.md" -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null | head -15`
+!`find . -maxdepth 3 -name "*.md" -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null`
 
 ---
 

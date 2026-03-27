@@ -16,25 +16,25 @@ I'll generate on-brand Open Graph images for your pages — each a self-containe
 !`ls next.config.* nuxt.config.* astro.config.* remix.config.* svelte.config.* vite.config.* angular.json 2>/dev/null || echo "No framework config detected"`
 
 **App Router Pages** (Next.js):
-!`find src/app -name "page.tsx" -o -name "page.jsx" -o -name "page.ts" -o -name "page.js" 2>/dev/null | head -20 || echo "No App Router pages"`
+!`find src/app -name "page.tsx" -o -name "page.jsx" -o -name "page.ts" -o -name "page.js" 2>/dev/null || echo "No App Router pages"`
 
 **Pages Router** (Next.js/Nuxt):
-!`ls src/pages/*.tsx src/pages/**/*.tsx pages/*.tsx pages/**/*.tsx src/pages/*.vue pages/*.vue 2>/dev/null | head -20 || echo "No Pages Router files"`
+!`ls src/pages/*.tsx src/pages/**/*.tsx pages/*.tsx pages/**/*.tsx src/pages/*.vue pages/*.vue 2>/dev/null || echo "No Pages Router files"`
 
 **Astro Pages**:
-!`find src/pages -name "*.astro" -o -name "*.md" -o -name "*.mdx" 2>/dev/null | head -20 || echo "No Astro pages"`
+!`find src/pages -name "*.astro" -o -name "*.md" -o -name "*.mdx" 2>/dev/null || echo "No Astro pages"`
 
 **Static HTML**:
-!`find . -maxdepth 3 -name "*.html" ! -path "./node_modules/*" ! -path "./design/*" ! -path "./public/og/*" ! -path "./.next/*" ! -path "./dist/*" 2>/dev/null | head -20 || echo "No static HTML files"`
+!`find . -maxdepth 3 -name "*.html" ! -path "./node_modules/*" ! -path "./design/*" ! -path "./public/og/*" ! -path "./.next/*" ! -path "./dist/*" 2>/dev/null || echo "No static HTML files"`
 
 **Existing OG Images**:
-!`ls public/og/ design/og-* 2>/dev/null | head -10 || echo "No existing OG images"`
+!`ls public/og/ design/og-* 2>/dev/null || echo "No existing OG images"`
 
 **Brand Assets**:
-!`cat design/brand-brief.md 2>/dev/null | head -30 || echo "No brand brief yet"`
+!`head -30 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
 
 **Metadata / SEO**:
-!`grep -rn "openGraph\|og:image\|og:title\|og:description\|meta.*property.*og:" src/ pages/ app/ 2>/dev/null | head -15 || echo "No existing OG meta tags found"`
+!`grep -rn "openGraph\|og:image\|og:title\|og:description\|meta.*property.*og:" src/ pages/ app/ 2>/dev/null || echo "No existing OG meta tags found"`
 
 ---
 

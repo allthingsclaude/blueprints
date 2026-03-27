@@ -16,10 +16,10 @@ I'll design and build a high-end landing page with polished animations, micro-in
 !`ls package.json tsconfig.json next.config.* vite.config.* astro.config.* tailwind.config.* 2>/dev/null || echo "No recognized project files"`
 
 **Existing Pages**:
-!`find . -maxdepth 4 -type f \( -name "page.tsx" -o -name "page.jsx" -o -name "index.tsx" -o -name "index.jsx" -o -name "index.html" \) -not -path "*/node_modules/*" 2>/dev/null | head -10`
+!`find . -maxdepth 4 -type f \( -name "page.tsx" -o -name "page.jsx" -o -name "index.tsx" -o -name "index.jsx" -o -name "index.html" \) -not -path "*/node_modules/*" 2>/dev/null`
 
 **Reference Files** (images/videos provided):
-!`ls {{TASKS_DIR}}/references/ 2>/dev/null | head -10 || echo "No references found"`
+!`ls {{TASKS_DIR}}/references/ 2>/dev/null || echo "No references found"`
 
 ---
 

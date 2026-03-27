@@ -13,29 +13,29 @@ I'll create or document a comprehensive brand identity system — colors, typogr
 **Working Directory**: !`pwd`
 
 **Existing Brand Assets**:
-!`ls tailwind.config.* src/app/globals.css src/styles/*.css styles/*.css public/images/*.svg public/*.svg 2>/dev/null | head -20 || echo "No brand files detected"`
+!`ls tailwind.config.* src/app/globals.css src/styles/*.css styles/*.css public/images/*.svg public/*.svg 2>/dev/null || echo "No brand files detected"`
 
 **Design Directory**:
-!`ls design/ 2>/dev/null && echo == existing brand docs == && ls design/brand-brief.md design/brand-guide.md design/tokens.css 2>/dev/null || echo "No existing design directory"`
+!`ls design/ 2>/dev/null || echo "No existing design directory"`
 
 **Previous Brand Brief**:
-!`cat design/brand-brief.md 2>/dev/null | head -40 || echo "No brand brief yet"`
+!`head -40 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
 
 **CSS / Tailwind Config**:
-!`cat tailwind.config.* 2>/dev/null | head -40 || echo "No Tailwind config"`
+!`head -40 tailwind.config.* 2>/dev/null || echo "No Tailwind config"`
 
 **Font Imports**:
-!`grep -rE "googleapis.com/css|next/font|@import.*font|@font-face|fontFamily" tailwind.config.* src/app/layout.tsx src/app/globals.css src/styles/*.css 2>/dev/null | head -15 || echo "No font declarations found"`
+!`grep -rE "googleapis.com/css|next/font|@import.*font|@font-face|fontFamily" tailwind.config.* src/app/layout.tsx src/app/globals.css src/styles/*.css 2>/dev/null || echo "No font declarations found"`
 
 **Color Definitions**:
-!`grep -rE "#[0-9A-Fa-f]{3,8}\b|--color-|rgba?\(|hsl" src/app/globals.css tailwind.config.* styles/*.css src/styles/*.css 2>/dev/null | head -30 || echo "No color definitions found"`
+!`grep -rE "#[0-9A-Fa-f]{3,8}\b|--color-|rgba?\(|hsl" src/app/globals.css tailwind.config.* styles/*.css src/styles/*.css 2>/dev/null || echo "No color definitions found"`
 
 **Logo Files**:
-!`ls public/images/logo* public/logo* public/images/icon* public/*.svg src/assets/*.svg 2>/dev/null | head -10 || echo "No logo files found"`
+!`ls public/images/logo* public/logo* public/images/icon* public/*.svg src/assets/*.svg 2>/dev/null || echo "No logo files found"`
 
 **README / Package Info**:
-!`cat README.md 2>/dev/null | head -20 || echo "No README"`
-!`cat package.json 2>/dev/null | head -10 || echo "No package.json"`
+!`head -20 README.md 2>/dev/null || echo "No README"`
+!`head -10 package.json 2>/dev/null || echo "No package.json"`
 
 ---
 

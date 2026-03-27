@@ -20,16 +20,16 @@ I'll orchestrate a complete release for your project — detecting existing rele
 !`git status --short`
 
 **Current Version**:
-!`cat package.json 2>/dev/null | grep '"version"' | head -1 || cat Cargo.toml 2>/dev/null | grep '^version' | head -1 || cat pyproject.toml 2>/dev/null | grep '^version' | head -1 || echo "Could not detect version"`
+!`grep '"version"' package.json 2>/dev/null || grep '^version' Cargo.toml 2>/dev/null || grep '^version' pyproject.toml 2>/dev/null || echo "Could not detect version"`
 
 **Latest Tags**:
-!`git tag --sort=-version:refname 2>/dev/null | head -5 || echo "No tags found"`
+!`git tag --sort=-version:refname -n5 2>/dev/null || echo "No tags found"`
 
 **Commits Since Last Tag**:
-!`git log --oneline 2>/dev/null | head -15`
+!`git log --oneline 2>/dev/null`
 
 **Release Scripts Detected**:
-!`cat package.json 2>/dev/null | grep -E '"(release|version|bump|publish|prepublish|postpublish|preversion|postversion|prepublishOnly)"' || echo "None in package.json"`
+!`grep -E '"(release|version|bump|publish|prepublish|postpublish|preversion|postversion|prepublishOnly)"' package.json 2>/dev/null || echo "None in package.json"`
 !`ls .release-it.* .changeset/ .versionrc* lerna.json .releaserc* release.config.* 2>/dev/null || echo "No release tool configs found"`
 !`ls scripts/release* scripts/publish* scripts/version* Makefile 2>/dev/null || echo "No release scripts found"`
 

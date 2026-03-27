@@ -15,19 +15,20 @@ I'll analyze your project and generate a comprehensive onboarding guide for new 
 **Working Directory**: !`pwd`
 
 **Project**:
-!`cat package.json 2>/dev/null | head -15 || cat Cargo.toml 2>/dev/null | head -15 || cat pyproject.toml 2>/dev/null | head -15 || cat go.mod 2>/dev/null | head -5`
+!`head -15 package.json 2>/dev/null`
 
 **Structure**:
 !`ls -la`
 
 **Git Info**:
-!`git log --oneline -5 2>/dev/null; echo ===; git branch -a 2>/dev/null | head -10`
+!`git log --oneline -5 2>/dev/null`
+!`git branch -a 2>/dev/null`
 
 **Existing Docs**:
-!`ls README* CONTRIBUTING* CLAUDE.md docs/ 2>/dev/null | head -10`
+!`ls README* CONTRIBUTING* CLAUDE.md docs/ 2>/dev/null`
 
 **Dev Scripts**:
-!`cat package.json 2>/dev/null | grep -A 20 '"scripts"' | head -25`
+!`grep -A 20 '"scripts"' package.json 2>/dev/null`
 
 ---
 

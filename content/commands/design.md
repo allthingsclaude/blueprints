@@ -13,13 +13,13 @@ I'll create on-brand design and marketing assets — social media banners, ad cr
 **Working Directory**: !`pwd`
 
 **Existing Brand Assets**:
-!`ls tailwind.config.* src/app/globals.css src/styles/*.css public/images/*.svg 2>/dev/null | head -15 || echo "No brand files detected"`
+!`ls tailwind.config.* src/app/globals.css src/styles/*.css public/images/*.svg 2>/dev/null || echo "No brand files detected"`
 
 **Design Directory**:
-!`ls design/ 2>/dev/null && echo == existing campaigns == && ls -d design/*/ 2>/dev/null || echo "No existing design directory"`
+!`ls design/ 2>/dev/null || echo "No existing design directory"`
 
 **Previous Brand Brief**:
-!`cat design/brand-brief.md 2>/dev/null | head -30 || echo "No brand brief yet"`
+!`head -30 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
 
 **Image Generation APIs** (agent will check GEMINI_API_KEY and FAL_KEY availability at runtime):
 

@@ -13,19 +13,19 @@ I'll create on-brand, email-client-compatible HTML templates — newsletters, pr
 **Working Directory**: !`pwd`
 
 **Existing Brand Assets**:
-!`ls tailwind.config.* src/app/globals.css src/styles/*.css public/images/*.svg 2>/dev/null | head -15 || echo "No brand files detected"`
+!`ls tailwind.config.* src/app/globals.css src/styles/*.css public/images/*.svg 2>/dev/null || echo "No brand files detected"`
 
 **Design Directory**:
-!`ls design/ 2>/dev/null && echo == existing campaigns == && ls -d design/*/ 2>/dev/null || echo "No existing design directory"`
+!`ls design/ 2>/dev/null || echo "No existing design directory"`
 
 **Previous Brand Brief**:
-!`cat design/brand-brief.md 2>/dev/null | head -30 || echo "No brand brief yet"`
+!`head -30 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
 
 **Existing Email Templates**:
-!`find . -maxdepth 4 -name "*.html" -path "*email*" -o -name "*.html" -path "*newsletter*" -o -name "*.html" -path "*template*" -path "*mail*" 2>/dev/null | head -10 || echo "No existing email templates found"`
+!`find . -maxdepth 4 -name "*.html" -path "*email*" -o -name "*.html" -path "*newsletter*" -o -name "*.html" -path "*template*" -path "*mail*" 2>/dev/null || echo "No existing email templates found"`
 
 **Mail-Related Dependencies**:
-!`grep -E "nodemailer|sendgrid|mailgun|postmark|resend|ses|mailchimp|mjml|react-email" package.json 2>/dev/null | head -10 || echo "No mail dependencies detected"`
+!`grep -E "nodemailer|sendgrid|mailgun|postmark|resend|ses|mailchimp|mjml|react-email" package.json 2>/dev/null || echo "No mail dependencies detected"`
 
 ---
 

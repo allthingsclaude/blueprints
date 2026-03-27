@@ -15,13 +15,13 @@ I'll analyze your codebase and generate Mermaid diagrams that visualize architec
 **Working Directory**: !`pwd`
 
 **Project**:
-!`cat package.json 2>/dev/null | head -10 || cat Cargo.toml 2>/dev/null | head -10 || cat pyproject.toml 2>/dev/null | head -10 || cat go.mod 2>/dev/null | head -5`
+!`head -10 package.json 2>/dev/null`
 
 **Structure**:
-!`ls -la src/ 2>/dev/null | head -20 || ls -la lib/ 2>/dev/null | head -20 || ls -la app/ 2>/dev/null | head -20 || ls -la`
+!`ls -la src/ 2>/dev/null`
 
 **Existing Docs**:
-!`ls docs/ 2>/dev/null | head -10; ls *.md 2>/dev/null | head -5`
+!`ls docs/ 2>/dev/null`
 
 ---
 

@@ -13,7 +13,7 @@ I'll provide a detailed, educational explanation of the code, architecture, or f
 **Working Directory**: !`pwd`
 
 **Project Structure**:
-!`ls -la src/ 2>/dev/null | head -15`
+!`ls -la src/ 2>/dev/null`
 
 ---
 

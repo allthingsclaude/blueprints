@@ -19,13 +19,13 @@ Scanning the codebase for code markers and annotations.
 ## Marker Scan
 
 **High Priority (FIXME, HACK, XXX)**:
-!`git grep -rn -E '\b(FIXME|HACK|XXX)\b' -- ':!node_modules' ':!.git' 2>/dev/null || grep -rn -E '\b(FIXME|HACK|XXX)\b' --include='*' --exclude-dir=node_modules --exclude-dir=.git . 2>/dev/null || echo "No high-priority markers found"`
+!`git grep -rn -E '\b(FIXME|HACK|XXX)\b' -- ':!node_modules' ':!.git' 2>/dev/null || echo "No high-priority markers found"`
 
 **Standard (TODO, TASK, TEMP, DEPRECATED)**:
-!`git grep -rn -E '\b(TODO|TASK|TEMP|DEPRECATED)\b' -- ':!node_modules' ':!.git' 2>/dev/null || grep -rn -E '\b(TODO|TASK|TEMP|DEPRECATED)\b' --include='*' --exclude-dir=node_modules --exclude-dir=.git . 2>/dev/null || echo "No standard markers found"`
+!`git grep -rn -E '\b(TODO|TASK|TEMP|DEPRECATED)\b' -- ':!node_modules' ':!.git' 2>/dev/null || echo "No standard markers found"`
 
 **Informational (NOTE, WARN)**:
-!`git grep -rn -E '\b(NOTE|WARN)\b' -- ':!node_modules' ':!.git' 2>/dev/null || grep -rn -E '\b(NOTE|WARN)\b' --include='*' --exclude-dir=node_modules --exclude-dir=.git . 2>/dev/null || echo "No informational markers found"`
+!`git grep -rn -E '\b(NOTE|WARN)\b' -- ':!node_modules' ':!.git' 2>/dev/null || echo "No informational markers found"`
 
 ## User Filter
 
