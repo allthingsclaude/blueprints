@@ -1,6 +1,6 @@
 ---
 description: Generate a developer onboarding guide for this project
-argument-hint: [optional: focus area like "backend", "frontend", "api", or "contributing"]
+argument-hint: optional: focus area like "backend", "frontend", "api", or "contributing"
 author: "@markoradak"
 ---
 

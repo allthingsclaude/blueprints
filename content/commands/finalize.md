@@ -1,6 +1,6 @@
 ---
 description: Finalize work session - update plans, commit changes with proper message
-argument-hint: [optional: commit message prefix or focus area]
+argument-hint: optional: commit message prefix or focus area
 author: "@markoradak"
 ---
 

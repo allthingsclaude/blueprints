@@ -1,6 +1,6 @@
 ---
 description: Generate comprehensive handoff documentation for context switching
-argument-hint: [optional: focus area or notes]
+argument-hint: optional: focus area or notes
 author: "@markoradak"
 ---
 

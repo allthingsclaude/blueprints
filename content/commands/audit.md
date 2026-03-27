@@ -1,6 +1,6 @@
 ---
 description: Review code changes before committing
-argument-hint: [optional: specific files or focus area]
+argument-hint: optional: specific files or focus area
 author: "@markoradak"
 ---
 

@@ -1,6 +1,6 @@
 ---
 description: Generate a standup summary from recent git activity
-argument-hint: [optional: timeframe like "3 days" or "this week"]
+argument-hint: optional: timeframe like "3 days" or "this week"
 author: "@markoradak"
 ---
 

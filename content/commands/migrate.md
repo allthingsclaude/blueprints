@@ -1,6 +1,6 @@
 ---
 description: Upgrade dependencies or migrate between framework versions
-argument-hint: [package@version, "all", or migration description]
+argument-hint: package@version, "all", or migration description
 author: "@markoradak"
 ---
 

@@ -1,6 +1,6 @@
 ---
 description: Create on-brand design and marketing assets (social media, banners, ads)
-argument-hint: [design brief] or leave empty for guided questionnaire
+argument-hint: design brief or leave empty for guided questionnaire
 author: "@markoradak"
 ---
 

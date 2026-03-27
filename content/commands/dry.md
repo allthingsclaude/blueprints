@@ -1,6 +1,6 @@
 ---
 description: Eliminate DRY violations without changing behavior
-argument-hint: [optional: file/folder path, "functions" | "components" | "hooks" | "types" | "constants"]
+argument-hint: optional: file/folder path, "functions" | "components" | "hooks" | "types" | "constants"
 author: "@markoradak"
 ---
 

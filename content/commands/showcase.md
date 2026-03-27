@@ -1,6 +1,6 @@
 ---
 description: Design an award-winning landing page with animations and micro-interactions
-argument-hint: [product/project name or description]
+argument-hint: product/project name or description
 author: "@markoradak"
 ---
 

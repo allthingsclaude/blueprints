@@ -1,6 +1,6 @@
 ---
 description: Generate a changelog from git history
-argument-hint: [optional: version tag, date range, or "unreleased"]
+argument-hint: optional: version tag, date range, or "unreleased"
 author: "@markoradak"
 ---
 

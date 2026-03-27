@@ -1,6 +1,6 @@
 ---
 description: Write on-brand marketing copy for social media, ads, emails, and landing pages
-argument-hint: [copy brief] or leave empty for guided questionnaire
+argument-hint: copy brief or leave empty for guided questionnaire
 author: "@markoradak"
 ---
 

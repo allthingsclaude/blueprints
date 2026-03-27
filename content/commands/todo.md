@@ -1,6 +1,6 @@
 ---
 description: Scan codebase for TODO/FIXME/HACK markers and present an organized summary
-argument-hint: [optional: directory, file, or keyword to filter]
+argument-hint: optional: directory, file, or keyword to filter
 author: "@markoradak"
 ---
 

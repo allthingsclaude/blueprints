@@ -1,6 +1,6 @@
 ---
 description: Enter brainstorming mode to explore ideas without implementation
-argument-hint: [topic or context]
+argument-hint: topic or context
 author: "@markoradak"
 ---
 

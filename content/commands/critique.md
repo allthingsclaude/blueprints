@@ -1,6 +1,6 @@
 ---
 description: Critique Mode
-argument-hint: [optional: code, design, or approach to critique]
+argument-hint: optional: code, design, or approach to critique
 author: "@markoradak"
 ---
 

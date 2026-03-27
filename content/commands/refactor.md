@@ -1,6 +1,6 @@
 ---
 description: Safely rename, extract, inline, or move code with validation
-argument-hint: [operation] [target] (e.g., "rename:old:new", "extract:ComponentName", "move:src:dest")
+argument-hint: operation target (e.g., "rename:old:new", "extract:ComponentName", "move:src:dest")
 author: "@markoradak"
 ---
 

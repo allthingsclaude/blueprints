@@ -1,6 +1,6 @@
 ---
 description: Activate a specialized research agent (codebase/web/docs) to investigate specific topics
-argument-hint: [topic or question to research]
+argument-hint: topic or question to research
 author: "@markoradak"
 ---
 

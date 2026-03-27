@@ -1,6 +1,6 @@
 ---
 description: Auto-generate Open Graph images for all pages in your project
-argument-hint: [specific page or route] or leave empty for all pages
+argument-hint: specific page or route or leave empty for all pages
 author: "@markoradak"
 ---
 

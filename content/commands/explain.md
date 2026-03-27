@@ -1,6 +1,6 @@
 ---
 description: Generate detailed explanations of code, architecture, or features
-argument-hint: [file path, component name, feature, or concept to explain]
+argument-hint: file path, component name, feature, or concept to explain
 author: "@markoradak"
 ---
 

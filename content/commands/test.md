@@ -1,6 +1,6 @@
 ---
 description: Run tests with intelligent analysis and fix suggestions
-argument-hint: [optional: file pattern, test name, or "generate" for new tests]
+argument-hint: optional: file pattern, test name, or "generate" for new tests
 author: "@markoradak"
 ---
 

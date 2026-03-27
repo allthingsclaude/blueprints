@@ -1,6 +1,6 @@
 ---
 description: Create an on-brand HTML presentation deck with speaker notes
-argument-hint: [pitch topic/audience] or leave empty for guided questionnaire
+argument-hint: pitch topic/audience or leave empty for guided questionnaire
 author: "@markoradak"
 ---
 

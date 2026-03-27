@@ -1,6 +1,6 @@
 ---
 description: Run a focused security scan on your codebase
-argument-hint: [optional: file/folder path, or focus area like "deps", "auth", "api"]
+argument-hint: optional: file/folder path, or focus area like "deps", "auth", "api"
 author: "@markoradak"
 ---
 

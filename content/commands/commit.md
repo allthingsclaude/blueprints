@@ -1,6 +1,6 @@
 ---
 description: Create a well-crafted git commit from your current changes
-argument-hint: [optional: commit message hint or scope]
+argument-hint: optional: commit message hint or scope
 author: "@markoradak"
 ---
 

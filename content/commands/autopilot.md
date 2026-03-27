@@ -1,6 +1,6 @@
 ---
 description: Full autonomous development loop - from idea to committed code
-argument-hint: [--full] [feature description or plan name]
+argument-hint: --full feature description or plan name
 author: "@markoradak"
 ---
 

@@ -1,6 +1,6 @@
 ---
 description: Update CLAUDE.md and STATE.md to reflect current project state
-argument-hint: [optional: section to focus on]
+argument-hint: optional: section to focus on
 author: "@markoradak"
 ---
 

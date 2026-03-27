@@ -1,6 +1,6 @@
 ---
 description: Investigate and diagnose issues with systematic analysis
-argument-hint: [error message, file path, or behavior description]
+argument-hint: error message, file path, or behavior description
 author: "@markoradak"
 ---
 

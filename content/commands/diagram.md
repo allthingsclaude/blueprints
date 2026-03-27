@@ -1,6 +1,6 @@
 ---
 description: Generate Mermaid diagrams from your codebase
-argument-hint: [architecture | dependency | sequence | er | dataflow | component name or feature]
+argument-hint: architecture | dependency | sequence | er | dataflow | component name or feature
 author: "@markoradak"
 ---
 

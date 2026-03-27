@@ -1,6 +1,6 @@
 ---
 description: Generate or update project documentation
-argument-hint: [readme | api | architecture | file path or component to document]
+argument-hint: readme | api | architecture | file path or component to document
 author: "@markoradak"
 ---
 

@@ -1,6 +1,6 @@
 ---
 description: Load handoff document and continue from previous session
-argument-hint: [optional: specific task or focus area]
+argument-hint: optional: specific task or focus area
 author: "@markoradak"
 ---
 

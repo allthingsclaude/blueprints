@@ -1,6 +1,6 @@
 ---
 description: Create a release — version bump, changelog, tag, and publish
-argument-hint: [optional: major | minor | patch | version number | --dry-run]
+argument-hint: optional: major | minor | patch | version number | --dry-run
 author: "@markoradak"
 ---
 

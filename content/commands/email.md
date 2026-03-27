@@ -1,6 +1,6 @@
 ---
 description: Create on-brand HTML email templates (newsletters, announcements, transactional)
-argument-hint: [email brief] or leave empty for guided questionnaire
+argument-hint: email brief or leave empty for guided questionnaire
 author: "@markoradak"
 ---
 

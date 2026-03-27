@@ -1,6 +1,6 @@
 ---
 description: Create or document a comprehensive brand identity system
-argument-hint: [brand description] or leave empty for guided questionnaire
+argument-hint: brand description or leave empty for guided questionnaire
 author: "@markoradak"
 ---
 
