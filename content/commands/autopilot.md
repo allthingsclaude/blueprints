@@ -12,10 +12,15 @@ Full autonomous development loop. I'll take it from idea to committed code on a 
 
 **Working Directory**: !`pwd`
 
-**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
+**Is Git Repo**: !`git rev-parse --is-inside-work-tree 2>/dev/null || echo "no"`
+
+**Branch**: !`git branch --show-current 2>/dev/null || echo "(not a repo — will scan children)"`
 
 **Git Status**:
-!`git status --short 2>/dev/null || echo "Not a git repository"`
+!`git status --short 2>/dev/null || echo "(not a repo)"`
+
+**Child Git Repos** (for multi-repo mode):
+!`find . -mindepth 2 -maxdepth 2 -name .git -type d 2>/dev/null`
 
 **Active Plan**:
 !`cat {{STATE_FILE}} 2>/dev/null || echo "No active plan"`
@@ -24,7 +29,7 @@ Full autonomous development loop. I'll take it from idea to committed code on a 
 !`ls -1 {{PLANS_DIR}}/PLAN_*.md 2>/dev/null || echo "No plans found"`
 
 **Project Detection**:
-!`ls package.json tsconfig.json Cargo.toml go.mod pyproject.toml requirements.txt 2>/dev/null || echo "No recognized project files"`
+!`ls package.json tsconfig.json Cargo.toml go.mod pyproject.toml requirements.txt 2>/dev/null || echo "(no root-level project files — multi-repo likely)"`
 
 ---
 
@@ -40,12 +45,13 @@ You are now in **AUTOPILOT MODE** — a full development loop that orchestrates 
 
 ### Step 0: Parse Arguments
 
-Parse `$ARGUMENTS` for:
+Parse `$ARGUMENTS` for (in order):
 - **`--full`** flag: If present, run the entire loop without stopping for confirmation — commit automatically, skip approval prompts, maximize autonomy. Remove this flag from the remaining arguments before further processing.
-- **Plan name**: If the first remaining word matches an existing plan in `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md`, treat it as a plan name to execute.
+- **`--repos a,b,c`** flag: If present, overrides auto-detection for multi-repo mode. Value is a comma-separated list of child directory names that should be treated as "affected" regardless of what the plan references. Remove this flag and its value from the remaining arguments. Store as `REPOS_OVERRIDE`.
+- **Plan name**: If the first remaining word matches an existing plan in `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md` (case-insensitive, matched by the `{NAME}` portion), treat it as a plan name to execute.
 - **Feature description**: Otherwise, treat remaining arguments as a feature description for brainstorming.
 
-Store the `--full` preference — you'll check it at every commit checkpoint and decision point.
+Store the `--full` and `REPOS_OVERRIDE` preferences — you'll check them at commit checkpoints and in Step 3a respectively.
 
 ---
 
@@ -55,7 +61,14 @@ Follow this decision tree **in order**:
 
 #### 1a. Check for Active Plan in STATE.md
 
-Read `{{STATE_FILE}}`. If it contains an active plan (status is `In Progress` or `Paused`):
+Look for `{{STATE_FILE}}` in this search order (first match wins):
+1. `./{{STATE_FILE}}` — cwd
+2. `../{{STATE_FILE}}` — parent directory (useful when user accidentally ran from inside a child repo in a multi-repo setup)
+
+If found in the parent, emit a notice: "Found {{TASKS_DIR}}/ in parent directory — treating parent as the working root. Suggest running `/autopilot` from `{parent_abspath}` in the future."
+
+Then, if STATE.md contains an active plan (status is `In Progress` or `Paused`):
+- If the resolved STATE.md is at `../`, **change working directory to the parent** before continuing. All subsequent steps (discovery, branching, commits) must operate relative to the parent.
 - Load the plan file referenced in STATE.md
 - Check which phase we're on and what tasks remain
 - **If there are uncompleted tasks** → skip to **Step 3** (branch) then **Step 4** (execute)
@@ -134,26 +147,112 @@ Use the Task tool to launch the plan agent (`subagent_type="plan"`) with the fea
 
 Wait for the plan agent to complete, then load and display a brief summary of the plan.
 
-**COMMIT CHECKPOINT**: After plan is created, commit it:
-- Stage the plan file and STATE.md
-- Use the Task tool to launch the commit agent (`subagent_type="commit"`) with context: "docs: add implementation plan for {NAME}"
+**COMMIT CHECKPOINT (conditional)**: After plan is created, commit it **only if cwd is a git repo**:
+- Check: `git rev-parse --is-inside-work-tree 2>/dev/null`
+- If cwd IS a git repo (single-repo or meta-repo case):
+  - Stage the plan file and STATE.md
+  - Use the Task tool to launch the commit agent (`subagent_type="commit"`) with context: "docs: add implementation plan for {NAME}"
+- If cwd is NOT a git repo (parent-with-child-repos case):
+  - **Skip the commit** — the plan and STATE.md stay as uncommitted coordination artifacts at the parent level.
+  - Report: "Plan created at parent level (not a git repo) — left uncommitted as coordination artifact. To version it, init a meta-repo at the parent or commit in any workflow you choose."
 
 ---
 
-### Step 3: Create Feature Branch
+### Step 3: Detect Repositories & Create Feature Branch(es)
 
-Before starting implementation, create a feature branch:
+Before starting implementation, detect the repository topology and create feature branches.
 
-1. Determine the branch name from the plan name:
-   - Convert plan name to lowercase kebab-case
-   - Prefix with `feat/` (e.g., plan "USER_AUTH" → branch `feat/user-auth`)
-2. Check if the branch already exists:
-   - If yes and we're resuming → switch to it: `git checkout feat/{name}`
-   - If yes and NOT resuming → switch to it (it may have prior work)
-   - If no → create it: `git checkout -b feat/{name}`
-3. Confirm the branch: `git branch --show-current`
+#### 3a. Discover Repos & Determine Mode
 
-Report: "Working on branch: `feat/{name}`"
+Always perform both discoveries below before deciding mode. Mode is chosen based on **what the plan references**, not purely on whether cwd is a git repo. This correctly handles three distinct layouts: plain single-repo, parent-is-not-a-repo-but-children-are, and parent-is-a-meta-repo-with-child-repos.
+
+**Discovery 1 — is cwd itself a git repo?**
+```bash
+git rev-parse --is-inside-work-tree 2>/dev/null
+```
+Store as `CWD_IS_REPO` (true/false).
+
+**Discovery 2 — are there child git repos?**
+```bash
+find . -mindepth 2 -maxdepth 2 -name .git -type d 2>/dev/null
+```
+Store the list as `CHILD_REPOS`. (Avoid `for` / `while` loops in inline shell — some harnesses reject control-flow statements.)
+
+**Discovery 3 — which repos does the plan reference?**
+If there's an active plan file (`{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md`), for each entry in `CHILD_REPOS`, grep the plan for its directory name:
+```bash
+grep -c "{child_repo_name}" {{PLANS_DIR}}/PLAN_{NN}_{NAME}.md
+```
+Any child with **> 0 mentions** goes into `AFFECTED_CHILDREN`.
+
+**Mode decision** (evaluate in this order, first match wins):
+
+| Condition | Mode | `AFFECTED_REPOS` | Notes |
+|---|---|---|---|
+| User passed `--repos a,b,...` | multi | `{a, b, ...}` | Explicit override wins over all auto-detection |
+| `AFFECTED_CHILDREN` is non-empty | multi | `AFFECTED_CHILDREN` | Applies even if cwd is itself a git repo (meta-repo case). The parent repo, if any, is NOT branched — it stays where it is. |
+| `CWD_IS_REPO` is true | single | `[.]` | No child repos mentioned in plan → plain single-repo |
+| Otherwise | fail | — | "No git repo found here, and no child directories with `.git/` are referenced by the plan. Either cd into a repo, initialize one, or verify the plan references the correct repo directories." |
+
+**Ambiguity warning**: If `CHILD_REPOS` is non-empty but `AFFECTED_CHILDREN` is empty AND `CWD_IS_REPO` is true (falling through to single-repo mode), this might indicate a plan authoring mistake. Emit a warning before proceeding:
+
+> "Detected child git repos {list} but the plan does not reference any of them by directory name. Proceeding with single-repo mode (branching in cwd). If you intended multi-repo, either (a) update the plan's file paths to include the repo prefix (e.g., `{child_name}/src/...`), or (b) re-run with `--repos {child_name}` to force multi-repo mode."
+
+Prompt the user to confirm before continuing (in `--full` mode, auto-continue with the warning still logged).
+
+**Important — meta-repo case**: If cwd is a git repo AND there are affected children, we enter **multi-repo mode**. Branches are created only in the affected children. The parent (meta) repo is left alone — no branch, no commits, no state mutations. STATE.md changes at the parent level remain uncommitted coordination artifacts. If the user later wants to version those in the meta-repo, they can commit them manually via `/commit`.
+
+Report the decision:
+- Single-repo: "Branching in this repo."
+- Multi-repo: "Plan touches {N} child repo(s): {list}. Will branch in each. Parent repo (if any) left untouched."
+
+#### 3b. Pre-flight: Check for Dirty Working State
+
+Before branching, guard against clobbering uncommitted work in any target repo.
+
+For each repo in `AFFECTED_REPOS`:
+1. `cd {repo}` (skip for single-repo mode where this is cwd)
+2. Run: `git status --short`
+3. If non-empty → mark this repo as "dirty" and collect the output.
+4. `cd -`
+
+If any repo is dirty:
+- Report to the user: list each dirty repo and its `git status --short` output.
+- Ask: "Uncommitted changes found in {N} repo(s). How should I proceed?
+  - **stash** — I'll stash the changes in each dirty repo before branching (`git stash push -u -m 'autopilot pre-branch'`). You can restore with `git stash pop` later.
+  - **abort** — stop autopilot so you can handle the changes manually.
+  - **continue** — proceed anyway; the uncommitted changes will carry onto the new branch (only safe if you want them there)."
+- In `--full` mode, default to **abort** (never silently discard or carry unintended work).
+- Wait for user decision before proceeding.
+
+If all repos are clean (or user chose stash/continue), proceed to 3c.
+
+#### 3c. Create Branches
+
+Determine the branch name:
+- Convert plan name to lowercase kebab-case
+- Prefix with `feat/` (e.g., plan "USER_AUTH" → branch `feat/user-auth`)
+
+**Single-repo mode**: run branching in cwd.
+**Multi-repo mode**: run branching in each affected repo.
+
+For each target repo, in order:
+1. `cd {repo}` (or stay at cwd for single-repo)
+2. Check current branch: `git branch --show-current`
+3. Check if `feat/{name}` exists:
+   - Exists + we're resuming → switch to it: `git checkout feat/{name}`
+   - Exists + not resuming → switch to it (prior work)
+   - Does not exist → create it: `git checkout -b feat/{name}`
+4. Confirm the branch.
+5. `cd -` (return to parent)
+
+**STATE UPDATE**: Add a `**Repos**:` line to STATE.md header listing the affected repos and the branch name:
+```markdown
+**Repos**: cli-shopnosis-shopper-app, cli-shopnosis-shopper-server
+**Branch**: feat/{name}
+```
+
+Report: "Working on branch `feat/{name}` in {N} repo(s): {list}"
 
 ---
 
@@ -181,10 +280,10 @@ Count the `- [ ]` uncompleted tasks in the current phase.
 Use the Task tool to launch the showcase agent (`subagent_type="showcase"`) with the plan context and any reference files from `{{TASKS_DIR}}/references/`.
 
 **For `/implement` mode:**
-Use the Task tool to launch the implement agent (`subagent_type="implement"`) with the plan name and instruction to work on the current phase only (e.g., "Execute Phase 1 only, then stop").
+Use the Task tool to launch the implement agent (`subagent_type="implement"`) with the plan name and instruction to work on the current phase only (e.g., "Execute Phase 1 only, then stop"). **Multi-repo mode**: include in the prompt the list of affected repos and their paths so the agent writes files into the correct sub-directories (file paths in the plan should already be prefixed with the repo name).
 
 **For `/parallelize` mode:**
-Use the Task tool to launch the parallelize orchestrator (`subagent_type="parallelize"`) with the plan name and instruction to work on the current phase only.
+Use the Task tool to launch the parallelize orchestrator (`subagent_type="parallelize"`) with the plan name and instruction to work on the current phase only. **Multi-repo mode**: include the list of affected repos in the prompt.
 
 Wait for the agent to complete. Review its summary.
 
@@ -194,11 +293,24 @@ Present the blockers to the user and ask how to proceed. Do NOT continue until b
 #### 4c. Commit the Phase
 
 **COMMIT CHECKPOINT**: After each phase completes:
+
+**Single-repo mode**:
 - Use the Task tool to launch the commit agent (`subagent_type="commit"`) with context describing what was accomplished in this phase
 - The commit agent will determine the appropriate prefix (`feat:`, `fix:`, `refactor:`, `chore:`, etc.) based on the nature of the changes
 - The commit message should reference the plan and phase (e.g., "feat: implement user authentication (PLAN_AUTH Phase 1)")
 
-**STATE UPDATE**: Read and update `{{STATE_FILE}}`:
+**Multi-repo mode**:
+- Before the commit loop, capture the parent directory: `PARENT_DIR=$(pwd)`.
+- For each repo in `AFFECTED_REPOS`:
+  1. `cd "$PARENT_DIR/{repo}"` (use the absolute path — never rely on `cd -` chains)
+  2. Check `git status --short` — if empty, skip this repo for this phase (no changes here).
+  3. If there are changes, launch the commit agent (`subagent_type="commit"`) with context including (a) what was accomplished in this phase, and (b) which repo this is. The commit runs inside the repo's working directory.
+- After the loop, **unconditionally** return: `cd "$PARENT_DIR"`.
+- Confirm cwd is the parent before the STATE.md update below (run `pwd` to verify).
+- A single phase may produce commits in multiple repos; that's expected.
+- Record the resulting commit hashes per repo for the final report.
+
+**STATE UPDATE** (always from the parent dir — STATE.md lives at `$PARENT_DIR/{{STATE_FILE}}`): Read and update `{{STATE_FILE}}`:
 - Increment `**Phase**` to the next phase number
 - Keep `**Status**` as `🚧 In Progress`
 - Update `**Updated**` timestamp
@@ -216,7 +328,9 @@ After committing and updating STATE.md, check if there are more phases remaining
 
 ### Step 5: Validate & Fix
 
-After all phases are implemented and committed, run validation. Each step uses a subagent:
+After all phases are implemented and committed, run validation. Each step uses a subagent.
+
+**Multi-repo mode**: every validation step below runs **once per affected repo**, with `cd {repo}` before launching the agent. Aggregate results per repo into the final report. A failure in one repo does not short-circuit the others — validate all, then report aggregated findings and decide together.
 
 #### 5a. Audit
 
@@ -293,7 +407,9 @@ Review security report:
 - Update `**Updated**` timestamp
 - Update all task statuses in the task tables under `## Plans` to reflect final state
 
-After everything is done (or stopped), provide a final summary:
+After everything is done (or stopped), provide a final summary.
+
+**Single-repo mode**:
 
 ```markdown
 **Autopilot Complete**
@@ -305,7 +421,6 @@ After everything is done (or stopped), provide a final summary:
 **Commits Made**:
 - `{hash}` {commit message 1}
 - `{hash}` {commit message 2}
-- `{hash}` {commit message 3}
 
 **What Was Done**:
 - [Phase 1 summary]
@@ -320,6 +435,45 @@ After everything is done (or stopped), provide a final summary:
 - Review changes: `git log main..feat/{name} --oneline`
 - Create PR when ready: `gh pr create`
 - Or continue working: `/autopilot` (will resume from STATE.md)
+```
+
+**Multi-repo mode**:
+
+```markdown
+**Autopilot Complete (multi-repo)**
+
+**Plan**: {NAME}
+**Branch**: `feat/{name}` (same across all affected repos)
+**Status**: {Complete / Partially Complete}
+
+**Per-repo results**:
+
+### {repo-name-1}
+- Branch: `feat/{name}`
+- Commits:
+  - `{hash}` {commit message}
+  - `{hash}` {commit message}
+- Next: `cd {repo-name-1} && gh pr create`
+
+### {repo-name-2}
+- Branch: `feat/{name}`
+- Commits:
+  - `{hash}` {commit message}
+- Next: `cd {repo-name-2} && gh pr create`
+
+**What Was Done**:
+- [Phase 1 summary]
+- [Phase 2 summary]
+
+**Validation Results**:
+- Audit: {result per repo}
+- Tests: {result per repo}
+- Security: {result per repo}
+
+**Next Steps**:
+- Review changes in each repo individually.
+- Open one PR per repo (they can reference each other's branch name).
+- Or resume: `/autopilot` will pick up from STATE.md.
 ```
 
 ---
@@ -351,6 +505,19 @@ Autopilot commits **early and often** using the commit agent (`subagent_type="co
 - Commit after every major milestone to keep work safe
 - BUT always stop for: blockers and validation failures that can't be auto-fixed
 - Never force-push, delete branches, or make destructive changes without asking
+
+### Multi-Repo Mode
+- **Trigger**: multi-repo mode activates whenever the plan references child directories that are git repos — regardless of whether the parent (cwd) is itself a git repo. The parent is never branched in this mode.
+- Three scenarios it handles:
+  1. Parent is NOT a git repo + children are → multi-repo.
+  2. Parent IS a git repo (meta-repo) + children are + plan mentions them → multi-repo, meta-repo untouched.
+  3. Parent IS a git repo + no children mentioned in plan → single-repo (plain case).
+- The same branch name (`feat/{name}`) is created in every "affected" child repo.
+- Commits run per-repo: `cd {repo}`, check `git status`, launch commit agent, `cd -`.
+- Validation (audit / test / security / a11y) runs per-repo. Failures in one repo don't short-circuit others — validate all, report together.
+- STATE.md lives at the parent level and is NOT committed by autopilot; it's a coordination artifact. If the parent is itself a meta-repo and the user wants to version STATE.md/plan updates, they can do so manually via `/commit` in the parent — autopilot does not touch the parent.
+- The plan document should prefix file paths with the repo directory name (e.g., `cli-shopnosis-shopper-server/src/models/...`) so the implement/parallelize agents write into the right sub-directory, and so the grep-for-mentions step correctly detects affected repos.
+- If the user passes `--repos repoA,repoB`, override auto-detection with that explicit list.
 
 ### Compose Existing Agents
 - Use the existing subagent types: `bootstrap`, `plan`, `implement`, `parallelize`, `showcase`, `audit`, `test`, `secure`, `a11y`, `commit`, `update`
