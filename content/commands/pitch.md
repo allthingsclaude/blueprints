@@ -43,58 +43,73 @@ Parse the brief for: presentation type, audience, slide count, key points, and s
 
 ### If the brief is empty or vague:
 
-Conduct a focused discovery questionnaire. Ask questions **one at a time**, adapting based on previous answers. Don't dump all questions at once — this should feel like a conversation.
+Conduct a focused discovery using the **AskUserQuestion tool** for interactive selection. The user should be able to click/select options rather than typing numbers. Adapt follow-up questions based on previous answers.
 
 #### First, determine the repo context:
 
 Check the "Existing Brand Brief", "Project Identity", "Package Description", and "Product Features & Stats" sections above. If meaningful product information was detected (README with clear positioning, product features, stats, metrics, or an existing `design/brand-brief.md`), this is a **brand-rich repo** — the codebase contains enough to derive brand identity, product messaging, and content automatically.
 
-#### Always ask (every context):
+#### Round 1 — Core questions (single AskUserQuestion call, 3 questions):
 
-**Q1: What's the presentation for?**
-- Product launch
-- Investor pitch
-- Conference talk
-- Team update
-- Sales demo
-- Workshop
-- Custom (describe)
+**Q1** (header: "Presentation type", multiSelect: false):
+Question: "What's the presentation for?"
+Options:
+- label: "Product launch" / description: "Announce a new product, feature, or version"
+- label: "Investor pitch" / description: "Fundraising deck — vision, traction, the ask"
+- label: "Conference talk" / description: "Keynote or session for an audience of peers"
+- label: "Sales demo" / description: "Walk a prospect through product value and pricing"
 
-**Q2: Who's the audience?**
-- Investors
-- Developers
-- Customers
-- Team / internal
-- Executives
-- Conference attendees
-- Custom (describe)
+**Q2** (header: "Audience", multiSelect: false):
+Question: "Who's the audience?"
+Options:
+- label: "Investors" / description: "VCs, angels, or strategic capital partners"
+- label: "Developers" / description: "Technical practitioners and engineering teams"
+- label: "Customers / prospects" / description: "Buyers, end users, or decision-makers"
+- label: "Team / internal" / description: "Colleagues, executives, or cross-functional peers"
 
-**Q3: How many slides?** (default: 10-12)
+**Q3** (header: "Slide count", multiSelect: false):
+Question: "How many slides should the deck have?"
+Options:
+- label: "6-8 slides" / description: "Tight lightning-talk pacing"
+- label: "10-12 slides (Recommended)" / description: "Standard pitch / launch length"
+- label: "15-18 slides" / description: "Deeper narrative with room for demo and proof"
+- label: "20+ slides" / description: "Long-form workshop or detailed walkthrough"
 
-**Q4: Key points to cover?**
-- List specific topics, features, stats, or talking points
-- Or say "derive from codebase" to auto-extract from README, features, and product info
+#### Round 2 — Content direction (single AskUserQuestion call, 1 question):
 
-#### Only ask in bare repos (no brand or product info detected):
+**Q4** (header: "Key points", multiSelect: false):
+Question: "What should the deck cover?"
+Options:
+- label: "Derive from codebase" / description: "Auto-extract from README, features, and product info"
+- label: "Narrative arc" / description: "Problem → solution → proof → CTA"
+- label: "Feature-led" / description: "Core capabilities with demos and use cases"
+- label: "Metrics-led" / description: "Traction, growth, and data-driven highlights"
 
-If no README positioning, brand brief, features, or product info was found, the agent has nothing to derive from — so you need to ask:
+#### Round 3 — Brand & style (only for bare repos, single AskUserQuestion call):
 
-**Q5: What's the brand/style direction?**
-- Minimal / editorial (whitespace, typography-driven)
-- Bold / high-contrast (oversized type, strong colors)
-- Dark / premium (dark backgrounds, glow effects, sleek)
-- Technical / developer (terminal aesthetics, monospace)
-- Corporate / clean (structured, professional)
-- Playful / colorful (gradients, rounded shapes, vibrant)
+Only ask these if **no brand files, README positioning, or product info were detected**. In brand-rich repos, skip to confirmation.
 
-**Q6: What content should the deck cover?**
-(Free text — outline the narrative arc, key arguments, data points, or story beats)
+**Q1** (header: "Style", multiSelect: false):
+Question: "What visual style fits your brand?"
+Options:
+- label: "Minimal / editorial" / description: "Whitespace, typography-driven, structural grids"
+- label: "Bold / dark premium" / description: "High-contrast, oversized type, dark backgrounds, glow"
+- label: "Technical / developer" / description: "Terminal mockups, monospace, code aesthetics"
+- label: "Corporate / clean" / description: "Structured, professional, restrained palette"
 
-#### In brand-rich repos, skip Q5-Q6:
+**Q2** (header: "Tone", multiSelect: false):
+Question: "What's the tone of voice for the deck?"
+Options:
+- label: "Confident / bold" / description: "Declarative, punchy, no hedging"
+- label: "Warm / conversational" / description: "Approachable, human, inviting"
+- label: "Authoritative / precise" / description: "Data-driven, measured, expert"
+- label: "Playful / energetic" / description: "Witty, spirited, brand-forward"
+
+#### In brand-rich repos, skip Round 3:
 
 The agent will automatically analyze the codebase for brand identity, product features, stats, and messaging. Visual style and content direction will be derived from the existing design system and product information. The user can still override any of these when confirming the brief.
 
-After gathering answers, **summarize the complete brief and ask for confirmation** before launching the agent. Include what will be auto-derived from the codebase so the user can correct anything.
+After gathering all answers, **summarize the complete brief and ask for confirmation** before launching the agent. Include what will be auto-derived from the codebase so the user can correct anything.
 
 ### Launching the Agent
 
