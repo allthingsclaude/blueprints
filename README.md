@@ -140,7 +140,7 @@ Control which models power your agents:
 | `/email` | Create on-brand HTML email templates (newsletters, announcements, transactional) |
 | `/pitch` | Create an on-brand HTML presentation deck with speaker notes |
 | `/og` | Auto-generate Open Graph images for all pages in your project |
-| `/imagine` | Generate images using Nano Banana 2 (Gemini/fal.ai) |
+| `/imagine` | Generate images using Nano Banana 2 (Gemini/fal.ai) or GPT Image 2 (fal.ai), or both side-by-side |
 | `/storyboard` | Extract UI interaction specs from video mockups |
 | `/showcase` | Design an award-winning landing page with animations and micro-interactions |
 | `/diagram` | Generate Mermaid diagrams from your codebase |
@@ -442,7 +442,7 @@ Agents are specialized workers launched by commands. Each agent is assigned a mo
 | `finalize` | `/finalize` | Session wrap-up and commits |
 | `handoff` | `/handoff` | Context documentation |
 | `i18n` | `/i18n` | Internationalization auditing and setup |
-| `imagine` | `/imagine` | Image generation via Nano Banana 2 |
+| `imagine` | `/imagine` | Image generation via Nano Banana 2 or GPT Image 2 |
 | `implement` | `/implement` | Autonomous plan execution |
 | `migrate` | `/migrate` | Dependency upgrades and migrations |
 | `og` | `/og` | Open Graph image generation for all pages |
