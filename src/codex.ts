@@ -65,6 +65,24 @@ const EFFORT_BY_MODEL: Record<'haiku' | 'sonnet' | 'opus', string> = {
 
 const CODEX_EFFORTS = new Set(['minimal', 'low', 'medium', 'high', 'xhigh', 'max']);
 
+/** What each power level means for Codex (reasoning effort per agent tier; agents use the session's model) */
+export const POWER_LEVEL_EFFORTS: Record<AgentPowerLevel, string> = {
+  1: 'low effort, medium for heavyweight — fastest, lowest cost',
+  2: 'low effort light + research, medium everything else',
+  3: 'all medium effort',
+  4: 'medium effort light + research, high everything else — recommended',
+  5: 'all high effort — most thorough, highest cost',
+};
+
+/**
+ * Reasoning effort for a Codex agent: an explicit `effort:` in its frontmatter wins,
+ * otherwise it follows the agent's tier at the chosen power level
+ */
+export function getEffortForAgent(filename: string, powerLevel: AgentPowerLevel, explicitEffort?: string): string {
+  if (explicitEffort && CODEX_EFFORTS.has(explicitEffort)) return explicitEffort;
+  return EFFORT_BY_MODEL[getModelForAgent(filename, powerLevel)];
+}
+
 export function getCodexPaths(scope: CodexScope, root: string, home: string = os.homedir()): CodexInstallPaths {
   const codexHome = scope === 'global'
     ? (process.env.CODEX_HOME || path.join(home, '.codex'))
@@ -268,8 +286,7 @@ export function agentToToml(filename: string, content: string, powerLevel: Agent
   const { fields, body } = parseFrontmatter(content);
   const name = fields.name || filename.replace(/\.md$/, '');
   const description = convertTextForCodex(fields.description || `Blueprints ${name} agent`, commandNames).text;
-  const explicit = fields.effort && CODEX_EFFORTS.has(fields.effort) ? fields.effort : undefined;
-  const effort = explicit ?? EFFORT_BY_MODEL[getModelForAgent(filename, powerLevel)];
+  const effort = getEffortForAgent(filename, powerLevel, fields.effort);
   const instructions = convertTextForCodex(body, commandNames).text.trim();
 
   return [

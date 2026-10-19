@@ -4,9 +4,9 @@ import { program } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
-import { installBlueprints, getDefaultClaudeDir, getInstallPaths, getSourcePaths, POWER_LEVEL_LABELS, DEFAULT_TASKS_DIR } from './installer.js';
+import { installBlueprints, getDefaultClaudeDir, getInstallPaths, getSourcePaths, POWER_LEVEL_LABELS, POWER_LEVEL_MODELS, DEFAULT_TASKS_DIR } from './installer.js';
 import type { AgentPowerLevel } from './installer.js';
-import { getCodexPaths, installCodex } from './codex.js';
+import { getCodexPaths, installCodex, POWER_LEVEL_EFFORTS } from './codex.js';
 import type { CodexScope } from './codex.js';
 import fs from 'fs';
 import path from 'path';
@@ -155,7 +155,14 @@ async function main(): Promise<void> {
   const codexScope: CodexScope = installType === 'global' ? 'global' : 'project';
   const codexRoot = installType === 'global' ? process.cwd() : codexRootFor(targetPath);
 
-  // Determine power level
+  // Determine power level: Claude Code agents get a model per tier, Codex agents a reasoning effort
+  const describe = (level: AgentPowerLevel): string => {
+    if (target === 'codex') return POWER_LEVEL_EFFORTS[level];
+    if (target === 'claude') return POWER_LEVEL_MODELS[level];
+    const [models, note] = POWER_LEVEL_MODELS[level].split(' — ');
+    const [efforts] = POWER_LEVEL_EFFORTS[level].split(' — ');
+    return `Claude: ${models} · Codex: ${efforts}${note ? ` — ${note}` : ''}`;
+  };
   let powerLevel: AgentPowerLevel;
 
   if (options.power) {
@@ -168,19 +175,24 @@ async function main(): Promise<void> {
   } else if (options.yes) {
     powerLevel = 4;
   } else {
-    const codexNote = forCodex ? chalk.dim(' (Codex: sets reasoning effort low/medium/high instead of models)') : '';
+    const levels: AgentPowerLevel[] = [1, 2, 3, 4, 5];
+    const messages: Record<Target, string> = {
+      claude: 'Select agent power level:',
+      codex: 'Select agent power level (reasoning effort per agent; agents use your session\'s model):',
+      both: 'Select agent power level (Codex gets the same tiers as reasoning effort: haiku → low, sonnet → medium, opus → high):',
+    };
+    // In "both" mode the choices show the Claude tiers and the message gives the Codex mapping, so lines don't wrap
+    const choiceText = (level: AgentPowerLevel): string => (target === 'codex' ? POWER_LEVEL_EFFORTS[level] : POWER_LEVEL_MODELS[level]);
     const powerAnswer = await inquirer.prompt<{ power: AgentPowerLevel }>([
       {
         type: 'list',
         name: 'power',
-        message: `Select agent power level:${codexNote}`,
-        choices: [
-          { name: '1 - Economy     (haiku + sonnet heavyweight — fastest, lowest cost)', value: 1 },
-          { name: '2 - Balanced    (haiku light, sonnet everything else)', value: 2 },
-          { name: '3 - Standard    (all sonnet)', value: 3 },
-          { name: '4 - Enhanced    (sonnet light + research, opus everything else — recommended)', value: 4 },
-          { name: '5 - Maximum     (all opus — most capable, highest cost)', value: 5 },
-        ],
+        message: messages[target],
+        choices: levels.map(level => ({
+          name: `${level} - ${POWER_LEVEL_LABELS[level].padEnd(9)} (${choiceText(level)})`,
+          value: level,
+        })),
+        pageSize: 10,
         default: 3 // 0-indexed, so index 3 = value 4
       }
     ]);
@@ -236,7 +248,7 @@ async function main(): Promise<void> {
     console.log(`  ${chalk.bold('Agents:')}      ${agentCount} files → ${chalk.cyan(codexPaths.agents)}`);
     console.log(`  ${chalk.bold('Hook:')}        typecheck gate → ${chalk.cyan(codexPaths.hooksFile)}`);
   }
-  console.log(`  ${chalk.bold('Power Level:')} ${chalk.magenta(`${powerLevel} - ${POWER_LEVEL_LABELS[powerLevel]}`)}`);
+  console.log(`  ${chalk.bold('Power Level:')} ${chalk.magenta(`${powerLevel} - ${POWER_LEVEL_LABELS[powerLevel]}`)} ${chalk.dim(`(${describe(powerLevel)})`)}`);
   console.log(`  ${chalk.bold('Tasks Dir:')}   ${chalk.cyan(`${tasksDir}/`)}`);
   console.log(chalk.dim('─'.repeat(50)));
   console.log();

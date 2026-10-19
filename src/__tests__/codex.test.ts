@@ -12,8 +12,10 @@ import {
   installCodex,
   getCodexPaths,
   CODEX_MARKER,
+  POWER_LEVEL_EFFORTS,
+  getEffortForAgent,
 } from '../codex.js';
-import { getSourcePaths, listFiles } from '../installer.js';
+import { getSourcePaths, listFiles, getModelForAgent, POWER_LEVEL_MODELS } from '../installer.js';
 
 const COMMANDS = ['autopilot', 'blueprint', 'commit', 'design-free-name'];
 
@@ -214,5 +216,33 @@ describe('installCodex', () => {
     } finally {
       if (saved !== undefined) process.env.CODEX_HOME = saved;
     }
+  });
+});
+
+describe('power level descriptions', () => {
+  const TIER_EXAMPLES = ['commit.md', 'research-web.md', 'implement.md', 'diagnose.md']; // lightweight, research, standard, heavyweight
+
+  it('describe exactly the efforts Codex agents get at each level', () => {
+    for (const level of [1, 2, 3, 4, 5] as const) {
+      const efforts = new Set(TIER_EXAMPLES.map(file => getEffortForAgent(file, level)));
+      const description = POWER_LEVEL_EFFORTS[level];
+      for (const effort of ['low', 'medium', 'high']) {
+        expect(description.includes(effort), `level ${level}: ${effort}`).toBe(efforts.has(effort));
+      }
+    }
+  });
+
+  it('describe exactly the models Claude Code agents get at each level', () => {
+    for (const level of [1, 2, 3, 4, 5] as const) {
+      const models = new Set(TIER_EXAMPLES.map(file => getModelForAgent(file, level)));
+      for (const model of ['haiku', 'sonnet', 'opus'] as const) {
+        expect(POWER_LEVEL_MODELS[level].includes(model), `level ${level}: ${model}`).toBe(models.has(model));
+      }
+    }
+  });
+
+  it('lets an agent\'s own effort setting win', () => {
+    expect(getEffortForAgent('commit.md', 5, 'low')).toBe('low');
+    expect(getEffortForAgent('commit.md', 5, 'bogus')).toBe('high');
   });
 });

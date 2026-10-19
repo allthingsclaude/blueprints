@@ -42,6 +42,15 @@ export const POWER_LEVEL_LABELS: Record<AgentPowerLevel, string> = {
   5: 'Maximum',
 };
 
+/** What each power level means for Claude Code (which model each agent tier runs on) */
+export const POWER_LEVEL_MODELS: Record<AgentPowerLevel, string> = {
+  1: 'haiku, sonnet for heavyweight — fastest, lowest cost',
+  2: 'haiku light + research, sonnet everything else',
+  3: 'all sonnet',
+  4: 'sonnet light + research, opus everything else — recommended',
+  5: 'all opus — most capable, highest cost',
+};
+
 export const RESEARCH_AGENTS = [
   'research-codebase.md',
   'research-docs.md',
