@@ -22,7 +22,7 @@ I'll create an on-brand, self-contained HTML presentation deck with keyboard nav
 !`head -10 package.json 2>/dev/null || echo "No package.json found"`
 
 **Product Features & Stats**:
-!`grep -rh "<h2\|<h3\|<strong\|features\|pricing\|stats\|metric" src/app/page.tsx src/components/*.tsx README.md 2>/dev/null || echo "No product features detected"`
+!`grep -rhE "<h2|<h3|<strong|features|pricing|stats|metric" --include="*.tsx" --include="*.jsx" --include="README.md" src app components README.md 2>/dev/null | head -40 | grep . || echo "No product features detected"`
 
 **Design Directory**:
 !`ls design/ 2>/dev/null || echo "No existing design directory"`
@@ -113,7 +113,7 @@ After gathering all answers, **summarize the complete brief and ask for confirma
 
 ### Launching the Agent
 
-Use the Task tool to launch the pitch agent (subagent_type="pitch") with the complete brief including:
+Use the `Agent` tool to launch the pitch agent (subagent_type="pitch") with the complete brief including:
 - Presentation type and audience
 - Slide count
 - Key points and narrative direction

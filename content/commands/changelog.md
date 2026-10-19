@@ -17,10 +17,10 @@ I'll analyze your git history and generate a well-structured changelog.
 **Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Latest Tags**:
-!`git tag --sort=-version:refname -n5 2>/dev/null || echo "No tags found"`
+!`git tag --sort=-version:refname 2>/dev/null | head -5 | grep . || echo "No tags found"`
 
 **Recent Commits**:
-!`git log --oneline -10 2>/dev/null`
+!`git log --oneline -10 2>/dev/null || echo "No git history"`
 
 ---
 
@@ -38,7 +38,7 @@ The changelog agent will:
 - Group related changes and write clear descriptions
 - Highlight breaking changes prominently
 - Generate a changelog following Keep a Changelog format
-- Append to or create CHANGELOG.md
+- Append to or create CHANGELOG.md (it never bumps versions or tags — use `/release` for that)
 
 **Workflows**:
 - No argument → Changes since the last tag (unreleased)
@@ -47,4 +47,4 @@ The changelog agent will:
 - `unreleased` → Same as no argument
 - `2024-01-01..` → Changes since a date
 
-Use the Task tool to launch the changelog agent (subagent_type="changelog") with the scope and any additional context.
+Use the `Agent` tool to launch the changelog agent (subagent_type="changelog") with the scope and any additional context.

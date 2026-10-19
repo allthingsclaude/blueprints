@@ -10,16 +10,24 @@ export interface InstallPaths {
   base: string;
   commands: string;
   agents: string;
+  workflows: string;
+  /** Blueprints' own support files (hook scripts), under <base>/blueprints */
+  support: string;
 }
 
 export interface SourcePaths {
   commands: string;
   agents: string;
+  workflows: string;
+  hooks: string;
 }
 
 export interface InstallResult {
   commands: number;
   agents: number;
+  workflows: number;
+  /** Files from a previous blueprints install that are no longer shipped and were removed */
+  removed: number;
   paths: InstallPaths;
   powerLevel: AgentPowerLevel;
 }
@@ -51,27 +59,43 @@ export const LIGHTWEIGHT_AGENTS = [
 
 export const HEAVYWEIGHT_AGENTS = [
   'audit.md',
-  'debug.md',
+  'diagnose.md',
   'secure.md',
 ];
+
+/**
+ * Files earlier versions shipped that have since been renamed or removed.
+ * Installs from before the manifest existed are cleaned up using this list.
+ */
+export const LEGACY_COMMANDS = ['auto.md', 'optimize.md', 'plan.md', 'verify.md', 'debug.md', 'design.md', 'copy.md'];
+export const LEGACY_AGENTS = ['optimize.md', 'plan.md', 'debug.md', 'design.md', 'copy.md'];
+
+/** Frontmatter line every blueprints command and agent carries */
+export const BLUEPRINTS_MARKER = 'author: "@markoradak"';
+
+export const MANIFEST_FILE = '.blueprints-version';
 
 export type AgentTier = 'lightweight' | 'research' | 'standard' | 'heavyweight';
 
 export const DEFAULT_TASKS_DIR = 'tasks';
 
-export function buildTemplateVars(tasksDir: string = DEFAULT_TASKS_DIR): Record<string, string> {
-  return {
+export function buildTemplateVars(tasksDir: string = DEFAULT_TASKS_DIR, blueprintsDir?: string): Record<string, string> {
+  const vars: Record<string, string> = {
     '{{TASKS_DIR}}': tasksDir,
     '{{PLANS_DIR}}': `${tasksDir}/plans`,
     '{{SESSIONS_DIR}}': `${tasksDir}/sessions`,
     '{{STATE_FILE}}': `${tasksDir}/STATE.md`,
   };
+  if (blueprintsDir) {
+    vars['{{BLUEPRINTS_DIR}}'] = blueprintsDir;
+  }
+  return vars;
 }
 
 export const TEMPLATE_VARS: Record<string, string> = buildTemplateVars();
 
-export function replaceTemplateVars(content: string, tasksDir?: string): string {
-  const vars = tasksDir ? buildTemplateVars(tasksDir) : TEMPLATE_VARS;
+export function replaceTemplateVars(content: string, tasksDir?: string, blueprintsDir?: string): string {
+  const vars = tasksDir || blueprintsDir ? buildTemplateVars(tasksDir, blueprintsDir) : TEMPLATE_VARS;
   let result = content;
   for (const [key, value] of Object.entries(vars)) {
     result = result.replaceAll(key, value);
@@ -85,6 +109,21 @@ export interface ExistingInstallation {
   hasAgents: boolean;
   commandsPath: string;
   agentsPath: string;
+}
+
+export interface InstalledFiles {
+  commands: string[];
+  agents: string[];
+  workflows: string[];
+  hooks: string[];
+}
+
+export interface Manifest {
+  version: string;
+  installedAt: string;
+  powerLevel: AgentPowerLevel;
+  tasksDir?: string;
+  files?: InstalledFiles;
 }
 
 /**
@@ -106,7 +145,7 @@ export function getDefaultClaudeDir(): string {
 }
 
 /**
- * Get the installation paths for commands and agents
+ * Get the installation paths for commands, agents, workflows, and support files
  */
 export function getInstallPaths(basePath: string): InstallPaths {
   // Resolve ~ to home directory if present
@@ -127,7 +166,9 @@ export function getInstallPaths(basePath: string): InstallPaths {
   return {
     base: claudeDir,
     commands: path.join(claudeDir, 'commands'),
-    agents: path.join(claudeDir, 'agents')
+    agents: path.join(claudeDir, 'agents'),
+    workflows: path.join(claudeDir, 'workflows'),
+    support: path.join(claudeDir, 'blueprints'),
   };
 }
 
@@ -139,7 +180,9 @@ export function getSourcePaths(): SourcePaths {
   const packageRoot = path.join(__dirname, '..');
   return {
     commands: path.join(packageRoot, 'content', 'commands'),
-    agents: path.join(packageRoot, 'content', 'agents')
+    agents: path.join(packageRoot, 'content', 'agents'),
+    workflows: path.join(packageRoot, 'content', 'workflows'),
+    hooks: path.join(packageRoot, 'content', 'hooks'),
   };
 }
 
@@ -153,15 +196,44 @@ export function ensureDir(dirPath: string): void {
 }
 
 /**
+ * Hidden entries (.DS_Store, editor or tool folders) are never installed
+ */
+function isHidden(name: string): boolean {
+  return name.startsWith('.');
+}
+
+/**
+ * List files under a directory, recursively, as paths relative to it
+ */
+export function listFiles(dir: string, prefix = ''): string[] {
+  if (!fs.existsSync(dir)) return [];
+
+  const files: string[] = [];
+  for (const entry of fs.readdirSync(dir)) {
+    if (isHidden(entry)) continue;
+    const full = path.join(dir, entry);
+    const rel = prefix ? path.join(prefix, entry) : entry;
+    const stat = fs.statSync(full);
+    if (stat.isDirectory()) {
+      files.push(...listFiles(full, rel));
+    } else if (stat.isFile()) {
+      files.push(rel);
+    }
+  }
+  return files;
+}
+
+/**
  * Copy all files from source to destination directory
  */
-export function copyDirectory(srcDir: string, destDir: string, tasksDir?: string): number {
+export function copyDirectory(srcDir: string, destDir: string, tasksDir?: string, blueprintsDir?: string): number {
   ensureDir(destDir);
 
   const files = fs.readdirSync(srcDir);
   let copiedCount = 0;
 
   for (const file of files) {
+    if (isHidden(file)) continue;
     const srcFile = path.join(srcDir, file);
     const destFile = path.join(destDir, file);
 
@@ -169,7 +241,7 @@ export function copyDirectory(srcDir: string, destDir: string, tasksDir?: string
 
     if (stat.isFile() && file.endsWith('.md')) {
       const content = fs.readFileSync(srcFile, 'utf-8');
-      const updated = replaceTemplateVars(content, tasksDir);
+      const updated = replaceTemplateVars(content, tasksDir, blueprintsDir);
       fs.writeFileSync(destFile, updated, 'utf-8');
       copiedCount++;
     } else if (stat.isFile()) {
@@ -177,10 +249,34 @@ export function copyDirectory(srcDir: string, destDir: string, tasksDir?: string
       copiedCount++;
     } else if (stat.isDirectory()) {
       // Recursively copy subdirectories
-      copiedCount += copyDirectory(srcFile, path.join(destDir, file), tasksDir);
+      copiedCount += copyDirectory(srcFile, path.join(destDir, file), tasksDir, blueprintsDir);
     }
   }
 
+  return copiedCount;
+}
+
+/**
+ * Copy script files (workflows, hooks) with template variables replaced.
+ * Shell scripts are made executable.
+ */
+export function copyTemplatedFiles(srcDir: string, destDir: string, tasksDir?: string, blueprintsDir?: string): number {
+  if (!fs.existsSync(srcDir)) return 0;
+  ensureDir(destDir);
+
+  let copiedCount = 0;
+  for (const rel of listFiles(srcDir)) {
+    const srcFile = path.join(srcDir, rel);
+    const destFile = path.join(destDir, rel);
+    ensureDir(path.dirname(destFile));
+
+    const content = fs.readFileSync(srcFile, 'utf-8');
+    fs.writeFileSync(destFile, replaceTemplateVars(content, tasksDir, blueprintsDir), 'utf-8');
+    if (rel.endsWith('.sh')) {
+      fs.chmodSync(destFile, 0o755);
+    }
+    copiedCount++;
+  }
   return copiedCount;
 }
 
@@ -198,10 +294,10 @@ export function getAgentTier(filename: string): AgentTier {
  * Get the model to use for a given agent file based on power level and tier
  *
  * Tiers:
- * - lightweight: commit, changelog, handoff, cleanup, imagine (rote tasks)
+ * - lightweight: commit, changelog, handoff, cleanup, imagine, og (rote tasks)
  * - research: codebase/docs/web research (search + synthesize)
- * - standard: refactor, test, plan, implement, etc. (balanced)
- * - heavyweight: audit, debug, secure (deep reasoning, high stakes)
+ * - standard: refactor, test, blueprint, implement, etc. (balanced)
+ * - heavyweight: audit, diagnose, secure (deep reasoning, high stakes)
  */
 export function getModelForAgent(filename: string, powerLevel: AgentPowerLevel): 'haiku' | 'sonnet' | 'opus' {
   const tier = getAgentTier(filename);
@@ -220,24 +316,25 @@ export function getModelForAgent(filename: string, powerLevel: AgentPowerLevel):
 /**
  * Copy agent files with model rewritten based on power level
  */
-export function copyAgentsWithPowerLevel(srcDir: string, destDir: string, powerLevel: AgentPowerLevel, tasksDir?: string): number {
+export function copyAgentsWithPowerLevel(srcDir: string, destDir: string, powerLevel: AgentPowerLevel, tasksDir?: string, blueprintsDir?: string): number {
   ensureDir(destDir);
 
   const files = fs.readdirSync(srcDir);
   let copiedCount = 0;
 
   for (const file of files) {
+    if (isHidden(file)) continue;
     const srcFile = path.join(srcDir, file);
     const destFile = path.join(destDir, file);
     const stat = fs.statSync(srcFile);
 
     if (stat.isDirectory()) {
-      copiedCount += copyAgentsWithPowerLevel(srcFile, path.join(destDir, file), powerLevel, tasksDir);
+      copiedCount += copyAgentsWithPowerLevel(srcFile, path.join(destDir, file), powerLevel, tasksDir, blueprintsDir);
     } else if (stat.isFile() && file.endsWith('.md')) {
       const content = fs.readFileSync(srcFile, 'utf-8');
       const model = getModelForAgent(file, powerLevel);
       let updated = content.replace(/^(model:\s*).+$/m, `$1${model}`);
-      updated = replaceTemplateVars(updated, tasksDir);
+      updated = replaceTemplateVars(updated, tasksDir, blueprintsDir);
       fs.writeFileSync(destFile, updated, 'utf-8');
       copiedCount++;
     } else if (stat.isFile()) {
@@ -264,30 +361,49 @@ export function getPackageVersion(): string {
 }
 
 /**
- * Remove files from a destination directory that no longer exist in the source
+ * Read the manifest a previous install wrote, if any
  */
-export function cleanStaleFiles(srcDir: string, destDir: string): number {
+export function readManifest(baseDir: string): Manifest | null {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(baseDir, MANIFEST_FILE), 'utf-8')) as Manifest;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether a file carries the blueprints marker in its frontmatter
+ */
+export function isBlueprintsFile(filePath: string): boolean {
+  if (!filePath.endsWith('.md') || !fs.existsSync(filePath)) return false;
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const frontmatter = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  return frontmatter !== null && frontmatter[1].includes(BLUEPRINTS_MARKER);
+}
+
+/**
+ * Remove files a previous blueprints install put in destDir that the package no longer ships.
+ *
+ * Only blueprints' own files are ever removed:
+ * - with a manifest from a previous install, the files it lists
+ * - without one (installs before the manifest existed), files named in `legacyNames`
+ *   that also carry the blueprints marker
+ * Anything else in destDir (the user's own commands, agents, workflows) is left alone.
+ */
+export function cleanStaleFiles(srcDir: string, destDir: string, previouslyInstalled: string[] | null, legacyNames: string[] = []): number {
   if (!fs.existsSync(destDir)) return 0;
 
+  const candidates = previouslyInstalled ?? legacyNames;
   let removedCount = 0;
-  const destFiles = fs.readdirSync(destDir);
 
-  for (const file of destFiles) {
-    const srcFile = path.join(srcDir, file);
-    const destFile = path.join(destDir, file);
-    const destStat = fs.statSync(destFile);
+  for (const rel of candidates) {
+    if (fs.existsSync(path.join(srcDir, rel))) continue; // still shipped: it gets overwritten
+    const destFile = path.join(destDir, rel);
+    if (!fs.existsSync(destFile) || !fs.statSync(destFile).isFile()) continue;
+    if (previouslyInstalled === null && !isBlueprintsFile(destFile)) continue;
 
-    if (destStat.isDirectory()) {
-      if (fs.existsSync(srcFile)) {
-        removedCount += cleanStaleFiles(srcFile, destFile);
-      } else {
-        fs.rmSync(destFile, { recursive: true });
-        removedCount++;
-      }
-    } else if (!fs.existsSync(srcFile)) {
-      fs.unlinkSync(destFile);
-      removedCount++;
-    }
+    fs.unlinkSync(destFile);
+    removedCount++;
   }
 
   return removedCount;
@@ -311,27 +427,47 @@ export async function installBlueprints(targetPath: string, powerLevel: AgentPow
   // Ensure base .claude directory exists
   ensureDir(installPaths.base);
 
-  // Clean stale files from previous installations
-  cleanStaleFiles(sourcePaths.commands, installPaths.commands);
-  cleanStaleFiles(sourcePaths.agents, installPaths.agents);
+  // Remove files a previous install put here that are no longer shipped (never the user's own files)
+  const previous = readManifest(installPaths.base)?.files ?? null;
+  const hooksDest = path.join(installPaths.support, 'hooks');
+  let removed = 0;
+  removed += cleanStaleFiles(sourcePaths.commands, installPaths.commands, previous ? previous.commands ?? [] : null, LEGACY_COMMANDS);
+  removed += cleanStaleFiles(sourcePaths.agents, installPaths.agents, previous ? previous.agents ?? [] : null, LEGACY_AGENTS);
+  removed += cleanStaleFiles(sourcePaths.workflows, installPaths.workflows, previous?.workflows ?? []);
+  removed += cleanStaleFiles(sourcePaths.hooks, hooksDest, previous?.hooks ?? []);
+
+  const blueprintsDir = installPaths.support;
 
   // Copy commands
-  const commandsCount = copyDirectory(sourcePaths.commands, installPaths.commands, tasksDir);
+  const commandsCount = copyDirectory(sourcePaths.commands, installPaths.commands, tasksDir, blueprintsDir);
 
   // Copy agents with power level model overrides
-  const agentsCount = copyAgentsWithPowerLevel(sourcePaths.agents, installPaths.agents, powerLevel, tasksDir);
+  const agentsCount = copyAgentsWithPowerLevel(sourcePaths.agents, installPaths.agents, powerLevel, tasksDir, blueprintsDir);
 
-  // Write version marker
-  const version = getPackageVersion();
-  fs.writeFileSync(
-    path.join(installPaths.base, '.blueprints-version'),
-    JSON.stringify({ version, installedAt: new Date().toISOString(), powerLevel }, null, 2),
-    'utf-8'
-  );
+  // Copy workflows and hook scripts
+  const workflowsCount = copyTemplatedFiles(sourcePaths.workflows, installPaths.workflows, tasksDir, blueprintsDir);
+  copyTemplatedFiles(sourcePaths.hooks, hooksDest, tasksDir, blueprintsDir);
+
+  // Write version marker and manifest of installed files
+  const manifest: Manifest = {
+    version: getPackageVersion(),
+    installedAt: new Date().toISOString(),
+    powerLevel,
+    tasksDir,
+    files: {
+      commands: listFiles(sourcePaths.commands),
+      agents: listFiles(sourcePaths.agents),
+      workflows: listFiles(sourcePaths.workflows),
+      hooks: listFiles(sourcePaths.hooks),
+    },
+  };
+  fs.writeFileSync(path.join(installPaths.base, MANIFEST_FILE), JSON.stringify(manifest, null, 2), 'utf-8');
 
   return {
     commands: commandsCount,
     agents: agentsCount,
+    workflows: workflowsCount,
+    removed,
     paths: installPaths,
     powerLevel
   };

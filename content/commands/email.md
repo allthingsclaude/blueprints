@@ -22,10 +22,10 @@ I'll create on-brand, email-client-compatible HTML templates — newsletters, pr
 !`head -30 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
 
 **Existing Email Templates**:
-!`find . -maxdepth 4 -name "*.html" -path "*email*" -o -name "*.html" -path "*newsletter*" -o -name "*.html" -path "*template*" -path "*mail*" 2>/dev/null || echo "No existing email templates found"`
+!`find . -maxdepth 4 -name "*.html" \( -path "*email*" -o -path "*newsletter*" -o -path "*mail*template*" \) -not -path "*/node_modules/*" 2>/dev/null | head -40 | grep . || echo "No existing email templates"`
 
 **Mail-Related Dependencies**:
-!`grep -E "nodemailer|sendgrid|mailgun|postmark|resend|ses|mailchimp|mjml|react-email" package.json 2>/dev/null || echo "No mail dependencies detected"`
+!`grep -E "nodemailer|@sendgrid|sendgrid|mailgun|postmark|\"resend\"|@aws-sdk/client-ses|aws-sdk|mailchimp|mjml|react-email" package.json 2>/dev/null || echo "No mail dependencies detected"`
 
 ---
 
@@ -103,7 +103,7 @@ After gathering answers, **summarize the complete brief and ask for confirmation
 
 ### Launching the Agent
 
-Use the Task tool to launch the email agent (subagent_type="email") with the complete email brief including:
+Use the `Agent` tool to launch the email agent (subagent_type="email") with the complete email brief including:
 - Email type and purpose
 - Target audience
 - Key message / subject line direction

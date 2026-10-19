@@ -237,7 +237,7 @@ Files modified:
 - List specific changes as bullets for clarity
 - Include file references for easy review
 - Add key decisions or trade-offs made
-- Always include Claude Code attribution
+- Don't add a `Co-Authored-By` line or other attribution trailers
 
 **Examples**:
 
@@ -283,17 +283,24 @@ Files modified:
 
 ### 8. Create Git Commit
 
-**Stage all changes**:
+**Stage the session's changes**:
 ```bash
 # Check what will be staged
-git status
+git status --short
 
-# Stage everything
-git add .
+# Stage specific files (prefer explicit paths over `git add .`)
+git add path/to/file1.ts path/to/file2.ts {{PLANS_DIR}}/PLAN_{NN}_{NAME}.md
 
 # Verify staged changes
-git status
+git status --short
 ```
+
+**Staging rules**:
+- If the user already has files staged, respect their staging — only commit what's staged (and the plan/summary files you updated)
+- Otherwise stage the modified and new files that belong to this session's work
+- Never stage files that look like secrets (`.env*`, credentials, keys, tokens)
+- Never stage large binaries or build artifacts (`dist/`, `build/`, coverage output) unless they're intentionally tracked
+- List any changed files you deliberately left unstaged in your summary
 
 **Create commit with HEREDOC** (for proper formatting):
 
@@ -422,7 +429,7 @@ After everything is complete, provide a final summary:
 - Following clear plan without issues
 
 ### Commit Safety
-- **Always stage all changes**: `git add .`
+- **Stage explicitly**: specific paths, following the staging rules above — never `git add .`
 - **Never skip validation**: Check git status first
 - **Never force push**: This is just a regular commit
 - **Verify the commit**: Show log after committing
@@ -473,20 +480,19 @@ Would you like me to:
 
 ### 10. Update Active Plan Tracker
 
-If an active plan exists, update `{{STATE_FILE}}` to reflect the current status:
-- **Always READ existing STATE.md first** to preserve `## Overview` table and `## Plans` sections
+If an active plan exists, update `{{STATE_FILE}}` to reflect the current status. STATE.md is a small index — the plan file's checkboxes are the source of truth for task status:
 - Update the header fields: `**Phase**`, `**Status**`, `**Updated**`
-- Update task statuses in the task tables under `## Plans` (`⏳` → `✅` for completed tasks)
-- Update phase status emoji in phase headers (`⏳` → `🚧` → `✅`)
-- Update the Progress column in `## Overview` table (e.g., `12/18 tasks`)
-- If all plan phases are complete, set `**Active**` to `None`, `**File**` and `**Phase**` to `—`, and update the plan's status to `✅ Complete` in the `## Overview` table
+- Update this plan's row in the `## Plans` table: Status, Progress (e.g. `Phase 3/5 · 12/18 tasks`), Updated
+- Never add per-task tables or multi-line notes to STATE.md — put longer notes in the plan's **Notes & Observations** section
+- If all plan phases are complete, set `**Active**` to `None`, `**File**` and `**Phase**` to `—`, and set the plan's row to `✅ Complete`
+- If the file is in the legacy format (`## Overview` table plus per-task tables), just update the header and the plan's Overview row; `/update` migrates the file
 
 ## Final Checks
 
 Before finishing, verify:
 - [ ] All plan documents updated accurately
 - [ ] Commit message is clear and well-formatted
-- [ ] All changes are staged and committed
+- [ ] The session's changes are staged (per the staging rules) and committed
 - [ ] Phase summary created if warranted
 - [ ] STATE.md updated if applicable
 - [ ] Session summary is accurate and helpful

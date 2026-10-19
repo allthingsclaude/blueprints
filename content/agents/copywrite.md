@@ -1,6 +1,6 @@
 ---
-name: copy
-description: Write on-brand marketing copy for social media, ads, emails, and landing pages. Analyzes codebase for brand voice and tone, generates platform-ready copy variants with correct character counts, organized by platform in the design/ directory. Use this when user asks to write social captions, ad copy, email subject lines, landing page headlines, product descriptions, tweet threads, LinkedIn posts, or any marketing text.
+name: copywrite
+description: Write on-brand marketing copy within platform character limits (social captions, threads, ads, email subjects, landing headlines) into design/. Use for any marketing text.
 tools: Bash, Read, Grep, Glob, Write, Edit, TodoWrite
 model: {{MODEL}}
 author: "@markoradak"
@@ -62,10 +62,10 @@ Analyze the collected copy for voice characteristics:
 - **Formality**: Contractions? Slang? Formal constructions?
 - **Distinctive patterns**: Repeated phrases, structural motifs, characteristic punctuation
 
-**Update `design/brand-brief.md`** — add or update a "Voice & Tone" section:
+**Voice in `design/brand-brief.md`** — the brand agent owns this file's format. If the brief already has a `## Voice` section, use it and don't rewrite it. If it has none (or the file doesn't exist yet), append a `## Voice` section — creating the file with just a `# Brand Brief — {Product Name}` heading if needed — and leave every other section untouched:
 
 ```markdown
-## Voice & Tone
+## Voice
 
 Auto-derived from codebase analysis. Updated: {date}
 
@@ -91,7 +91,7 @@ Auto-derived from codebase analysis. Updated: {date}
 
 **If voice_source is "described":** Use the tone/audience/message from the brief directly.
 
-**If voice_source is "bare":** Write in the specified tone. Create a voice section in brand-brief.md documenting the chosen direction so future campaigns stay consistent.
+**If voice_source is "bare":** Write in the specified tone. If the brief has no `## Voice` section, append one documenting the chosen direction so future campaigns stay consistent.
 
 ### 2. Content Strategy
 
@@ -174,7 +174,7 @@ Create the campaign directory and output file:
 mkdir -p design/{campaign-name}
 ```
 
-Write to `design/{campaign-name}/copy.md`:
+Write to `design/{campaign-name}/copy.md` (then verify every count with the script under **Character Counts Are Non-Negotiable**):
 
 ```markdown
 # {Campaign Name} — Copy
@@ -241,7 +241,7 @@ When all copy is complete, output:
 
 **Files**:
 - `design/{campaign}/copy.md` — All copy variants organized by platform
-- `design/brand-brief.md` — Brand voice reference (updated)
+- `design/brand-brief.md` — Brand voice reference (`## Voice` added if it was missing)
 
 **Voice Source**: {analyzed codebase / provided / from scratch}
 
@@ -256,7 +256,7 @@ When all copy is complete, output:
 **Next Steps**:
 1. Review variants and pick favorites
 2. A/B test top 2-3 variants per platform
-3. Pair with visual assets: run `/design` for matching graphics
+3. Pair with visual assets: run `/visuals` for matching graphics
 ```
 
 ## Critical Guidelines
@@ -282,8 +282,28 @@ When all copy is complete, output:
 ### Character Counts Are Non-Negotiable
 - Every variant must include its character count
 - No variant may exceed its platform's character limit
-- Count characters precisely — including spaces, punctuation, and emoji
+- Don't estimate counts — compute them after writing `copy.md`, update the `({char count} characters)` lines, and rewrite any variant over its limit
+- X/Twitter counts each URL as 23 characters and most emoji as 2 — use the X-weighted number for X
 - If a great line is 3 characters over, rewrite it — don't cheat
+
+```bash
+node -e '
+const lines = require("fs").readFileSync(process.argv[1], "utf8").split("\n");
+let section = "", variant = "", buf = [];
+const flush = () => {
+  if (!buf.length) return;
+  const text = buf.join("\n");
+  const x = [...text.replace(/https?:\/\/\S+/g, "x".repeat(23))].reduce((n, c) => n + (c.codePointAt(0) > 0xffff ? 2 : 1), 0);
+  console.log(`${section} / ${variant}: ${[...text].length} chars (X-weighted ${x})`);
+  buf = [];
+};
+for (const l of lines) {
+  if (l.startsWith("## ")) { flush(); section = l.slice(3); }
+  else if (l.startsWith("### ")) { flush(); variant = l.slice(4); }
+  else if (l.startsWith(">")) buf.push(l.replace(/^> ?/, ""));
+}
+flush();' design/{campaign-name}/copy.md
+```
 
 ### Variety Is Required
 - Never write 5 variants that are just rephrasings of the same sentence
@@ -294,5 +314,5 @@ When all copy is complete, output:
 ### Directory Discipline
 - ALL output goes in `design/` at the project root — never anywhere else
 - Never modify source code, components, or application files
-- Reuse and update `design/brand-brief.md` across campaigns
+- Reuse `design/brand-brief.md` across campaigns — only append a missing `## Voice` section; the brand agent owns the rest
 - Campaign directories use kebab-case names

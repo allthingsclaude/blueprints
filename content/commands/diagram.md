@@ -15,13 +15,13 @@ I'll analyze your codebase and generate Mermaid diagrams that visualize architec
 **Working Directory**: !`pwd`
 
 **Project**:
-!`head -10 package.json 2>/dev/null`
+!`head -10 package.json 2>/dev/null || echo "No package.json"`
 
 **Structure**:
-!`ls -la src/ 2>/dev/null`
+!`ls -la src/ 2>/dev/null || echo "No src/ directory"`
 
 **Existing Docs**:
-!`ls docs/ 2>/dev/null`
+!`ls docs/ 2>/dev/null || echo "No docs/ directory"`
 
 ---
 
@@ -48,4 +48,4 @@ The diagram agent will:
 - `[feature or component]` — Auto-detect the best diagram type for the subject
 - No arguments — Survey the project and generate the most useful overview diagram
 
-Use the Task tool to launch the diagram agent (subagent_type="diagram") with the target and any additional context.
+Use the `Agent` tool to launch the diagram agent (subagent_type="diagram") with the target and any additional context.

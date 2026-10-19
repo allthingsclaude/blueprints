@@ -17,7 +17,7 @@ I'll scan your codebase for dead code, unused imports, and technical debt.
 **Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Files to Analyze**:
-!`find . -maxdepth 5 -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -not -path "*/node_modules/*" 2>/dev/null` source files
+!`find . -maxdepth 5 \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \) -not -path "*/node_modules/*" 2>/dev/null | wc -l | tr -d " " || echo "0"` source files
 
 ---
 
@@ -36,4 +36,6 @@ The cleanup agent will:
 - Offer auto-fix for safe changes (with your approval)
 - Validate that nothing breaks after cleanup
 
-Use the Task tool to launch the cleanup agent (subagent_type="cleanup") with the focus area and any additional context from arguments.
+Use the `Agent` tool to launch the cleanup agent (subagent_type="cleanup") with the focus area and any additional context from arguments.
+
+The agent reports first and changes nothing. After the user picks which items to apply, relaunch the agent with the approved item list and its report (e.g. "apply items 1, 3, 5 from your previous report; skip rescanning") rather than the original request, so it doesn't redo the scan.

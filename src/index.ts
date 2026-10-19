@@ -12,15 +12,38 @@ export {
   checkExistingInstallation,
   ensureDir,
   copyDirectory,
+  copyTemplatedFiles,
+  cleanStaleFiles,
+  listFiles,
+  readManifest,
+  isBlueprintsFile,
   DEFAULT_TASKS_DIR,
   TEMPLATE_VARS,
   buildTemplateVars,
   replaceTemplateVars
 } from './installer.js';
 
+export {
+  installCodex,
+  getCodexPaths,
+  commandToSkill,
+  agentToToml,
+  convertTextForCodex,
+  mergeCodexHooks
+} from './codex.js';
+
+export type {
+  CodexScope,
+  CodexInstallPaths,
+  CodexInstallResult,
+  CodexManifest
+} from './codex.js';
+
 export type {
   InstallPaths,
   SourcePaths,
   InstallResult,
-  ExistingInstallation
+  ExistingInstallation,
+  InstalledFiles,
+  Manifest
 } from './installer.js';

@@ -14,7 +14,7 @@ Given a video file (screen recording, prototype demo, etc.), you will:
 1. Extract key frames at a calculated rate based on video duration
 2. Analyze each frame to identify UI elements, states, and layout
 3. Compare consecutive frames to identify user actions and transitions
-4. Produce a structured `INTERACTION_SPEC_{NAME}.md` ready for `/implement`
+4. Produce a structured `INTERACTION_SPEC_{NAME}.md` ready to turn into a plan with `/blueprint`
 
 ## Execution Steps
 
@@ -59,13 +59,13 @@ The goal is to evenly sample the video with a sensible number of frames. Use the
 - **Maximum frames**: 30 (above this, per-image analysis quality drops)
 - **Minimum frames**: 5 (below this, we miss too much)
 - **Maximum FPS**: 10 (more than 10 per second captures redundant in-between states)
-- **Minimum FPS**: 1 (at least 1 frame per second to not miss anything)
+- **No minimum FPS**: for videos longer than 30s the rate drops below 1 FPS, so the 30 frames still span the **whole** video instead of only its first 30 seconds
 
 Calculate the target FPS:
 
 ```
 raw_fps = MAX_FRAMES / duration
-fps = clamp(raw_fps, MIN_FPS, MAX_FPS)
+fps = min(raw_fps, MAX_FPS)
 total_frames = min(floor(fps * duration), MAX_FRAMES)
 ```
 
@@ -75,18 +75,20 @@ Examples:
 - **5s video**: raw = 6, stays 6 FPS → 30 frames
 - **10s video**: raw = 3, stays 3 FPS → 30 frames
 - **30s video**: raw = 1, stays 1 FPS → 30 frames
-- **60s video**: raw = 0.5, clamped to 1 FPS → 30 frames (capped)
+- **60s video**: raw = 0.5, stays 0.5 FPS → 30 frames (one every 2s, covering the full minute)
 
 #### 2c. Create temp directory and extract
 
 ```bash
-mkdir -p /tmp/storyboard_$(date +%s)
+mktemp -d "${TMPDIR:-/tmp}/storyboard.XXXXXX"
 ```
+
+This prints the frames directory. Shell variables don't persist between Bash calls, so use that printed path literally (shown below as `<frames_dir>`) in later commands.
 
 Run ffmpeg with the calculated FPS:
 
 ```bash
-ffmpeg -i <video> -vf "fps=<calculated_fps>,scale=1024:-1" -frames:v <total_frames> /tmp/storyboard_<ts>/frame_%04d.png
+ffmpeg -i <video> -vf "fps=<calculated_fps>,scale=1024:-1" -frames:v <total_frames> <frames_dir>/frame_%04d.png
 ```
 
 Parameter rationale:
@@ -213,11 +215,12 @@ Write the spec to `{{SESSIONS_DIR}}/INTERACTION_SPEC_{NAME}.md` using this forma
 
 ### Step 5: Copy Frames to References
 
-After writing the spec, copy the extracted key frames to `{{TASKS_DIR}}/references/` so they're available to future agents (implement, showcase, parallelize) for design reference:
+After writing the spec, copy the extracted key frames into their own folder under `{{TASKS_DIR}}/references/` so they're available to future agents (implement, showcase, parallelize) without overwriting frames from earlier storyboards or mixing with other references, then remove the temp directory:
 
 ```bash
-mkdir -p {{TASKS_DIR}}/references
-cp /tmp/storyboard_<ts>/frame_*.png {{TASKS_DIR}}/references/
+mkdir -p {{TASKS_DIR}}/references/storyboard_{name}
+cp <frames_dir>/frame_*.png {{TASKS_DIR}}/references/storyboard_{name}/
+rm -rf <frames_dir>
 ```
 
 This ensures implementing agents can view the actual UI frames when building the interaction.
@@ -228,11 +231,11 @@ When the spec is written, report:
 
 ```markdown
 Interaction spec written to: {{SESSIONS_DIR}}/INTERACTION_SPEC_{NAME}.md
-Key frames copied to: {{TASKS_DIR}}/references/
+Key frames copied to: {{TASKS_DIR}}/references/storyboard_{name}/
 
 **Summary**: [One sentence about what the interaction shows]
 **States detected**: {count}
 **Transitions mapped**: {count}
 
-You can now use this spec with `/implement` to build the interaction.
+Next: `/blueprint {NAME}` with this spec as context, then `/implement` or `/autopilot` to build it.
 ```

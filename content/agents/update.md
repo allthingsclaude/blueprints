@@ -220,28 +220,35 @@ Write CLAUDE.md with this structure. Auto-generated sections are wrapped in HTML
 
 Scan the tasks directory and reconcile `{{STATE_FILE}}` with the actual plan files on disk.
 
+STATE.md is a small index that commands inject into every run, so it must stay short. Task checkboxes in the plan files are the single source of truth.
+
 #### 5a. Scan Plans Directory
 
 ```bash
 ls -1 {{PLANS_DIR}}/PLAN_*.md 2>/dev/null || echo "No plans found"
-cat {{STATE_FILE}} 2>/dev/null || echo "No STATE.md found"
+sed -n '1,/^---$/p' {{STATE_FILE}} 2>/dev/null || echo "No STATE.md found"
+grep -c '^### PLAN_\|^#### Phase' {{STATE_FILE}} 2>/dev/null
 ```
 
-#### 5b. Read Each Plan File
+A non-zero count from the last command means STATE.md is in the **legacy format** (per-plan task tables) — see 5d.
 
-For every `PLAN_*.md` file found in `{{PLANS_DIR}}/`:
-- Read the plan file
-- Count total phases and tasks
-- Count completed tasks (lines matching `- [x]`)
-- Count pending tasks (lines matching `- [ ]`)
-- Determine plan status:
-  - All tasks `[x]` → `✅ Complete`
-  - Some tasks `[x]`, some `[ ]` → `🚧 In Progress`
-  - No tasks `[x]` → `⏳` (not started)
+#### 5b. Count Progress Per Plan (don't read whole plans)
+
+Plans can be very large, so count with `grep` instead of reading them. Plans don't all follow the template exactly (phases may be `## Phase 1:`, `### Phase 1:`, or `## 4. Phase A —`; tasks may be `1. [ ]`, `- [ ]`, or `* [ ]`), so use tolerant patterns:
+
+```bash
+# checkboxes done / total (tasks plus validation items — an approximation is fine)
+grep -cE '^[[:space:]]*([0-9]+\.|[-*]) \[[xX]\]' {{PLANS_DIR}}/PLAN_{NN}_{NAME}.md
+grep -cE '^[[:space:]]*([0-9]+\.|[-*]) \[[ xX]\]' {{PLANS_DIR}}/PLAN_{NN}_{NAME}.md
+# phase headings with line numbers
+grep -n -iE '^#{2,4} .*phase' {{PLANS_DIR}}/PLAN_{NN}_{NAME}.md
+```
+
+Plan status: no unchecked task boxes left in the phase sections → `✅ Complete` (items marked as needing the user, e.g. **(USER)**, don't keep a plan open); some done → `🚧 In Progress`; none done → `⏳ Not started`. For the active plan, the current phase is the first phase section that still has an unchecked task — check it with a ranged read of that section if the counts don't settle it.
 
 #### 5c. Rebuild STATE.md
 
-Write `{{STATE_FILE}}` with the reconciled state. Follow this exact format:
+Write `{{STATE_FILE}}` in this exact format:
 
 ```markdown
 # State
@@ -254,37 +261,32 @@ Write `{{STATE_FILE}}` with the reconciled state. Follow this exact format:
 
 ---
 
-## Overview
-
-| # | Plan | File | Status | Progress |
-|---|------|------|--------|----------|
-| {NN} | {NAME} | PLAN_{NN}_{NAME}.md | {status} | {completed}/{total} tasks |
-[... one row per plan found on disk, sorted by number ...]
-
----
-
 ## Plans
 
-### PLAN_{NN}_{NAME}
-
-#### Phase 1: {Phase Name} {status emoji}
-
-| Task | Status |
-|------|--------|
-| {Task name} | ✅ or 🚧 or ⏳ |
-[... one row per task in this phase ...]
-
-[... continue for all phases and all plans ...]
+| # | Plan | Status | Progress | Updated |
+|---|------|--------|----------|---------|
+| {NN} | {NAME} | {status} | Phase {n}/{phases} · {completed}/{total} tasks | [date] |
+[... one row per plan found on disk, sorted by number ...]
 ```
 
+Keep any **Branch** / **Repos** header lines that already exist. Never add per-task tables or multi-line notes.
+
 **Reconciliation rules**:
-- **Plans on disk but not in STATE.md** → add them to the Overview table and Plans section
-- **Plans in STATE.md but not on disk** → remove them (plan file was deleted)
-- **Task status mismatch** → the plan file (`- [x]` / `- [ ]`) is the source of truth, update STATE.md to match
-- **Active plan detection** → if any plan has incomplete tasks, set it as Active (prefer the highest-numbered incomplete plan). If all plans are complete, set Active to `None`
+- **Plans on disk but not in STATE.md** → add a row
+- **Plans in STATE.md but not on disk** → remove the row (plan file was deleted)
+- **Progress mismatch** → the plan file's checkboxes are the source of truth
+- **Active plan detection** → if the current Active plan still has incomplete tasks, keep it. Otherwise, if any plan has incomplete tasks, set the highest-numbered one as Active; if all plans are complete, set Active to `None`
 - **Phase detection** → for the active plan, set Phase to the first phase that has incomplete tasks
 
-#### 5d. Create Tasks Directory if Needed
+#### 5d. Migrate a Legacy STATE.md
+
+If STATE.md has the legacy format (an `## Overview` table plus `### PLAN_…` / `#### Phase …` task tables, often with long status paragraphs), migrate it to the format above:
+1. Read it in chunks (it can be very large)
+2. For each plan whose entry contains status prose longer than one line, append that prose to the end of the plan file's **Notes & Observations** section (or the end of the file) under `### Notes migrated from STATE.md ([date])`, so nothing is lost
+3. Rewrite STATE.md in the compact format, computing progress from the plan files (5b)
+4. Mention the migration in your report, with the before/after size of STATE.md
+
+#### 5e. Create Tasks Directory if Needed
 
 ```bash
 mkdir -p {{PLANS_DIR}}

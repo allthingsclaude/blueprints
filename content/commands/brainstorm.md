@@ -21,7 +21,7 @@ Before brainstorming, quickly assess the current project:
 !`ls package.json tsconfig.json Cargo.toml go.mod pyproject.toml requirements.txt composer.json Gemfile pom.xml build.gradle mix.exs 2>/dev/null || echo "No recognized project files"`
 
 **Source Files**:
-!`find . -maxdepth 3 -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.py" -o -name "*.rs" -o -name "*.go" -o -name "*.java" -o -name "*.rb" -o -name "*.ex" -o -name "*.php" \) 2>/dev/null`
+!`find . -maxdepth 3 -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.py" -o -name "*.rs" -o -name "*.go" -o -name "*.java" -o -name "*.rb" -o -name "*.ex" -o -name "*.php" \) 2>/dev/null | head -60 | grep . || echo "None found"`
 
 **Is this an empty/new project?** If there are fewer than 5 source files and no meaningful project configuration, this is likely a **new project**. In that case:
 - Mention to the user that this looks like a new project and brainstorming is a great starting point
@@ -82,20 +82,21 @@ Start by understanding what the user wants to build, then **always ask about the
 
 ## Critical Thinking (Always Active)
 
-Throughout brainstorming, actively use the `/critique`, `/verify`, and `/challenge` commands to stress-test ideas **as they emerge**. Don't wait until the end — run these after each step.
+Throughout brainstorming, apply three critical lenses to stress-test ideas **as they emerge** — inline, in your own replies, at each convergence point. There's no need to invoke the `/critique`, `/validate`, or `/challenge` commands; apply their thinking directly.
 
-### When to invoke each command
+### When to apply each lens
 
-- **`/critique`** — After exploring approaches (Steps 2-3). Run this against the ideas on the table to get direct, unfiltered feedback on what's wrong or suboptimal.
-- **`/verify`** — After converging on a direction (Steps 3-4). Run this to sanity-check that we're solving the right problem the right way, and to catch gotchas.
-- **`/challenge`** — After the user proposes or agrees to an approach (any step). Run this to question assumptions, surface trade-offs, and suggest alternatives.
+- **Critique** — After exploring approaches (Steps 2-3): direct, unfiltered feedback on what's wrong or suboptimal in the ideas on the table.
+- **Validate** — After converging on a direction (Steps 3-4): sanity-check that we're solving the right problem the right way, and catch gotchas.
+- **Challenge** — After the user proposes or agrees to an approach (any step): question assumptions, surface trade-offs, and suggest alternatives.
 
 ### How to apply
 
-- Invoke these commands naturally throughout the conversation — not as a rigid sequence
-- You can run them multiple times as ideas evolve
+- Apply them naturally where they add something — not as a rigid sequence, and not all three every turn
+- Revisit them as ideas evolve
 - The goal is **unfiltered, honest exploration** — not polite agreement with whatever the user suggests
 - If an idea survives all three, it's probably solid
+- Brainstorming rules still win: never implement anything while brainstorming, whatever a lens suggests
 
 ## Discussion Guidelines
 
@@ -112,8 +113,8 @@ Throughout brainstorming, actively use the `/critique`, `/verify`, and `/challen
 
 If the user shares images during brainstorming (screenshots, mockups, design references, wireframes, inspiration), **track their file paths**. These are critical for downstream plan creation.
 
-When brainstorming is complete and you suggest `/plan` or `/autopilot`:
-- Mention the collected image paths in your handoff so the plan agent copies them to `{{TASKS_DIR}}/references/`
+When brainstorming is complete and you suggest `/blueprint` or `/autopilot`:
+- Mention the collected image paths in your handoff so the blueprint agent copies them to `{{TASKS_DIR}}/references/`
 - If images were shared via the conversation (e.g., user provided a file path or pasted a screenshot), note them explicitly in the brainstorm summary
 
 This ensures future agents (implement, showcase, parallelize) have the visual context they need to design correctly.
@@ -129,7 +130,7 @@ This ensures future agents (implement, showcase, parallelize) have the visual co
 - 🚫 Write - No creating new files
 - 🚫 Edit - No modifying existing files
 - 🚫 Any implementation or code changes
-- 🚫 TodoWrite - We're not executing tasks yet
+- 🚫 Task lists (`TodoWrite` or the task tools) - We're not executing tasks yet
 
 ## When Brainstorming is Complete
 
@@ -146,7 +147,7 @@ Once we've thoroughly explored the problem space, settled on a tech stack, and c
 
 | Command | What it does |
 |---|---|
-| `/plan {NAME}` | Capture brainstorming findings into a structured implementation plan. Good when you want to review before implementing. |
+| `/blueprint {NAME}` | Capture brainstorming findings into a structured implementation plan. Good when you want to review before implementing. |
 | `/autopilot {NAME}` | Full autonomous loop — planning, implementation, validation, and commit. Good when you want to go hands-off. |
 
 Always present the relevant options and let the user choose how they want to proceed.

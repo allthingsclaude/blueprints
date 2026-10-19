@@ -6,7 +6,10 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { installBlueprints, getDefaultClaudeDir, getInstallPaths, getSourcePaths, POWER_LEVEL_LABELS, DEFAULT_TASKS_DIR } from './installer.js';
 import type { AgentPowerLevel } from './installer.js';
+import { getCodexPaths, installCodex } from './codex.js';
+import type { CodexScope } from './codex.js';
 import fs from 'fs';
+import path from 'path';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
@@ -19,16 +22,21 @@ interface CLIOptions {
   yes?: boolean;
   power?: string;
   tasksDir?: string;
+  target?: string;
 }
 
 type InstallType = 'global' | 'local' | 'custom';
+type Target = 'claude' | 'codex' | 'both';
+
+const TARGETS: Target[] = ['claude', 'codex', 'both'];
 
 program
   .name('blueprints')
   .description(pkg.description)
   .version(pkg.version)
-  .option('-g, --global', 'Install to default Claude directory (~/.claude)')
-  .option('-l, --local', 'Install to current directory (./.claude)')
+  .option('-t, --target <target>', 'Install for: claude (default), codex, or both')
+  .option('-g, --global', 'Install to your user directory (~/.claude, or ~/.codex + ~/.agents for Codex)')
+  .option('-l, --local', 'Install to the current project (./.claude, or ./.codex + ./.agents for Codex)')
   .option('-p, --path <path>', 'Install to a custom path')
   .option('-y, --yes', 'Skip confirmation prompts')
   .option('--power <level>', 'Agent power level 1-5 (default: 4)')
@@ -37,11 +45,48 @@ program
 
 const options = program.opts<CLIOptions>();
 
+/** Project root for a Codex install at a custom path (tolerates a path ending in .claude or .codex) */
+function codexRootFor(targetPath: string): string {
+  const resolved = path.resolve(targetPath);
+  const base = path.basename(resolved);
+  return base === '.claude' || base === '.codex' ? path.dirname(resolved) : resolved;
+}
+
 async function main(): Promise<void> {
   console.log();
-  console.log(chalk.bold.cyan('  Claude Code Blueprints'));
-  console.log(chalk.dim('  Install commands and agents for enhanced AI-assisted development'));
+  console.log(chalk.bold.cyan('  Blueprints'));
+  console.log(chalk.dim('  Commands and agents for Claude Code and Codex'));
   console.log();
+
+  // Determine target tool(s)
+  let target: Target;
+  if (options.target) {
+    const requested = options.target.toLowerCase() as Target;
+    if (!TARGETS.includes(requested)) {
+      console.error(chalk.red('Error: --target must be claude, codex, or both'));
+      process.exit(1);
+    }
+    target = requested;
+  } else if (options.yes || options.global || options.local || options.path) {
+    target = 'claude';
+  } else {
+    const targetAnswer = await inquirer.prompt<{ target: Target }>([
+      {
+        type: 'list',
+        name: 'target',
+        message: 'Install for which tool?',
+        choices: [
+          { name: 'Claude Code', value: 'claude', short: 'Claude Code' },
+          { name: 'Codex', value: 'codex', short: 'Codex' },
+          { name: 'Both', value: 'both', short: 'Both' },
+        ],
+        default: 0
+      }
+    ]);
+    target = targetAnswer.target;
+  }
+  const forClaude = target === 'claude' || target === 'both';
+  const forCodex = target === 'codex' || target === 'both';
 
   let targetPath: string;
   let installType: InstallType;
@@ -58,6 +103,11 @@ async function main(): Promise<void> {
     installType = 'local';
   } else {
     // Interactive mode
+    const globalLabel = [
+      forClaude ? getDefaultClaudeDir() : null,
+      forCodex ? `${getCodexPaths('global', process.cwd()).codexHome} + ${getCodexPaths('global', process.cwd()).skills}` : null,
+    ].filter(Boolean).join(', ');
+
     const answer = await inquirer.prompt<{ location: InstallType }>([
       {
         type: 'list',
@@ -65,12 +115,12 @@ async function main(): Promise<void> {
         message: 'Where would you like to install the blueprints?',
         choices: [
           {
-            name: `Global Claude directory (${getDefaultClaudeDir()})`,
+            name: `Global — all your projects (${globalLabel})`,
             value: 'global',
             short: 'Global'
           },
           {
-            name: `Current directory (${process.cwd()})`,
+            name: `Current project (${process.cwd()})`,
             value: 'local',
             short: 'Local'
           },
@@ -102,6 +152,9 @@ async function main(): Promise<void> {
     }
   }
 
+  const codexScope: CodexScope = installType === 'global' ? 'global' : 'project';
+  const codexRoot = installType === 'global' ? process.cwd() : codexRootFor(targetPath);
+
   // Determine power level
   let powerLevel: AgentPowerLevel;
 
@@ -115,11 +168,12 @@ async function main(): Promise<void> {
   } else if (options.yes) {
     powerLevel = 4;
   } else {
+    const codexNote = forCodex ? chalk.dim(' (Codex: sets reasoning effort low/medium/high instead of models)') : '';
     const powerAnswer = await inquirer.prompt<{ power: AgentPowerLevel }>([
       {
         type: 'list',
         name: 'power',
-        message: 'Select agent power level:',
+        message: `Select agent power level:${codexNote}`,
         choices: [
           { name: '1 - Economy     (haiku + sonnet heavyweight — fastest, lowest cost)', value: 1 },
           { name: '2 - Balanced    (haiku light, sonnet everything else)', value: 2 },
@@ -158,16 +212,30 @@ async function main(): Promise<void> {
   }
 
   // Show what will be installed
-  const paths = getInstallPaths(targetPath);
   const sourcePaths = getSourcePaths();
   const commandCount = fs.readdirSync(sourcePaths.commands).filter(f => f.endsWith('.md')).length;
   const agentCount = fs.readdirSync(sourcePaths.agents).filter(f => f.endsWith('.md')).length;
+  const workflowCount = fs.existsSync(sourcePaths.workflows)
+    ? fs.readdirSync(sourcePaths.workflows).filter(f => f.endsWith('.js')).length
+    : 0;
 
   console.log();
   console.log(chalk.yellow('Installation Summary:'));
   console.log(chalk.dim('─'.repeat(50)));
-  console.log(`  ${chalk.bold('Commands:')}    ${commandCount} files → ${chalk.cyan(paths.commands)}`);
-  console.log(`  ${chalk.bold('Agents:')}      ${agentCount} files → ${chalk.cyan(paths.agents)}`);
+  if (forClaude) {
+    const paths = getInstallPaths(targetPath);
+    console.log(chalk.bold('  Claude Code'));
+    console.log(`  ${chalk.bold('Commands:')}    ${commandCount} files → ${chalk.cyan(paths.commands)}`);
+    console.log(`  ${chalk.bold('Agents:')}      ${agentCount} files → ${chalk.cyan(paths.agents)}`);
+    console.log(`  ${chalk.bold('Workflows:')}   ${workflowCount} files → ${chalk.cyan(paths.workflows)}`);
+  }
+  if (forCodex) {
+    const codexPaths = getCodexPaths(codexScope, codexRoot);
+    console.log(chalk.bold('  Codex'));
+    console.log(`  ${chalk.bold('Skills:')}      ${commandCount} skills → ${chalk.cyan(codexPaths.skills)}`);
+    console.log(`  ${chalk.bold('Agents:')}      ${agentCount} files → ${chalk.cyan(codexPaths.agents)}`);
+    console.log(`  ${chalk.bold('Hook:')}        typecheck gate → ${chalk.cyan(codexPaths.hooksFile)}`);
+  }
   console.log(`  ${chalk.bold('Power Level:')} ${chalk.magenta(`${powerLevel} - ${POWER_LEVEL_LABELS[powerLevel]}`)}`);
   console.log(`  ${chalk.bold('Tasks Dir:')}   ${chalk.cyan(`${tasksDir}/`)}`);
   console.log(chalk.dim('─'.repeat(50)));
@@ -194,13 +262,35 @@ async function main(): Promise<void> {
   const spinner = ora('Installing blueprints...').start();
 
   try {
-    const result = await installBlueprints(targetPath, powerLevel, tasksDir);
+    const claudeResult = forClaude ? await installBlueprints(targetPath, powerLevel, tasksDir) : null;
+    const codexResult = forCodex ? await installCodex(codexScope, codexRoot, powerLevel, tasksDir) : null;
     spinner.succeed(chalk.green('Installation complete!'));
 
     console.log();
     console.log(chalk.dim('─'.repeat(50)));
-    console.log(`  ${chalk.green('✓')} ${result.commands} commands installed`);
-    console.log(`  ${chalk.green('✓')} ${result.agents} agents installed`);
+    if (claudeResult) {
+      console.log(chalk.bold('  Claude Code'));
+      console.log(`  ${chalk.green('✓')} ${claudeResult.commands} commands installed`);
+      console.log(`  ${chalk.green('✓')} ${claudeResult.agents} agents installed`);
+      console.log(`  ${chalk.green('✓')} ${claudeResult.workflows} workflows installed`);
+      if (claudeResult.removed > 0) {
+        console.log(`  ${chalk.green('✓')} ${claudeResult.removed} outdated blueprints files removed (your own files are never touched)`);
+      }
+    }
+    if (codexResult) {
+      console.log(chalk.bold('  Codex'));
+      console.log(`  ${chalk.green('✓')} ${codexResult.skills} skills installed`);
+      console.log(`  ${chalk.green('✓')} ${codexResult.agents} agents installed`);
+      if (codexResult.hookRegistered) {
+        console.log(`  ${chalk.green('✓')} typecheck gate added to ${codexResult.paths.hooksFile}`);
+      }
+      if (codexResult.removed > 0) {
+        console.log(`  ${chalk.green('✓')} ${codexResult.removed} outdated blueprints files removed`);
+      }
+      if (codexResult.skipped.length > 0) {
+        console.log(`  ${chalk.yellow('!')} Skipped (you already have your own): ${codexResult.skipped.join(', ')}`);
+      }
+    }
     console.log(chalk.dim('─'.repeat(50)));
     console.log();
 
@@ -208,20 +298,22 @@ async function main(): Promise<void> {
     console.log(chalk.bold('Next steps:'));
     console.log();
 
-    if (installType === 'global') {
-      console.log(`  ${chalk.cyan('1.')} Open Claude Code in any project`);
-      console.log(`  ${chalk.cyan('2.')} Type ${chalk.yellow('/plan')} to start planning, ${chalk.yellow('/research')} to research, etc.`);
-    } else {
-      console.log(`  ${chalk.cyan('1.')} Navigate to ${chalk.cyan(targetPath)}`);
-      console.log(`  ${chalk.cyan('2.')} Open Claude Code: ${chalk.yellow('claude')}`);
-      console.log(`  ${chalk.cyan('3.')} Type ${chalk.yellow('/plan')} to start planning, ${chalk.yellow('/research')} to research, etc.`);
+    if (claudeResult) {
+      const where = installType === 'global' ? 'in any project' : `in ${chalk.cyan(targetPath)}`;
+      console.log(`  ${chalk.cyan('Claude Code:')} open Claude Code ${where} and type ${chalk.yellow('/autopilot')} or ${chalk.yellow('/blueprint')}`);
+    }
+    if (codexResult) {
+      const where = installType === 'global' ? 'in any project' : `in ${chalk.cyan(codexRoot)}`;
+      console.log(`  ${chalk.cyan('Codex:')}       open Codex ${where} and type ${chalk.yellow('$autopilot')} or ${chalk.yellow('$blueprint')} (skills start with $)`);
+      if (codexResult.hookRegistered) {
+        console.log(`               run ${chalk.yellow('/hooks')} in Codex once to review and trust the blueprints typecheck gate`);
+      }
+      console.log(chalk.dim(`               Optional: for parallel streams in $parallelize, add "[agents]" with "max_depth = 2" to ${path.join(codexResult.paths.codexHome, 'config.toml')}`));
     }
 
     console.log();
-    console.log(chalk.dim('Available commands: /audit, /auto, /bootstrap, /brainstorm, /challenge,'));
-    console.log(chalk.dim('/cleanup, /critique, /debug, /dry, /explain, /finalize, /flush, /handoff,'));
-    console.log(chalk.dim('/imagine, /implement, /kickoff, /parallelize, /pickup, /plan, /refactor,'));
-    console.log(chalk.dim('/research, /storyboard, /test, /verify'));
+    console.log(chalk.dim('Popular: autopilot, blueprint, kickoff, implement, audit, diagnose, research,'));
+    console.log(chalk.dim('brainstorm, validate, commit. Type / (Claude Code) or $ (Codex) to see them all.'));
     console.log();
 
   } catch (error) {

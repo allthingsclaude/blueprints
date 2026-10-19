@@ -18,14 +18,19 @@ Scanning the codebase for code markers and annotations.
 
 ## Marker Scan
 
+**Marker counts per file** (all tiers):
+!`git grep -c -w -E 'FIXME|HACK|XXX|TODO|TASK|TEMP|DEPRECATED|NOTE|WARN' -- ':!node_modules' 2>/dev/null | sort -t: -k2 -rn | head -40 | grep . || echo "No markers found"`
+
+Each list below is capped at 200 lines; use the counts above for totals.
+
 **High Priority (FIXME, HACK, XXX)**:
-!`git grep -rn -E '\b(FIXME|HACK|XXX)\b' -- ':!node_modules' ':!.git' 2>/dev/null || echo "No high-priority markers found"`
+!`git grep -n -w -E 'FIXME|HACK|XXX' -- ':!node_modules' 2>/dev/null | head -200 | grep . || echo "No high-priority markers found"`
 
 **Standard (TODO, TASK, TEMP, DEPRECATED)**:
-!`git grep -rn -E '\b(TODO|TASK|TEMP|DEPRECATED)\b' -- ':!node_modules' ':!.git' 2>/dev/null || echo "No standard markers found"`
+!`git grep -n -w -E 'TODO|TASK|TEMP|DEPRECATED' -- ':!node_modules' 2>/dev/null | head -200 | grep . || echo "No standard markers found"`
 
 **Informational (NOTE, WARN)**:
-!`git grep -rn -E '\b(NOTE|WARN)\b' -- ':!node_modules' ':!.git' 2>/dev/null || echo "No informational markers found"`
+!`git grep -n -w -E 'NOTE|WARN' -- ':!node_modules' 2>/dev/null | head -200 | grep . || echo "No informational markers found"`
 
 ## User Filter
 

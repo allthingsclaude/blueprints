@@ -14,16 +14,19 @@ Generate a comprehensive HANDOFF.md file at `{{SESSIONS_DIR}}/HANDOFF.md` that e
 
 ## Analysis Steps
 
-1. **Analyze Git State**
-   - Review recent commits (last 3-5) for completed work
-   - Examine staged changes (what's ready to commit)
-   - Examine unstaged changes (what's being worked on)
+You only see your prompt, not the conversation — the session's decisions, open threads, and next steps come from the summary the caller passes you. Use it as the primary source for "why"; git tells you "what".
+
+1. **Analyze Git State and the Active Plan**
+   - Read the STATE.md header: `sed -n '1,/^---$/p' {{STATE_FILE}} 2>/dev/null` — note the active plan and phase, if any
+   - Review recent commits: `git log -3 --stat`
+   - Size the uncommitted work: `git diff HEAD --stat` (and `git diff --cached --stat` for what's staged)
    - Understand the progression of work
 
-2. **Read Modified Files**
-   - Read actual file contents (not just diffs)
+2. **Read the Changes**
+   - Start from the diffs: `git diff HEAD -- <path>` for the files that matter
+   - Read a whole file only when it's small or the diff lacks the context you need (e.g. to see what a half-finished function is for)
    - Identify specific functions/components being modified
-   - Understand WHY changes are being made (look for patterns, related code)
+   - Understand WHY changes are being made (from the caller's summary, commit messages, and related code)
    - Note incomplete implementations or TODOs
 
 3. **Identify Context**
@@ -48,6 +51,7 @@ Generate `{{SESSIONS_DIR}}/HANDOFF.md` with this exact structure:
 **Date**: [Current date and time]
 **Status**: 🚧 In Progress / ✅ Ready / ⚠️ Blocked
 **Focus Area**: [Brief description]
+**Active Plan**: [{NN}_{NAME}, Phase N — resume with `/autopilot` or `/kickoff {NAME}`] (or "None")
 
 [2-3 sentence summary of what was being worked on]
 
@@ -164,10 +168,11 @@ Generate `{{SESSIONS_DIR}}/HANDOFF.md` with this exact structure:
 ## 💡 How to Resume
 
 1. **Load this handoff**: Use `/pickup` command in fresh session
-2. **Review current state**: Check "What's In Progress" section above
-3. **Pick up from Next Steps**: Start with first unchecked item
-4. **Read key files**: Review files listed in "Key Files" section
-5. **Verify environment**: Run type check and lints to ensure clean state
+2. **Resume the active plan** (if any): `/autopilot` or `/kickoff {NAME}`
+3. **Review current state**: Check "What's In Progress" section above
+4. **Pick up from Next Steps**: Start with first unchecked item
+5. **Read key files**: Review files listed in "Key Files" section
+6. **Verify environment**: Run type check and lints to ensure clean state
 
 ---
 
@@ -182,7 +187,7 @@ Generate `{{SESSIONS_DIR}}/HANDOFF.md` with this exact structure:
 3. **Be Actionable**: Next steps should be clear and prioritized
 4. **Preserve Context**: Capture decisions, patterns, and constraints
 5. **Stay Concise**: Comprehensive but scannable - use bullets and headers
-6. **Read Files**: Don't rely on diffs alone - read actual content to understand context
+6. **Read Purposefully**: Start from diffs; read whole files only when they're small or the diff lacks context
 
 ## What to Capture
 

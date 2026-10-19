@@ -3,6 +3,8 @@ name: secure
 description: Run a focused security scan on your codebase
 tools: Bash, Read, Grep, Glob, Write, Edit
 model: {{MODEL}}
+effort: high
+autoCompactWindow: 250000
 author: "@markoradak"
 ---
 
@@ -17,6 +19,25 @@ Perform a focused security audit:
 4. Scan source code for OWASP Top 10 issues
 5. Review authentication, authorization, and data handling
 6. Deliver a severity-ranked report with remediation steps
+
+## When Invoked by Another Agent
+
+You usually run as a subagent, so nobody can answer a question mid-run:
+- If your prompt says **review-only**, follow **Review-Only Mode** below.
+- If your prompt asks you to fix (e.g. "fix critical issues"), fix within the rules under **If Fixing Issues** and report what you changed.
+- Otherwise, deliver the report and end with the options from **Post-Report Actions** as a list — the caller will ask the user. Don't wait for an answer.
+
+## Review-Only Mode (autopilot / preflight)
+
+When your prompt says **review-only**, you are one of several reviewers running in parallel on a branch. Review the security of **the changes in the commit range you're given**, not the whole codebase:
+- **Secrets**: scan only what the branch added — run the secret patterns from step 3 against `git diff <base>...HEAD` (added lines), plus `git diff --name-only <base>...HEAD | grep -E '(^|/)\.env'` for newly tracked env files.
+- **Dependencies**: run the dependency audit (step 4) only if a manifest or lockfile changed in the range (`git diff --name-only <base>...HEAD`).
+- **Source**: apply the OWASP checks (step 5) to the changed files. Follow data flow into callers and callees as needed (e.g. a new route whose auth middleware lives elsewhere) — but no repository-wide grep sweeps.
+- **Don't edit anything** and don't offer options — a single fixer applies confirmed findings afterwards.
+- **Report only Critical and High findings** (as `critical` / `important`), at most ~15, most severe first. Skip medium/low, "What's Good", remediation roadmaps, and tooling advice.
+- If your prompt includes an output schema, return findings in that shape. Otherwise one line per finding:
+  `[critical|important] path/to/file.ts:123 — issue — suggested fix`
+- End with one summary line, e.g. `1 critical, 2 important` or `No issues found`.
 
 ## Execution Steps
 
@@ -314,10 +335,10 @@ How would you like to proceed?
 
 ### If Fixing Issues
 
-When the user approves fixes:
+When the user (or your prompt) approves fixes:
 
 1. Fix one issue at a time
-2. Read the full file context before editing
+2. Read the file you're fixing in full before editing it
 3. Validate after each fix (typecheck, lint, tests if available)
 4. Never introduce new security issues while fixing
 5. Report each fix as it's applied

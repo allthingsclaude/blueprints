@@ -3,7 +3,7 @@
 
 ![Blueprints by All Things Claude](assets/blueprints.webp)
 
-Install powerful commands and agents for Claude Code to enhance your AI-assisted development workflows.
+Install powerful commands and agents for Claude Code — and Codex — to enhance your AI-assisted development workflows.
 
 ## Quick Start
 
@@ -11,7 +11,7 @@ Install powerful commands and agents for Claude Code to enhance your AI-assisted
 npx @allthingsclaude/blueprints
 ```
 
-This will prompt you to choose an installation location:
+This will ask which tool to install for (Claude Code, Codex, or both — see [Codex](#codex)) and where:
 
 - **Global** (`~/.claude`) - Available in all your projects
 - **Local** (current directory) - Available only in the current project
@@ -30,6 +30,10 @@ npx @allthingsclaude/blueprints
 ```bash
 # Install globally to ~/.claude
 npx @allthingsclaude/blueprints --global
+
+# Install for Codex, or for both tools (default: claude)
+npx @allthingsclaude/blueprints --target codex --global
+npx @allthingsclaude/blueprints --target both --local
 
 # Install locally to current directory
 npx @allthingsclaude/blueprints --local
@@ -56,7 +60,7 @@ Control which models power your agents:
 | 1 | Economy | Haiku | Haiku | Haiku | Sonnet |
 | 2 | Balanced | Haiku | Haiku | Sonnet | Sonnet |
 | 3 | Standard | Sonnet | Sonnet | Sonnet | Sonnet |
-| **4** | **Enhanced (default)** | **Sonnet** | **Opus** | **Opus** | **Opus** |
+| **4** | **Enhanced (default)** | **Sonnet** | **Sonnet** | **Opus** | **Opus** |
 | 5 | Maximum | Opus | Opus | Opus | Opus |
 
 ---
@@ -67,7 +71,7 @@ Control which models power your agents:
 
 | Command | Description |
 |---------|-------------|
-| `/plan` | Create a structured implementation plan from your requirements |
+| `/blueprint` | Create a structured implementation plan from your requirements |
 | `/kickoff` | Execute a plan interactively with approval gates (collaborative) |
 | `/implement` | Execute a plan autonomously (hands-off) |
 | `/parallelize` | Execute independent plan tasks across multiple agents simultaneously |
@@ -95,6 +99,7 @@ Control which models power your agents:
 | Command | Description |
 |---------|-------------|
 | `/audit` | Pre-commit security and quality review |
+| `/preflight` | Workflow: parallel audit, security, accessibility and test review of a branch — every finding verified, then one fix pass |
 | `/test` | Run tests, analyze failures, generate test coverage |
 | `/cleanup` | Find and remove dead code, unused imports, technical debt |
 | `/refactor` | Safe refactoring — rename, extract, inline, or move code with validation |
@@ -121,22 +126,22 @@ Control which models power your agents:
 |---------|-------------|
 | `/brainstorm` | Pure ideation mode - explore ideas without any code changes |
 | `/challenge` | Critical analysis - question assumptions before proceeding |
-| `/verify` | Quick sanity check - validate your approach |
+| `/validate` | Quick sanity check - validate your approach |
 | `/critique` | Get direct, unfiltered feedback on code or decisions |
 
 ### Debugging
 
 | Command | Description |
 |---------|-------------|
-| `/debug` | Systematic investigation with root cause analysis and fix options |
+| `/diagnose` | Systematic investigation with root cause analysis and fix options |
 
 ### Creative
 
 | Command | Description |
 |---------|-------------|
-| `/design` | Create on-brand design and marketing assets (social media, banners, ads) |
+| `/visuals` | Create on-brand design and marketing assets (social media, banners, ads) |
 | `/brand` | Create or document a comprehensive brand identity system |
-| `/copy` | Write on-brand marketing copy for social media, ads, emails, and landing pages |
+| `/copywrite` | Write on-brand marketing copy for social media, ads, emails, and landing pages |
 | `/email` | Create on-brand HTML email templates (newsletters, announcements, transactional) |
 | `/pitch` | Create an on-brand HTML presentation deck with speaker notes |
 | `/og` | Auto-generate Open Graph images for all pages in your project |
@@ -212,7 +217,7 @@ Add features to an existing project with structured planning.
 │         (understand codebase/docs)                              │
 │                    │                                            │
 │                    ▼                                            │
-│                  /plan                                          │
+│                  /blueprint                                          │
 │          (create structured plan)                               │
 │                   │                                             │
 │        ┌──────────┼──────────┐                                  │
@@ -233,7 +238,7 @@ Add features to an existing project with structured planning.
 ```
 /research how does auth work in this codebase?
 ... investigation results ...
-/plan add OAuth integration
+/blueprint add OAuth integration
 ... creates PLAN_OAUTH.md ...
 /implement
 ... autonomous execution ...
@@ -249,7 +254,7 @@ Systematic debugging with proper verification.
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                 │
-│                      /debug                                     │
+│                      /diagnose                                     │
 │         (investigate, find root cause)                          │
 │                        │                                        │
 │            ┌───────────┴───────────┐                            │
@@ -274,7 +279,7 @@ Systematic debugging with proper verification.
 
 **Example:**
 ```
-/debug users can't login after password reset
+/diagnose users can't login after password reset
 ... investigation, root cause found ...
 ... apply fix ...
 /test
@@ -363,7 +368,7 @@ Validate approaches before committing to implementation.
 │                                                                 │
 │   Got a task?                                                   │
 │        │                                                        │
-│        ├─── Quick check? ───► /verify                           │
+│        ├─── Quick check? ───► /validate                           │
 │        │                      (lightweight validation)          │
 │        │                                                        │
 │        ├─── Need to think? ──► /challenge                       │
@@ -385,7 +390,7 @@ Validate approaches before committing to implementation.
 /challenge Should we use microservices or a monolith?
 ... analyzes tradeoffs, questions assumptions ...
 
-/verify Is using Redis for sessions the right approach here?
+/validate Is using Redis for sessions the right approach here?
 ... quick validation with gotchas ...
 
 /brainstorm What would an ideal developer experience look like?
@@ -407,6 +412,73 @@ When you have a plan, choose how to execute it:
 
 ---
 
+## Autopilot
+
+`/autopilot` runs the whole loop on a feature branch:
+
+```
+brainstorm → /blueprint → branch → phase 1 → commit → phase 2 → commit → … → preflight → fixes → commit → update CLAUDE.md
+```
+
+- **Phases** run in fresh agents: `implement` for small phases, `parallelize` (several `implement` streams at once) for phases with 6+ tasks, `showcase` for landing pages. Each phase is committed before the next starts.
+- **Preflight** reviews the whole branch at the end. `audit`, `secure`, `a11y` (only when UI files changed) and `test` run in parallel without editing anything; every finding is checked by an independent verifier; one fixer applies the confirmed ones and runs typecheck, lint and tests; each fix is rechecked, with at most two rounds. It runs as the `preflight` workflow when [dynamic workflows](https://code.claude.com/docs/en/workflows) are available, and as parallel subagents otherwise. You can also run `/preflight` on any branch yourself.
+- **Typecheck gate**: when an `implement` agent tries to finish, a stop hook runs the project's typecheck script and hands any errors back to it once. Set `BLUEPRINTS_PHASE_GATE=0` to turn it off.
+- **Resuming**: progress lives in the plan's checkboxes and `tasks/STATE.md`, so running `/autopilot` again picks up where it stopped.
+
+### Keeping token use down
+
+- Long-running agents (`implement`, `parallelize`, `audit`, `secure`, `a11y`) compact their context at 250k tokens instead of near the 1M limit, which roughly halves what they re-read on every turn.
+- Agents read only the plan sections they need and keep shared codebase conventions in `tasks/CONVENTIONS.md`, so each phase doesn't rediscover them.
+- `tasks/STATE.md` is a short index (a header plus one row per plan). Longer notes belong in the plan file. Run `/update` once to migrate an older, longer STATE.md; notes from it are moved into the plan files, not deleted.
+- Optional, for your own sessions: autopilot's orchestrator runs in your main session, so a lower main-session compaction window helps too, e.g. `/autocompact 400k`.
+
+---
+
+## Codex
+
+The same commands and agents install into [Codex](https://learn.chatgpt.com/docs/build-skills) with `--target codex` (or `both`). The installer converts them:
+
+| Claude Code | Codex | Where (global / project) |
+|-------------|-------|--------------------------|
+| Commands (`/autopilot`) | Skills (`$autopilot`) | `~/.agents/skills/` / `./.agents/skills/` |
+| Agents | Custom agents (TOML) | `~/.codex/agents/` / `./.codex/agents/` |
+| Typecheck gate (agent hook) | `SubagentStop` hook for `implement` | `~/.codex/hooks.json` / `./.codex/hooks.json` |
+| `CLAUDE.md` | `AGENTS.md` | — |
+
+Things that work differently in Codex:
+
+- **Invoke skills with `$`**: `$autopilot`, `$blueprint`, `$kickoff`. `$autopilot`, `$release`, `$merge` and `$flush` only run when you invoke them; the rest Codex can also pick up from your request.
+- **Context commands**: Claude Code runs a command's `!` lines before the prompt; in Codex they become the first steps the skill runs.
+- **Power level** sets each agent's reasoning effort (low / medium / high) instead of a model, since available models depend on your plan. Agents use your session's model.
+- **Review step**: there are no workflows in Codex, so `$autopilot` runs its review with parallel agents (the same fallback Claude Code uses without workflows).
+- **Parallel streams**: Codex agents can't start agents of their own by default, so `$parallelize` runs its streams one after another. To run them in parallel, add this to `~/.codex/config.toml`:
+  ```toml
+  [agents]
+  max_depth = 2
+  ```
+- **Typecheck gate**: run `/hooks` in Codex once to review and trust it. The installer appends it to your existing `hooks.json` (your hooks are kept, and the original is saved as `hooks.json.before-blueprints`).
+- **Per-agent compaction and turn limits** have no Codex equivalent; Codex uses its global compaction setting.
+
+The installer never overwrites a skill or agent you wrote yourself — if one already uses a blueprints name, it's skipped and listed. Reinstalling updates only the files blueprints installed.
+
+---
+
+## Upgrading from 0.4.x
+
+Five commands and agents were renamed to stop clashing with Claude Code built-ins (`/plan`, `/verify`, `/debug`, `/design`, `/copy`):
+
+| Before | Now |
+|--------|-----|
+| `/plan` | `/blueprint` |
+| `/verify` | `/validate` |
+| `/debug` | `/diagnose` |
+| `/design` | `/visuals` |
+| `/copy` | `/copywrite` |
+
+Reinstalling removes the old blueprints files automatically. The installer only ever removes files it installed itself, so your own commands, agents and workflows in the same folders are left alone.
+
+---
+
 ## Agents (30+)
 
 Agents are specialized workers launched by commands. Each agent is assigned a model based on your chosen power level and its tier classification.
@@ -417,8 +489,8 @@ Agents are specialized workers launched by commands. Each agent is assigned a mo
 |------|--------|-------------|
 | **Lightweight** | commit, changelog, handoff, cleanup, imagine, og | Rote tasks — fast models suffice |
 | **Research** | research-codebase, research-docs, research-web | Search and synthesize |
-| **Standard** | plan, implement, parallelize, bootstrap, refactor, test, explain, docs, dry, storyboard, finalize, migrate, a11y, diagram, i18n, onboard, release, showcase, design, update, brand, copy, email, pitch | Balanced reasoning |
-| **Heavyweight** | audit, debug, secure | Deep reasoning, high-stakes analysis |
+| **Standard** | blueprint, implement, parallelize, bootstrap, refactor, test, explain, docs, dry, storyboard, finalize, migrate, a11y, diagram, i18n, onboard, release, showcase, visuals, update, brand, copywrite, email, pitch | Balanced reasoning |
+| **Heavyweight** | audit, diagnose, secure | Deep reasoning, high-stakes analysis |
 
 ### Agent List
 
@@ -431,9 +503,9 @@ Agents are specialized workers launched by commands. Each agent is assigned a mo
 | `changelog` | `/changelog` | Changelog generation from git history |
 | `cleanup` | `/cleanup` | Dead code and unused import removal |
 | `commit` | `/commit` | Git commit message crafting |
-| `copy` | `/copy` | On-brand marketing copy for social, ads, emails, landing pages |
-| `debug` | `/debug` | Systematic root cause investigation |
-| `design` | `/design` | On-brand marketing asset creation (social media, banners, ads) |
+| `copywrite` | `/copywrite` | On-brand marketing copy for social, ads, emails, landing pages |
+| `diagnose` | `/diagnose` | Systematic root cause investigation |
+| `visuals` | `/visuals` | On-brand marketing asset creation (social media, banners, ads) |
 | `diagram` | `/diagram` | Mermaid diagram generation from codebase |
 | `docs` | `/docs` | Documentation generation and updates |
 | `dry` | `/dry` | DRY violation detection and elimination |
@@ -449,7 +521,7 @@ Agents are specialized workers launched by commands. Each agent is assigned a mo
 | `onboard` | `/onboard` | Developer onboarding guide generation |
 | `parallelize` | `/parallelize` | Multi-agent orchestration |
 | `pitch` | `/pitch` | On-brand HTML presentation deck creation |
-| `plan` | `/plan` | Structured plan creation |
+| `blueprint` | `/blueprint` | Structured plan creation |
 | `refactor` | `/refactor` | Safe code refactoring with validation |
 | `release` | `/release` | Version bumps, changelogs, tags, and publishing |
 | `research-codebase` | `/research` | Code exploration |
@@ -480,16 +552,23 @@ After installation, your `.claude` directory will contain:
 │   ├── bootstrap.md
 │   ├── changelog.md
 │   └── ...
+├── workflows/
+│   └── preflight.js   # Branch review workflow (runs as /preflight)
+├── blueprints/
+│   └── hooks/
+│       └── phase-gate.sh   # Typecheck gate used by the implement agent
+└── .blueprints-version     # Installed version and the list of installed files
 tasks/                         # Runtime artifacts (created during use)
 ├── plans/
 │   └── PLAN_*.md              # Implementation plans
 ├── sessions/
 │   ├── HANDOFF.md             # Session handoff document
 │   └── PHASE_SUMMARY_*.md    # Phase summaries
-└── STATE.md                   # Active plan tracker
+├── CONVENTIONS.md             # Codebase conventions shared by implementation agents
+└── STATE.md                   # Active plan tracker (short index)
 ```
 
-> The `tasks/` directory name is configurable during installation via `--tasks-dir`. Template variables (`{{TASKS_DIR}}`, `{{PLANS_DIR}}`, `{{SESSIONS_DIR}}`) are resolved at install time.
+> The `tasks/` directory name is configurable during installation via `--tasks-dir`. Template variables (`{{TASKS_DIR}}`, `{{PLANS_DIR}}`, `{{SESSIONS_DIR}}`, `{{BLUEPRINTS_DIR}}`) are resolved at install time.
 
 ---
 
@@ -502,7 +581,10 @@ tasks/                         # Runtime artifacts (created during use)
 ## Requirements
 
 - Node.js 20.0.0 or higher
-- Claude Code CLI
+- Claude Code CLI — v2.1.296 or later for the per-agent compaction settings (older versions ignore them)
+- Or Codex — tested with Codex CLI 0.163 (skills in `.agents/skills`, TOML custom agents, hooks)
+- Optional: [dynamic workflows](https://code.claude.com/docs/en/workflows) for `/preflight` as a workflow (on paid plans; Pro users enable them in `/config`). Without them, autopilot runs the same review with parallel subagents.
+- The typecheck gate needs `sh` (macOS, Linux, or Git Bash on Windows); without it the gate is skipped.
 
 ## License
 

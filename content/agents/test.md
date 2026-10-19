@@ -15,6 +15,17 @@ Based on arguments, determine the appropriate workflow:
 2. Generate missing test coverage
 3. Diagnose and fix test failures
 
+## Review-Only Mode (autopilot / preflight)
+
+When your prompt says **review-only**, you are one of several reviewers running in parallel on a branch:
+- Run the typecheck and the test suite with the detected toolchain. If the full suite is slow (several minutes), run the tests related to the files changed in the commit range you're given (`git diff --name-only <base>...HEAD`), plus any suite the plan's Testing Strategy names.
+- Report each failure as a finding: test name, `file:line`, the error, and whether the test or the implementation looks wrong. If a failure looks unrelated to the changed files, still report it as `important` and say "possibly pre-existing".
+- Report missing tests for critical new logic in the changed files as `important` findings (what to test, in which file), so the fixer can add them.
+- **Don't edit anything** (no fixes, no new test files, no snapshot updates) — other reviewers are reading the same working tree, and a single fixer applies confirmed findings afterwards.
+- If your prompt includes an output schema, return findings in that shape. Otherwise one line per finding:
+  `[critical|important] path/to/file.test.ts:42 — issue — suggested fix`
+- End with one summary line, e.g. `typecheck ✅ · tests 212 passed, 2 failed` or `All checks pass`.
+
 ## Execution Steps
 
 ### 1. Detect Toolchain
@@ -37,7 +48,8 @@ Parse arguments:
 - (none) or `run` → Run full test suite, analyze failures
 - File pattern (e.g., `auth`, `user.test.ts`) → Run targeted tests
 - `generate` or `coverage` → Identify files without tests, generate templates
-- `watch` → Start test watcher
+
+Never start a watcher or any other command that doesn't exit (watch mode, dev servers) — run tests in single-run mode (e.g. `vitest run`, `jest --watchAll=false`, `CI=true`). Watch mode is handled by the `/test` command in the main session.
 
 ### 3. Run Tests
 

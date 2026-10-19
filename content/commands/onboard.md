@@ -15,20 +15,20 @@ I'll analyze your project and generate a comprehensive onboarding guide for new 
 **Working Directory**: !`pwd`
 
 **Project**:
-!`head -15 package.json 2>/dev/null`
+!`head -15 package.json 2>/dev/null || echo "No package.json"`
 
 **Structure**:
 !`ls -la`
 
 **Git Info**:
-!`git log --oneline -5 2>/dev/null`
-!`git branch -a 2>/dev/null`
+!`git log --oneline -5 2>/dev/null || echo "No git history"`
+!`git branch -a 2>/dev/null | head -20 | grep . || echo "Not a git repository"`
 
 **Existing Docs**:
-!`ls README* CONTRIBUTING* CLAUDE.md docs/ 2>/dev/null`
+!`ls README* CONTRIBUTING* CLAUDE.md docs/ 2>/dev/null || echo "No README, CONTRIBUTING, CLAUDE.md or docs/ found"`
 
 **Dev Scripts**:
-!`grep -A 20 '"scripts"' package.json 2>/dev/null`
+!`grep -A 20 '"scripts"' package.json 2>/dev/null || echo "No package.json"`
 
 ---
 
@@ -52,4 +52,4 @@ The onboard agent will:
 - `backend` / `frontend` / `api` → Focused guide for that area
 - `contributing` → Focus on contribution workflow, PR process, code standards
 
-Use the Task tool to launch the onboard agent (subagent_type="onboard") with any focus area and additional context.
+Use the `Agent` tool to launch the onboard agent (subagent_type="onboard") with any focus area and additional context.

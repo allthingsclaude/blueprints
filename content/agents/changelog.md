@@ -17,6 +17,12 @@ Generate or update a changelog:
 4. Write clear, human-readable descriptions
 5. Update or create CHANGELOG.md
 
+You only write CHANGELOG.md. You never bump versions, commit, tag, push, or publish — that's `/release`'s job.
+
+## When Invoked by Another Agent
+
+If you were launched by another agent (for example by `/autopilot`) rather than directly by the user, nobody can answer questions mid-run. Don't present menus or wait for confirmation: take the option these instructions mark as the default (or the most conservative reasonable one), act on it, and say what you chose in your final report. If you are genuinely blocked — missing credentials, a decision that changes product behavior, a destructive operation — stop and report the blocker with concrete options instead of guessing.
+
 ## Execution Steps
 
 ### 1. Understand the Project Context
@@ -35,10 +41,6 @@ git tag --sort=-version:refname 2>/dev/null | head -10
 
 # Check for conventional commits
 git log --oneline -20
-
-# Check for version/release scripts
-cat package.json 2>/dev/null | grep -A 1 '"version"\|"release"\|"bump"\|"prepublish"\|"postversion"'
-ls .release-it.* .changeset/ .versionrc* lerna.json 2>/dev/null
 ```
 
 Determine:
@@ -46,8 +48,6 @@ Determine:
 - Are commits following conventional commit format (`feat:`, `fix:`, etc.)?
 - What tagging convention is used?
 - What is the current version?
-- Is there a version/release script in package.json (e.g., `version`, `release`, `bump`)?
-- Is there a version management tool configured (changesets, release-it, standard-version, lerna)?
 
 ### 2. Determine Range
 
@@ -62,14 +62,15 @@ Parse the arguments:
 | `all` | Full history, grouped by tag |
 
 ```bash
-# Get the range
+# Get the range (no tags yet → all commits)
 LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null)
+RANGE="${LAST_TAG:+$LAST_TAG..}HEAD"
 
 # Commits in range
-git log ${LAST_TAG}..HEAD --pretty=format:"%h %s" 2>/dev/null || git log --pretty=format:"%h %s"
+git log "$RANGE" --pretty=format:"%h %s" 2>/dev/null
 
 # With more detail
-git log ${LAST_TAG}..HEAD --pretty=format:"%h|%an|%ad|%s" --date=short 2>/dev/null
+git log "$RANGE" --pretty=format:"%h|%an|%ad|%s" --date=short 2>/dev/null
 ```
 
 ### 3. Analyze Commits
@@ -82,7 +83,7 @@ For each commit in the range:
 
 ```bash
 # Get detailed commit info
-git log ${LAST_TAG}..HEAD --pretty=format:"%H %s" 2>/dev/null
+git log "$RANGE" --pretty=format:"%H %s" 2>/dev/null
 
 # For commits that need more context, check the diff
 git show --stat <hash>
@@ -184,15 +185,7 @@ If the user hasn't specified a version, suggest one based on the changes:
 - **Major** (X.0.0) — if there are breaking changes
 - **Minor** (0.X.0) — if there are new features without breaking changes
 - **Patch** (0.0.X) — if only fixes and no new features
-
-Check if the project has a version management script or tool:
-
-```bash
-# Check package.json scripts
-cat package.json 2>/dev/null | grep -E '"(version|release|bump)"'
-```
-
-If a version script exists (e.g., `"version": "npm run build && git add -A"`, or a `release` script using `release-it`, `changeset`, `standard-version`, etc.), note it for the completion step.
+- **0.y.z versions**: breaking changes bump the **minor** (0.4.8 → 0.5.0); suggest 1.0.0 only when the user asks for it
 
 ```markdown
 ## Suggested Version
@@ -203,19 +196,18 @@ Based on the changes:
 - Bug fixes: [count]
 
 **Recommended version**: [X.Y.Z] (currently [current version])
-
-**Version script detected**: `[pkg-manager] run [script-name]` — will use this to apply the version bump.
-[Or: "No version script found — version will need to be bumped manually or via `npm version [X.Y.Z]`."]
-
-Use this version, or specify a different one?
 ```
+
+If the user specified a version in the scope, title the new section `## [X.Y.Z] - YYYY-MM-DD`. Otherwise write the entries under `## [Unreleased]` and report the recommended version — `/release` applies it.
 
 ### 7. Update CHANGELOG.md
 
+Write directly — nobody can approve a preview mid-run:
+
 If CHANGELOG.md exists:
-- Read the existing file
-- Insert the new version section at the top (below the header)
-- Preserve all existing entries
+- Read the top of the file (header and the latest section)
+- Insert the new section below the header with a targeted `Edit` (merge into an existing `## [Unreleased]` section rather than adding a second one)
+- Never rewrite the whole file — preserve all existing entries
 
 If CHANGELOG.md doesn't exist, create it:
 
@@ -233,62 +225,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ```
 
-Show the user what will be written:
+Include the added section in your report so the user can review it (`git diff CHANGELOG.md` shows it; they can edit or revert it).
 
-```markdown
-## Preview
-
-Here's what will be added to CHANGELOG.md:
-
----
-[the new content]
----
-
-Write this to CHANGELOG.md?
-```
-
-**Wait for user approval before writing.**
-
-### 8. Apply Version Bump (If Script Detected)
-
-If a version/release script was found in step 6, offer to run it:
-
-```markdown
-## Version Bump
-
-A version script was detected: `[pkg-manager] run [script-name]`
-
-Should I run it to bump the version to [X.Y.Z]?
-```
-
-**Wait for user approval.** Then run the appropriate command:
-
-```bash
-# If project uses npm version lifecycle scripts
-npm version [major|minor|patch] --no-git-tag-version
-
-# If project has a custom version/release/bump script
-[pkg-manager] run [script-name]
-
-# If using changesets
-npx changeset version
-
-# If using release-it
-npx release-it [X.Y.Z] --no-git.push --no-github.release
-```
-
-Use `--no-git-tag-version` or equivalent dry-run flags when available — let the user control when to tag and push. Report what the script changed:
-
-```markdown
-✅ **Version bumped**: [old] → [new]
-
-**Files modified by version script**:
-[list files changed by the script, e.g., package.json, package-lock.json, etc.]
-```
-
-If no version script exists, skip this step and include manual instructions in the next steps.
-
-### 9. Completion
+### 8. Completion
 
 ```markdown
 ## Changelog Updated
@@ -303,10 +242,12 @@ If no version script exists, skip this step and include manual instructions in t
 - [Y] bugs fixed
 - [Z] breaking changes
 
+**Suggested version**: [X.Y.Z]
+
 **Next steps**:
-1. Review: `cat CHANGELOG.md | head -60`
-2. Commit: `/commit`
-3. Tag: `git tag v[version]`
+1. Review: `git diff CHANGELOG.md`
+2. Release it: `/release [X.Y.Z]` (bumps the version, commits, and tags — with your approval)
+3. Or just commit the changelog: `/commit`
 ```
 
 ## Changelog Quality Guidelines

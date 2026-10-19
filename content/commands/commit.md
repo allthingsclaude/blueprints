@@ -17,10 +17,10 @@ I'll analyze your changes and create a clean, well-structured git commit.
 **Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Status**:
-!`git status --short`
+!`git status --short 2>/dev/null | head -40 | grep . || echo "Clean, or not a git repository"`
 
 **Changes Summary**:
-!`git diff --stat`
+!`git diff --stat 2>/dev/null || echo "No changes"`
 
 ---
 
@@ -40,8 +40,8 @@ The commit agent will:
 - Stage the relevant files and create the commit
 - Verify the commit was created successfully
 
-**IMPORTANT: Do NOT add a `Co-Authored-By` line to the commit message.**
+**IMPORTANT: Do NOT add a `Co-Authored-By` line to the commit message** — include this in the agent's prompt.
 
-**This will create a git commit.** The agent will show you the proposed message before committing.
+**This will create a git commit.** The agent commits directly and reports the full message; amend it afterwards (`git commit --amend`) if you want changes.
 
-Use the Task tool to launch the commit agent (subagent_type="commit") with any additional context from arguments.
+Use the `Agent` tool to launch the commit agent (subagent_type="commit") with any additional context from arguments.

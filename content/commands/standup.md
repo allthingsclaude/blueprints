@@ -16,20 +16,23 @@ Generating a standup summary from recent activity.
 
 **Author**: !`git config user.name 2>/dev/null || echo "Unknown"`
 
-**Commits (last 48 hours)**:
-!`git log --since="48 hours ago" --format="%h %an: %s (%ar)" 2>/dev/null || echo "No recent commits"`
+**Your Commits (last 48 hours, all branches)**:
+!`git log --all --since="48 hours ago" --author="$(git config user.email)" --format="%h %s (%ar)" 2>/dev/null | head -60 | grep . || echo "No recent commits"`
 
 **Uncommitted Changes**:
-!`git diff --stat 2>/dev/null || echo "None"`
+!`git diff --stat 2>/dev/null | tail -25 | grep . || echo "None"`
 
 **Staged Changes**:
-!`git diff --cached --stat 2>/dev/null || echo "None"`
+!`git diff --cached --stat 2>/dev/null | tail -25 | grep . || echo "None"`
 
 **Stashed Work**:
-!`git stash list 2>/dev/null || echo "No stashes"`
+!`git stash list 2>/dev/null | head -10 | grep . || echo "No stashes"`
 
-**Active Plan Files**:
-!`ls -1 {{TASKS_DIR}}/*.md 2>/dev/null || echo "No plan files found"`
+**Active Plan** (STATE.md header):
+!`sed -n '1,/^---$/p' {{STATE_FILE}} 2>/dev/null || echo "No active plan"`
+
+**Next Unchecked Tasks in the Active Plan**:
+!`p=$(sed -n 's/^\*\*File\*\*: *//p' {{STATE_FILE}} 2>/dev/null | head -1); if [ -f "$p" ]; then grep -n -m 8 -E '^[[:space:]]*([0-9]+\.|[-*]) \[ \]' "$p" | grep . || echo "No unchecked tasks"; else echo "No active plan"; fi`
 
 ## Timeframe Override
 
@@ -62,9 +65,9 @@ Using the activity data above, generate a clean standup summary in this format:
 
 2. **In Progress** — Describe what the current branch and uncommitted changes suggest you're working on. If there are stashes, mention them as paused work.
 
-3. **Up Next** — Pull from plan files if they exist. If not, infer reasonable next steps from the in-progress work or leave as "TBD — no active plan."
+3. **Up Next** — Pull from the active plan's next unchecked tasks if there are any. If not, infer reasonable next steps from the in-progress work or leave as "TBD — no active plan."
 
-4. **Timeframe** — If `$ARGUMENTS` specifies a different timeframe (e.g., "3 days", "this week"), adjust the "Done" section scope accordingly. The shell commands captured the last 48 hours; if the user wants a wider window, note that some older work may not appear.
+4. **Timeframe** — The commits above cover the last 48 hours. If `$ARGUMENTS` specifies a different timeframe (e.g., "3 days", "this week"), rerun the commit query with it before writing "Done": `git log --all --since="<timeframe>" --author="$(git config user.email)" --format="%h %s (%ar)" | head -100`.
 
 5. **Tone** — Keep it concise and factual. No filler. Ready to paste into Slack or Teams.
 

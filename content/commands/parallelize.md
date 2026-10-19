@@ -15,7 +15,7 @@ I'll analyze your plan or task, identify parallelization opportunities, and spaw
 **Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Available Plans**:
-!`ls -1 {{PLANS_DIR}}/PLAN_*.md 2>/dev/null || echo "No plans found"`
+!`ls -1 {{PLANS_DIR}}/PLAN_*.md 2>/dev/null | tail -30 | grep . || echo "No plans found"`
 
 ---
 
@@ -42,7 +42,7 @@ The orchestrator agent will:
 - **Dependency Analysis**: Map which tasks depend on others
 - **Conflict Detection**: Identify tasks that touch the same files
 - **Optimal Partitioning**: Create work streams that maximize parallelism
-- **Agent Spawning**: Launch agents for each stream using Task tool
+- **Agent Spawning**: Launch agents for each stream using the `Agent` tool
 - **Progress Tracking**: Monitor completion status
 - **Validation**: Run typecheck/lint on combined results
 - **Summary Report**: Show what was accomplished
@@ -62,57 +62,10 @@ The orchestrator agent will:
 - Sequential migrations/schema changes
 - Tasks requiring shared state
 
-### Agent Limits
-
-- **Default**: 3-5 agents (balances speed vs. coordination overhead)
-- **Maximum**: 8 agents (beyond this, conflicts become likely)
-- **Minimum**: 2 agents (otherwise just use `/implement`)
+The orchestrator picks the number of streams from the size of the work (see its heuristics); a max-agents count in the arguments caps it.
 
 ---
 
-## Expected Output
+Use the `Agent` tool to launch the parallelize orchestrator agent (subagent_type="parallelize") which will analyze the plan, partition work, spawn agents, and coordinate parallel execution. Pass along any max-agents count from the arguments.
 
-After parallel execution completes:
-
-```markdown
-# Parallel Execution Complete
-
-**Plan**: {PLAN_NAME}
-**Agents Spawned**: [X]
-**Total Duration**: [time]
-**Tasks Completed**: [Y/Z]
-
-## Stream Results
-
-### Stream 1: [Description]
-- Agent: [ID]
-- Status: Complete
-- Tasks: [list]
-- Files Modified: [list]
-
-### Stream 2: [Description]
-- Agent: [ID]
-- Status: Complete
-- Tasks: [list]
-- Files Modified: [list]
-
-## Validation
-
-- Type Check: [Pass/Fail]
-- Lint: [Pass/Fail]
-- Conflicts: [None/List]
-
-## Summary
-
-[What was accomplished across all streams]
-
-## Next Steps
-
-1. Review changes: `git diff`
-2. Run tests: `pnpm test`
-3. Continue with remaining tasks (if any)
-```
-
----
-
-Use the Task tool to launch the parallelize orchestrator agent (subagent_type="parallelize") which will analyze the plan, partition work, spawn agents, and coordinate parallel execution.
+When it returns, relay its report (and any blockers) to the user, then suggest next steps: review the changes (`git diff`), run the project's tests, commit with `/commit`, and review the branch with `/preflight` before opening a PR.

@@ -4,7 +4,7 @@ argument-hint: error message, file path, or behavior description
 author: "@markoradak"
 ---
 
-# Debug Assistant
+# Diagnose Assistant
 
 I'll systematically investigate and diagnose the issue you're experiencing.
 
@@ -15,10 +15,10 @@ I'll systematically investigate and diagnose the issue you're experiencing.
 **Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Recent Changes** (potential cause):
-!`git log --oneline -5`
+!`git log --oneline -5 2>/dev/null || echo "No git history"`
 
 **Modified Files**:
-!`git status --short`
+!`git status --short 2>/dev/null || echo "Not a git repository"`
 
 ---
 
@@ -28,14 +28,14 @@ $ARGUMENTS
 
 ---
 
-## Launching Debug Agent
+## Launching Diagnose Agent
 
-The debug agent will follow a systematic 4-phase methodology:
-1. **Reproduce & Understand** — Clarify the issue, gather context
+The diagnose agent will follow a systematic 4-phase methodology:
+1. **Reproduce & Understand** — Clarify the issue, run the failing command (test, build, typecheck) if there is one, gather context
 2. **Isolate the Problem** — Narrow scope, trace data flow
 3. **Root Cause Analysis** — Identify candidates, verify hypothesis
 4. **Resolution** — Develop fix, suggest prevention
 
 It will produce a structured diagnosis report with root cause, investigation trail, recommended fixes, and verification steps.
 
-Use the Task tool to launch the debug agent (subagent_type="debug") with the issue description and any additional context from arguments.
+Use the `Agent` tool to launch the diagnose agent (subagent_type="diagnose") with the issue description and any additional context from arguments.

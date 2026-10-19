@@ -13,7 +13,7 @@ I'll create a structured plan document based on our conversation findings.
 **Working Directory**: !`pwd`
 
 **Git Status**:
-!`git status --short`
+!`git status --short 2>/dev/null | head -40 | grep . || echo "Clean, or not a git repository"`
 
 ---
 
@@ -25,7 +25,7 @@ $ARGUMENTS
 
 ## Generating Plan
 
-Launching the plan agent to analyze our conversation and generate `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md`...
+Launching the blueprint agent to analyze our conversation and generate `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md`...
 
 The agent will:
 - ✅ Summarize key findings from our discussion
@@ -36,4 +36,6 @@ The agent will:
 - ✅ List relevant files and references
 - ✅ Copy any reference files (images, videos, mockups) to `{{TASKS_DIR}}/references/` and link them in the plan so implementing agents can consume them
 
-Use the Task tool to launch the plan agent (subagent_type="plan") which will autonomously generate the plan document.
+Use the `Agent` tool to launch the blueprint agent (subagent_type="blueprint") which will autonomously generate the plan document.
+
+The agent can't see this conversation, so its prompt must carry it. Include the plan name and a thorough summary of the conversation: the problem, the chosen approach and the alternatives rejected (with reasons), key decisions, files discussed, constraints, open questions, and the path of every image or reference file the user shared.

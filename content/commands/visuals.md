@@ -21,8 +21,6 @@ I'll create on-brand design and marketing assets — social media banners, ad cr
 **Previous Brand Brief**:
 !`head -30 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
 
-**Image Generation APIs** (agent will check GEMINI_API_KEY and FAL_KEY availability at runtime):
-
 ---
 
 ## Design Brief
@@ -35,7 +33,7 @@ $ARGUMENTS
 
 ### If the user provided a detailed brief above:
 
-Parse the brief for: asset type, platform(s), goal, style direction, messaging, and count. Infer reasonable defaults for anything missing based on the project context. Summarize your understanding in 2-3 sentences, then launch the design agent.
+Parse the brief for: asset type, platform(s), goal, style direction, messaging, and count. Infer reasonable defaults for anything missing based on the project context. Summarize your understanding in 2-3 sentences, then launch the visuals agent.
 
 ### If the brief is empty or vague:
 
@@ -91,7 +89,7 @@ If **product assets**:
 - label: "Open Graph" / description: "Landscape — 1200×630"
 - label: "Product Hunt" / description: "Landscape — 1270×760"
 - label: "YouTube Thumbnail" / description: "Landscape — 1280×720"
-- label: "App Store screenshot" / description: "Portrait — 1284×2778"
+- label: "App Store screenshot" / description: "Portrait — 1290×2796 (6.9-inch)"
 
 If **presentation graphics**:
 - label: "Slide 16:9" / description: "Widescreen — 1920×1080"
@@ -127,12 +125,11 @@ After gathering all answers, **summarize the complete brief and ask for confirma
 
 ### Launching the Agent
 
-Use the Task tool to launch the design agent (subagent_type="design") with the complete design brief including:
+Use the `Agent` tool to launch the visuals agent (subagent_type="visuals") with the complete design brief including:
 - Asset type and platform(s) with exact pixel dimensions
 - Campaign goal and key messaging
 - Brand source preference (and existing brand-brief.md content if available)
 - Visual style direction
 - Number of designs to create
 - Working directory path
-- Whether image generation APIs are available (and which)
 - Any specific instructions or constraints from the user

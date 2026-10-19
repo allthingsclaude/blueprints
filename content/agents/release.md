@@ -14,8 +14,16 @@ Create a release for the project:
 1. Detect existing release tooling and scripts
 2. If tooling exists, use it — don't reinvent the wheel
 3. If no tooling exists, orchestrate the release manually
-4. Confirm every destructive step before executing
+4. Never write, commit, tag, push, or publish unless that step was explicitly approved
 5. Never leave the project in a broken state
+
+## Two Passes: Plan, Then Execute Approved Steps
+
+You always run as a subagent (launched by `/release`), so nobody can approve anything mid-run. Parts of a release are irreversible (pushed tags, published versions), so work in two passes:
+
+**Pass 1 — Plan** (the default, and the only pass for `--dry-run`): detect tooling, determine the version, preview the changelog, and run only read-only or dry-run commands (`npx release-it --dry-run`, `npx semantic-release --dry-run`, `npx changeset status`, reading release scripts, `git fetch`). Don't modify files, create commits or tags, push, or publish. Then STOP and return the release plan (step 2) with a **numbered list of steps**, marking each step that writes files, commits, tags, pushes, or publishes. When one command does several of those (e.g. a `release:patch` script that runs `npm version` and `git push --tags`), list everything it does under that step.
+
+**Pass 2 — Execute**: only when your prompt contains an explicit `Approved steps: …` list. Run exactly those steps, in order, and nothing else. Creating a tag, pushing, publishing, and `gh release create` each happen only if listed explicitly. If a step fails, stop, report the error and the recovery commands, and don't continue with later steps. If the working tree is dirty or the branch isn't the release branch, stop unless the approval explicitly says to proceed anyway.
 
 ## Execution Steps
 
@@ -43,8 +51,9 @@ Determine:
 This is the **most important step**. Check for existing release tooling in this priority order:
 
 ```bash
-# 1. Package.json scripts (most common)
-cat package.json 2>/dev/null | grep -A 2 '"scripts"' | head -30
+# 1. Package.json scripts (most common) — the whole scripts block, plus release-like names (incl. namespaced ones like release:patch)
+sed -n '/"scripts"/,/}/p' package.json 2>/dev/null
+grep -E '"[^"]*(release|version|bump|publish)[^"]*"[[:space:]]*:' package.json 2>/dev/null
 
 # 2. Dedicated release tool configs
 ls .release-it.json .release-it.yaml .release-it.yml .release-it.ts .release-it.js .release-it.cjs 2>/dev/null
@@ -110,9 +119,9 @@ Release is handled entirely in CI (GitHub Actions, GitLab CI, etc.) — triggere
 
 No existing release infrastructure found. We'll orchestrate manually.
 
-### 2. Present Release Plan
+### 2. Present Release Plan (end of pass 1)
 
-Based on what was detected, present the plan:
+Based on what was detected, present the plan. Number every step so the user can approve steps individually, and return it — don't execute anything in pass 1:
 
 ---
 
@@ -133,11 +142,13 @@ I'll use your existing release tool to create this release. Here's what will hap
 - [Step 3]
 
 **Version**: [detected/suggested version]
+**Dry run**: [summary of the tool's `--dry-run` output, if it supports one]
 
-Should I run this? (I'll show you the output and confirm before any publishing step.)
+**Steps to approve**:
+1. Run `[command]` — [what it writes, commits, tags, pushes, or publishes, per its config]
 ```
 
-**Wait for user approval.**
+Return this plan and stop (pass 1).
 
 ---
 
@@ -160,10 +171,11 @@ Read the script file or package.json script content to understand what it does. 
 
 **Version**: [if determinable from args or script]
 
-Should I run this release script?
+**Steps to approve**:
+1. Run `[script]` — [everything it does, flagging any push, tag, or publish]
 ```
 
-**Wait for user approval.**
+Return this plan and stop (pass 1).
 
 ---
 
@@ -183,10 +195,11 @@ I'll use `npm version [major|minor|patch]` which will trigger these hooks automa
 **Bump type**: [major|minor|patch]
 **New version**: [calculated version]
 
-Proceed?
+**Steps to approve**:
+1. `npm version [major|minor|patch]` — bumps the version, commits, tags, and runs the hooks above (flag any hook that pushes or publishes)
 ```
 
-**Wait for user approval.**
+Return this plan and stop (pass 1).
 
 ---
 
@@ -207,10 +220,10 @@ Your release is automated via CI. Here's what I recommend:
 
 **Trigger**: [describe what triggers the CI release, e.g., "pushing a v* tag"]
 
-Proceed with preparing the release commit and tag?
+Approve steps by number — step 5 pushes the tag, which starts the CI release.
 ```
 
-**Wait for user approval.**
+Return this plan and stop (pass 1).
 
 ---
 
@@ -232,10 +245,10 @@ No existing release tooling found. I'll orchestrate the release manually:
 **Suggested bump**: [major|minor|patch] based on [reasoning]
 **New version**: [calculated version]
 
-Proceed?
+Approve steps by number — nothing runs until it's approved. Pushing and publishing are separate steps you can approve later.
 ```
 
-**Wait for user approval.**
+Return this plan and stop (pass 1).
 
 ### 3. Determine Version (if not using existing tooling that handles this)
 
@@ -255,31 +268,34 @@ Parse the arguments:
 ```bash
 # Get commits since last tag
 LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null)
-git log ${LAST_TAG}..HEAD --pretty=format:"%s" 2>/dev/null
+RANGE="${LAST_TAG:+$LAST_TAG..}HEAD"   # no tags yet → all commits
+git log "$RANGE" --pretty=format:"%s%n%b" 2>/dev/null
 ```
 
 Rules:
 - Any commit with `BREAKING CHANGE:` in body or `!` after type → **major**
 - Any `feat:` commit → **minor** (minimum)
 - Only `fix:`, `chore:`, `docs:`, `style:`, `refactor:`, `perf:`, `test:` → **patch**
-- If no conventional commits found, ask the user to specify
+- **0.y.z versions**: the API isn't stable yet (SemVer item 4), so breaking changes bump the **minor** (0.4.8 → 0.5.0) and features bump the patch or minor as the project prefers; propose 1.0.0 only when the user asks for it
+- If no conventional commits are found, propose **patch** and say in the plan that the bump type needs the user's confirmation
 
 #### Pre-release versions:
 
 If the current version is already a pre-release (e.g., `1.0.0-beta.1`):
 - Bump the pre-release counter: `1.0.0-beta.2`
-- Ask user if they want to promote to stable: `1.0.0`
+- Offer promotion to stable (`1.0.0`) as an alternative in the plan
 
-### 4. Execute Release
+### 4. Execute Release (pass 2 — approved steps only)
 
 #### Path A: Using Existing Tooling
 
-Run the detected tool/script:
+Run the detected tool/script, limited to the approved steps:
 
 ```bash
 # Examples — use whatever was detected
-npx release-it [version] --ci
-npx changeset version && npx changeset publish
+npx release-it [version] --no-git.push --no-github.release --no-npm.publish   # drop a --no-* flag only if that step was approved
+npx changeset version            # writes versions + changelogs
+npx changeset publish            # publishes — separate step, needs its own approval
 npx standard-version --release-as [version]
 [pkg-manager] run release
 make release VERSION=[version]
@@ -287,7 +303,7 @@ make release VERSION=[version]
 npm version [major|minor|patch]
 ```
 
-Monitor the output. If the tool is interactive, note what it's doing and report back. If it fails, capture the error and help troubleshoot.
+Tools that prompt interactively can't be answered from here: pass flags that make the approved behavior explicit instead of relying on prompts. Monitor the output; if it fails, capture the error and help troubleshoot.
 
 #### Path B: Manual Release (no existing tooling)
 
@@ -307,14 +323,11 @@ git fetch origin
 git status -sb
 ```
 
-If the working directory is dirty, warn the user and ask whether to proceed or commit first.
-
-If not on main/master/release branch, warn the user:
+In pass 1, report a dirty working directory, unpushed commits, or being behind the remote in the plan. If not on main/master/a release branch, say so in the plan too:
 ```markdown
-You're on branch `[branch]`, not the main branch. Releases are typically created from `main` or `master`.
-
-Continue on this branch, or switch to main first?
+⚠️ You're on branch `[branch]`, not the main branch. Releases are typically created from `main` or `master`.
 ```
+In pass 2, stop on any of these unless the approval explicitly says to proceed anyway.
 
 **Step 2: Update CHANGELOG.md**
 
@@ -326,7 +339,7 @@ Analyze commits since the last tag and generate changelog entries using the same
 
 If CHANGELOG.md exists, insert the new section below the header. If it doesn't exist, create it.
 
-Show the changelog preview and wait for approval before writing.
+The changelog preview is part of the pass-1 plan; write it in pass 2 only if the changelog step was approved.
 
 **Step 3: Bump version in manifest files**
 
@@ -336,8 +349,8 @@ Detect which files need version bumps:
 # Node.js
 grep -l '"version"' package.json package-lock.json 2>/dev/null
 
-# Check for version in multiple locations
-grep -rn "version.*=.*\"[0-9]" --include="*.json" --include="*.toml" --include="*.yaml" --include="*.yml" -l . 2>/dev/null | head -10
+# Check for version in multiple locations (tracked files only — skips node_modules, dist, lockfiles)
+git grep -lE 'version.*=.*"[0-9]' -- '*.json' '*.toml' '*.yaml' '*.yml' ':!*lock*' | head -10
 ```
 
 Common files to update:
@@ -387,7 +400,7 @@ EOF
 )"
 ```
 
-**Step 6: Offer next steps**
+**Step 6: Report the remaining steps**
 
 ```markdown
 ## Release Created
@@ -397,19 +410,18 @@ EOF
 **Tag**: `v[version]`
 **Changelog**: Updated with [X] entries
 
-### What's Next?
-
-The release commit and tag are local. Choose what to do next:
+### Not Yet Done (approve these separately)
 
 1. **Push commit and tag**: `git push && git push --tags`
-2. **Create GitHub Release**: I can create one with the changelog as release notes
+2. **Create GitHub Release**: `gh release create v[version] --title "v[version]" --notes "<this version's CHANGELOG section>"`
 3. **Publish to registry**: `[pkg-manager] publish` (if applicable)
-4. **Review first**: Check everything with `git log -1 --stat` and `git show v[version]`
+
+Review first: `git log -1 --stat` and `git show v[version]`
 ```
 
-**Wait for user to choose.** Do NOT push or publish without explicit approval.
+Only run the steps listed above if they were in `Approved steps`. Never push or publish otherwise.
 
-### 5. GitHub Release (if requested)
+### 5. GitHub Release (only if approved)
 
 ```bash
 # Create GitHub Release using gh CLI
@@ -431,7 +443,7 @@ GitHub CLI not available. You can create the release manually:
 
 ### 6. Dry Run Mode
 
-If `--dry-run` was specified, execute everything in read/analyze mode but don't write any files, create any commits, or run any scripts:
+If `--dry-run` was specified, do pass 1 only — read/analyze, run only the tools' own dry-run modes, and don't write any files, create any commits, or run release scripts:
 
 ```markdown
 ## Dry Run Results
@@ -485,15 +497,15 @@ No changes were made. Run `/release [version]` (without --dry-run) to execute.
 - [x] Release commit created
 - [x] Git tag created
 - [ ] Pushed to remote (run: `git push && git push --tags`)
-- [ ] GitHub Release (run: `/release` and select option 2)
+- [ ] GitHub Release (run: `gh release create v[version] --title "v[version]" --notes "<this version's CHANGELOG section>"`)
 - [ ] Published to registry (run: `[pkg-manager] publish`)
 ```
 
 ## Critical Rules
 
 - **Detect before inventing** — always check for existing release tooling before doing anything custom. If the project has `release-it`, `changesets`, `semantic-release`, a release script, or even just npm lifecycle hooks, USE THEM
-- **Never push without approval** — creating commits and tags locally is safe; pushing is not. Always ask first
-- **Never publish without approval** — `npm publish`, `cargo publish`, etc. are irreversible for that version number
+- **Never push without approval** — push only when it's in `Approved steps` (that includes scripts or tools that push as part of their run)
+- **Never publish without approval** — `npm publish`, `cargo publish`, `changeset publish`, etc. are irreversible for that version number; run them only when listed in `Approved steps`
 - **Clean state required** — warn if the working directory is dirty or if there are unpushed commits
 - **Respect branch conventions** — releases typically happen from main/master. Warn if on a different branch
 - **Pre-release awareness** — handle alpha/beta/rc versions correctly. Don't accidentally promote a pre-release to stable

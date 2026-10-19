@@ -1,6 +1,6 @@
 ---
-name: design
-description: Create on-brand design and marketing assets. Analyzes codebase for brand identity, generates standalone HTML/CSS designs for social media banners, ads, email headers, OG images, and marketing materials with correct platform dimensions. All output goes in the design/ directory. Use this when user asks to create social media posts, marketing banners, Instagram content, Twitter graphics, LinkedIn assets, Product Hunt visuals, or any visual marketing material.
+name: visuals
+description: Create on-brand marketing visuals as HTML at exact platform sizes (social posts, banners, ads, OG/Product Hunt images) in design/. Use for social graphics or marketing banners.
 tools: Bash, Read, Grep, Glob, Write, Edit, TodoWrite
 model: {{MODEL}}
 author: "@markoradak"
@@ -18,7 +18,12 @@ Create a set of on-brand marketing/design assets based on the provided brief. Ea
 
 ```bash
 mkdir -p design
+
+# Image generation availability (prints provider names only — never print key values)
+[ -n "$GEMINI_API_KEY" ] && echo gemini; [ -n "$FAL_KEY" ] && echo fal; true
 ```
+
+Image generation is available only if that check printed a provider; use what it printed rather than any availability claim in the brief.
 
 Extract from the brief:
 - `asset_type` — what we're creating
@@ -28,7 +33,6 @@ Extract from the brief:
 - `message` — key headline/copy
 - `count` — number of designs
 - `brand_source` — where to get brand identity (codebase / described / scratch)
-- `has_image_api` — whether image generation is available
 
 ### 1. Brand Analysis
 
@@ -56,7 +60,7 @@ cat design/brand-brief.md 2>/dev/null
 
 Extract and document: primary colors, accent colors, background/surface colors, text colors, font families with weights, logo paths, and visual patterns (grid structure, border styles, spacing rhythm, animation easing curves).
 
-**Write `design/brand-brief.md`** (create or update):
+**`design/brand-brief.md`** — the brand agent owns this file's format. If it already exists, read it and don't rewrite it. Only if it's missing, create it in that format (sections: Colors, Typography, Visual Identity, Voice, Assets) from what you extracted:
 
 ```markdown
 # Brand Brief
@@ -93,7 +97,7 @@ Auto-generated from codebase analysis. Updated: {date}
 
 **If brand_source is "described":** Use the style/colors/fonts from the brief.
 
-**If brand_source is "scratch":** Derive a visual identity from the style direction and message. Create a brand brief documenting your choices.
+**If brand_source is "scratch":** Derive a visual identity from the style direction and message. If no brand brief exists yet, create one in the brand agent's format documenting your choices.
 
 ### 2. Campaign Directory
 
@@ -238,7 +242,7 @@ For generated images, reference them as relative paths: `assets/{name}.png`.
 
 ### 7. Image Generation
 
-When image generation APIs are available (GEMINI_API_KEY or FAL_KEY), consider whether generated images would enhance or undermine the brand.
+When image generation is available (the step 0 check printed `gemini` or `fal`), consider whether generated images would enhance or undermine the brand.
 
 **First, assess the brand's visual language.** Some brands are inherently typographic/geometric — they rely on bold type, structural grids, code mockups, and clean geometry for their identity. Injecting photos or generated imagery into these brands dilutes what makes them distinctive. Other brands are warmer, more lifestyle-oriented, or photo-friendly — generated images can genuinely elevate those.
 
@@ -268,19 +272,21 @@ When image generation APIs are available (GEMINI_API_KEY or FAL_KEY), consider w
 **fal.ai:**
 ```bash
 mkdir -p design/{campaign}/assets
-cat << 'PROMPTEOF' > /tmp/design_prompt.txt
+export T=$(mktemp -d)
+cat << 'PROMPTEOF' > "$T/prompt.txt"
 {enhanced prompt — be specific about style, composition, colors, mood, lighting. Reference brand hex values. Always include "no text overlays"}
 PROMPTEOF
-node -e 'var fs=require("fs");fs.writeFileSync("/tmp/design_payload.json",JSON.stringify({prompt:fs.readFileSync("/tmp/design_prompt.txt","utf-8").trim(),aspect_ratio:"{ratio}",resolution:"2K"}))' && curl -s "https://fal.run/fal-ai/nano-banana-2" -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" -d @/tmp/design_payload.json -o /tmp/design_resp.json && IMG=$(node -p 'JSON.parse(require("fs").readFileSync("/tmp/design_resp.json","utf-8")).images[0].url') && curl -s "$IMG" -o design/{campaign}/assets/{name}.png && rm -f /tmp/design_resp.json /tmp/design_payload.json /tmp/design_prompt.txt
+node -e 'var fs=require("fs");fs.writeFileSync(process.env.T+"/payload.json",JSON.stringify({prompt:fs.readFileSync(process.env.T+"/prompt.txt","utf-8").trim(),aspect_ratio:"{ratio}",resolution:"2K"}))' && curl -s "https://fal.run/fal-ai/nano-banana-2" -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" -d @"$T/payload.json" -o "$T/resp.json" && IMG=$(node -p 'JSON.parse(require("fs").readFileSync(process.env.T+"/resp.json","utf-8")).images[0].url') && curl -s "$IMG" -o design/{campaign}/assets/{name}.png; rm -rf "$T"
 ```
 
 **Gemini:**
 ```bash
 mkdir -p design/{campaign}/assets
-cat << 'PROMPTEOF' > /tmp/design_prompt.txt
+export T=$(mktemp -d)
+cat << 'PROMPTEOF' > "$T/prompt.txt"
 {enhanced prompt}
 PROMPTEOF
-node -e 'var fs=require("fs"),p=fs.readFileSync("/tmp/design_prompt.txt","utf-8").trim();fs.writeFileSync("/tmp/design_payload.json",JSON.stringify({contents:[{parts:[{text:p}]}],generationConfig:{responseModalities:["IMAGE"],imageConfig:{aspectRatio:"{ratio}",imageSize:"2K"}}}))' && curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent" -H "Content-Type: application/json" -H "x-goog-api-key: $GEMINI_API_KEY" -d @/tmp/design_payload.json -o /tmp/design_resp.json && node -e 'var fs=require("fs"),r=JSON.parse(fs.readFileSync("/tmp/design_resp.json","utf-8")),c=r.candidates,p=c&&c[0]&&c[0].content&&c[0].content.parts,i=p&&p.find(function(x){return x.inlineData||x.inline_data});if(!i){console.error("No image");process.exit(1)}var d=i.inlineData||i.inline_data;fs.writeFileSync("design/{campaign}/assets/{name}.png",Buffer.from(d.data,"base64"))' && rm -f /tmp/design_resp.json /tmp/design_payload.json /tmp/design_prompt.txt
+node -e 'var fs=require("fs"),p=fs.readFileSync(process.env.T+"/prompt.txt","utf-8").trim();fs.writeFileSync(process.env.T+"/payload.json",JSON.stringify({contents:[{parts:[{text:p}]}],generationConfig:{responseModalities:["IMAGE"],imageConfig:{aspectRatio:"{ratio}",imageSize:"2K"}}}))' && curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent" -H "Content-Type: application/json" -H "x-goog-api-key: $GEMINI_API_KEY" -d @"$T/payload.json" -o "$T/resp.json" && node -e 'var fs=require("fs"),r=JSON.parse(fs.readFileSync(process.env.T+"/resp.json","utf-8")),c=r.candidates,p=c&&c[0]&&c[0].content&&c[0].content.parts,i=p&&p.find(function(x){return x.inlineData||x.inline_data});if(!i){console.error("No image");process.exit(1)}var d=i.inlineData||i.inline_data;fs.writeFileSync("design/{campaign}/assets/{name}.png",Buffer.from(d.data,"base64"))'; rm -rf "$T"
 ```
 
 Generate images **before** building the HTML designs that use them, so you can reference them as `assets/{name}.png` in the markup. Let the brand guide the ratio — a photo-centric campaign might generate images for every design, while a typographic/brutalist brand might use none at all. Don't force images where the brand doesn't want them.
@@ -375,7 +381,7 @@ When all designs are complete, output:
 ### Directory Discipline
 - ALL output goes in `design/` at the project root — never anywhere else
 - Never modify source code, components, or application files
-- Reuse and update `design/brand-brief.md` across campaigns
+- Reuse `design/brand-brief.md` across campaigns — read it, don't rewrite it (the brand agent owns it)
 - Campaign directories use kebab-case names
 
 ### Brand Consistency

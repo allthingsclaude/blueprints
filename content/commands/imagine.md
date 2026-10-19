@@ -1,5 +1,5 @@
 ---
-description: Generate images using Nano Banana 2 (Gemini/fal.ai)
+description: Generate images using Nano Banana 2 (Gemini/fal.ai) or GPT Image 2 (fal.ai)
 argument-hint: <what you want to see> [optional: path/to/reference.png]
 author: "@markoradak"
 ---
@@ -8,13 +8,15 @@ author: "@markoradak"
 
 $ARGUMENTS
 
-## API Keys (agent will check GEMINI_API_KEY and FAL_KEY availability at runtime)
+## API Keys (presence only — values are never printed)
+
+!`printf 'GEMINI_API_KEY=%s FAL_KEY=%s\n' "$([ -n "$GEMINI_API_KEY" ] && echo set || echo unset)" "$([ -n "$FAL_KEY" ] && echo set || echo unset)" 2>/dev/null || echo "Key check unavailable"`
 
 ---
 
 ## Instructions
 
-1. **API key check.** If no API key is available, stop and tell the user to set `GEMINI_API_KEY` or `FAL_KEY`.
+1. **API key check.** Use the API Keys line above. If both keys are `unset`, stop and tell the user to set `GEMINI_API_KEY` or `FAL_KEY`. (The agent's templates also refuse to run without the key they need.)
 
 2. **Determine `model`** — one of `nano-banana-2`, `gpt-image-2`, or `both`. Resolve in this order; first match wins:
    1. **Explicit flag** in `$ARGUMENTS`: `--model=nano-banana-2`, `--model=gpt-image-2`, or `--model=both`. Strip the flag from the prompt.
@@ -48,7 +50,7 @@ $ARGUMENTS
 
 7. Derive a short snake_case name (e.g., `mountain_cabin`).
 
-8. Launch the imagine agent via Task tool with `subagent_type="imagine"` passing:
+8. Launch the imagine agent via the `Agent` tool with `subagent_type="imagine"` passing:
    - `prompt`: the enhanced prompt text
    - `model`: `nano-banana-2`, `gpt-image-2`, or `both`
    - `api`: `gemini` or `fal`
@@ -58,7 +60,7 @@ $ARGUMENTS
    - `resolution`: e.g., `2K`
    - `reference_images`: list of absolute file paths (if edit mode)
 
-9. After the agent returns, display the output(s) inline with the Read tool:
+9. After the agent returns, display the output(s) inline with the `Read` tool:
    - `model=nano-banana-2` or `gpt-image-2` → `generated/imagine_{name}.png`
    - `model=both` → `generated/imagine_{name}_nano.png` AND `generated/imagine_{name}_gpt.png`
    Show the path(s).

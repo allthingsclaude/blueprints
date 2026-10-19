@@ -1,6 +1,6 @@
 ---
 name: research-codebase
-description: Use PROACTIVELY when user asks to research, explore, investigate, analyze, or understand the codebase structure, code patterns, architecture, file organization, implementation details, or how something works in the code. Triggers on keywords - research codebase, explore code, investigate implementation, analyze architecture, find in code, how does X work, where is X implemented.
+description: Explore this codebase - how something works, where it's implemented, architecture and patterns. Returns findings with file:line references.
 tools: Glob, Grep, Read, Bash
 model: {{MODEL}}
 author: "@markoradak"
@@ -46,8 +46,8 @@ Cast a wide net to find all relevant code.
 
 Read the actual code and build understanding.
 
-5. **Read key files completely**
-   - Don't skim — read the full implementation of critical files
+5. **Read key code**
+   - Read the few critical files in full; for files you only need for reference, locate the relevant part with `Grep` and read just that range
    - Pay attention to: types/interfaces, function signatures, state management, side effects
    - Note any patterns that repeat across files
 

@@ -1,6 +1,6 @@
 ---
 name: og
-description: Auto-generate Open Graph images for all pages in a project. Scans routes based on framework (Next.js, Astro, Remix, static HTML), extracts per-page metadata, creates branded 1200x630 HTML files in public/og/, and generates a batch screenshot script. Use this when user wants OG images, social preview cards, or link preview graphics for their site.
+description: Generate branded 1200x630 Open Graph images per page (Next.js, Astro, Remix, static) plus a PNG capture script. Use for OG images, social/link preview cards.
 tools: Bash, Read, Grep, Glob, Write, Edit
 model: {{MODEL}}
 author: "@markoradak"
@@ -89,17 +89,17 @@ Extract: primary background color, text color, accent color, font families.
 
 **If no brand brief, analyze the codebase:**
 ```bash
-# Tailwind / CSS colors
-cat tailwind.config.* src/app/globals.css src/styles/*.css styles/*.css 2>/dev/null | head -100
+# Tailwind / CSS colors (find instead of globs: in zsh one unmatched glob fails the whole command)
+find . -maxdepth 4 \( -name "tailwind.config.*" -o -name "globals.css" -o -path "*/styles/*.css" \) -not -path "*/node_modules/*" 2>/dev/null | head -10 | xargs cat 2>/dev/null | head -100
 
 # Font declarations
-grep -rE "googleapis.com/css|next/font|@import.*font|@font-face|fontFamily" tailwind.config.* src/app/layout.tsx src/app/globals.css 2>/dev/null | head -15
+grep -rE "googleapis.com/css|next/font|@import.*font|@font-face|fontFamily" --include="*.css" --include="tailwind.config.*" --include="layout.tsx" --exclude-dir=node_modules . 2>/dev/null | head -15
 
 # Color values
-grep -rE "#[0-9A-Fa-f]{3,8}\b|--color-|rgba?\(|hsl" src/app/globals.css tailwind.config.* 2>/dev/null | head -40
+grep -rE "#[0-9A-Fa-f]{3,8}\b|--color-|rgba?\(|hsl" --include="*.css" --include="tailwind.config.*" --exclude-dir=node_modules . 2>/dev/null | head -40
 
 # Logo / icon
-ls public/images/logo* public/logo* public/*.svg public/images/icon* public/favicon* src/assets/*.svg 2>/dev/null
+find public src/assets -maxdepth 3 \( -iname "logo*" -o -iname "icon*" -o -iname "favicon*" -o -name "*.svg" \) 2>/dev/null | head -20
 ```
 
 Derive a simple OG palette:
@@ -114,10 +114,10 @@ If the project uses Google Fonts, include them via CDN link. If the project uses
 ### 3. Generate OG Images
 
 ```bash
-mkdir -p public/og
+mkdir -p design/og public/og
 ```
 
-For each page in the manifest, create `public/og/{route-slug}.html`.
+For each page in the manifest, create `design/og/{route-slug}.html`. The HTML sources and the preview page live in `design/og/` — never in `public/`, which ships with the site. Only the PNGs produced by the capture script go to `public/og/`.
 
 The route slug follows these rules:
 - `/` becomes `home`
@@ -296,7 +296,7 @@ mkdir -p design
 #!/usr/bin/env bash
 #
 # OG Image Capture Script
-# Screenshots all OG HTML files in public/og/ to PNG using a headless browser.
+# Screenshots the OG HTML sources in design/og/ to PNGs in public/og/ using a headless browser.
 #
 # Usage: bash design/og-capture.sh
 #
@@ -307,8 +307,9 @@ mkdir -p design
 
 set -euo pipefail
 
-OG_DIR="public/og"
+OG_DIR="design/og"
 OUTPUT_DIR="public/og"
+mkdir -p "$OUTPUT_DIR"
 
 # Detect Chrome/Chromium binary
 if [[ -f "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ]]; then
@@ -333,6 +334,7 @@ for html_file in "$OG_DIR"/*.html; do
   [ -f "$html_file" ] || continue
 
   filename=$(basename "$html_file" .html)
+  [ "$filename" = "index" ] && continue   # the preview page isn't an OG image
   output_file="$OUTPUT_DIR/${filename}.png"
 
   echo "  Capturing: $filename.html -> $filename.png"
@@ -360,7 +362,7 @@ chmod +x design/og-capture.sh
 
 ### 6. Preview Page
 
-Create `public/og/index.html` — an overview page showing all generated OG images at a glance.
+Create `design/og/index.html` — an overview page showing all generated OG images at a glance.
 
 ```html
 <!DOCTYPE html>
@@ -417,17 +419,17 @@ When all OG images are generated, output:
 
 **Pages**: {count} OG images created
 **Dimensions**: 1200x630 (standard Open Graph)
-**Location**: public/og/
+**Location**: `design/og/` (HTML sources + preview) → PNGs in `public/og/` after capture
 
 **Files**:
-- `public/og/index.html` — Preview page (open in browser)
-- `public/og/home.html` — / (Home)
-- `public/og/about.html` — /about (About)
-- `public/og/{slug}.html` — /{route} ({title})
+- `design/og/index.html` — Preview page (open in browser)
+- `design/og/home.html` — / (Home)
+- `design/og/about.html` — /about (About)
+- `design/og/{slug}.html` — /{route} ({title})
 - ...
 - `design/og-capture.sh` — Batch screenshot script
 
-**To Preview**: `open public/og/index.html`
+**To Preview**: `open design/og/index.html`
 
 **To Export to PNG**:
 ```
@@ -476,7 +478,7 @@ bash design/og-capture.sh
 - When in doubt, refer to `design/brand-brief.md`.
 
 ### Don't Modify Source Code
-- Write OG HTML files to `public/og/` only.
+- Write OG HTML sources and the preview page to `design/og/` only — never to `public/`, which ships with the site. PNGs reach `public/og/` only through the capture script.
 - Write the capture script to `design/og-capture.sh` only.
 - Never modify the user's page files, layout files, or configuration.
 - Output meta tag snippets for the user to integrate manually.

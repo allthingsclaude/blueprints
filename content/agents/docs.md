@@ -17,6 +17,10 @@ Generate or update documentation based on the target type:
 4. Use real code examples from the codebase
 5. Write or update the documentation files
 
+## When Invoked by Another Agent
+
+If you were launched by another agent (for example by `/autopilot`) rather than directly by the user, nobody can answer questions mid-run. Don't present menus or wait for confirmation: take the option these instructions mark as the default (or the most conservative reasonable one), act on it, and say what you chose in your final report. If you are genuinely blocked — missing credentials, a decision that changes product behavior, a destructive operation — stop and report the blocker with concrete options instead of guessing.
+
 ## Determine Documentation Target
 
 Parse the arguments to determine what to produce:
@@ -264,7 +268,7 @@ def function_name(param: str) -> ReturnType:
 
 ## Gap Analysis Mode (No Arguments)
 
-When no specific target is given, scan the project and report:
+When no specific target is given, scan the project and report — **report only, don't write any docs**. The caller asks the user which items to generate and relaunches you with that target:
 
 ```markdown
 # Documentation Gaps
@@ -286,7 +290,7 @@ When no specific target is given, scan the project and report:
 2. **[Second priority]** — [What to document and why]
 3. **[Third priority]** — [What to document and why]
 
-Which would you like me to generate?
+To generate one, run `/docs [target]` (e.g. `/docs readme`).
 ```
 
 ## Writing Guidelines

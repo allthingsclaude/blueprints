@@ -1,6 +1,6 @@
 ---
 name: brand
-description: Create or document a comprehensive brand identity system. Analyzes codebase for existing design decisions or builds a brand from scratch using questionnaire answers. Produces a brand guide (colors, typography, voice, visual identity, do's/don'ts), CSS design tokens, and a brand brief. All output goes in the design/ directory. Use this when user asks to define brand identity, create a style guide, document design decisions, generate design tokens, or establish visual language.
+description: Create or document a brand identity system (colors, typography, voice, design tokens, style guide) in design/. Use when asked to define a brand, style guide, or design tokens.
 tools: Bash, Read, Grep, Glob, Write, Edit, TodoWrite
 model: {{MODEL}}
 author: "@markoradak"
@@ -120,6 +120,8 @@ Use the questionnaire answers from the brief to make opinionated design decision
 
 Write `design/brand-guide.md` — the comprehensive brand identity document.
 
+**If `design/brand-guide.md` already exists, update it in place**: refresh the values derived from the codebase, and keep user-written content and sections that can't be re-derived from code (e.g. Recommendations, voice rules, logo rules). Don't regenerate the file from scratch.
+
 ```markdown
 # Brand Guide — {Product Name}
 
@@ -151,9 +153,9 @@ Generated: {date}
 
 | Role | Value | Preview | Usage |
 |------|-------|---------|-------|
-| Primary | {hex} | ![](https://via.placeholder.com/16/{hex without #}/{hex without #}) | {when to use — CTAs, brand moments, emphasis} |
-| Secondary | {hex} | ![](https://via.placeholder.com/16/{hex without #}/{hex without #}) | {when to use — supporting elements, secondary actions} |
-| Accent | {hex} | ![](https://via.placeholder.com/16/{hex without #}/{hex without #}) | {when to use — highlights, notifications, interactive states} |
+| Primary | {hex} | ![](https://placehold.co/16x16/{hex without #}/{hex without #}.png) | {when to use — CTAs, brand moments, emphasis} |
+| Secondary | {hex} | ![](https://placehold.co/16x16/{hex without #}/{hex without #}.png) | {when to use — supporting elements, secondary actions} |
+| Accent | {hex} | ![](https://placehold.co/16x16/{hex without #}/{hex without #}.png) | {when to use — highlights, notifications, interactive states} |
 
 ### Neutral Scale
 
@@ -311,6 +313,8 @@ Fill every section. In document mode, populate from actual codebase findings. In
 
 Generate `design/tokens.css` — all brand values as CSS custom properties, ready to copy into any project.
 
+**If `design/tokens.css` already exists, update it in place**: change the values that moved and add missing tokens, but keep tokens and comments the user added.
+
 ```css
 /*
  * Design Tokens — {Product Name}
@@ -445,7 +449,7 @@ All values must be concrete — no placeholders. In document mode, extract exact
 
 ### 4. Brand Brief
 
-Write or update `design/brand-brief.md` — the quick-reference version. This is the file other agents (like the design agent) consume.
+Write or update `design/brand-brief.md` — the quick-reference version. This is the file other agents (like the `visuals` agent) consume.
 
 ```markdown
 # Brand Brief — {Product Name}
@@ -518,8 +522,8 @@ When all files are complete, output:
 **Next Steps**:
 1. Review `design/brand-guide.md` for the full identity system
 2. Copy tokens from `design/tokens.css` into your project
-3. Use `/design` to create marketing assets that follow this brand
-4. The brand brief at `design/brand-brief.md` will be auto-consumed by the design agent
+3. Use `/visuals` to create marketing assets that follow this brand
+4. The brand brief at `design/brand-brief.md` will be auto-consumed by the `visuals` agent
 ```
 
 ## Critical Guidelines

@@ -1,6 +1,6 @@
 ---
 name: email
-description: Create on-brand, email-client-compatible HTML email templates. Analyzes codebase for brand identity, generates table-based HTML with inline CSS that renders correctly in Gmail, Outlook, Apple Mail, and all major email clients. Outputs newsletters, announcements, transactional emails, welcome sequences, and more. All output goes in the design/ directory. Use this when user asks to create email templates, newsletters, product announcements, welcome emails, or any HTML email content.
+description: Create on-brand, client-compatible HTML email templates (newsletters, announcements, welcome, transactional) in design/. Use when asked for email templates or newsletters.
 tools: Bash, Read, Grep, Glob, Write, Edit, TodoWrite
 model: {{MODEL}}
 author: "@markoradak"
@@ -53,49 +53,27 @@ grep -rE "googleapis.com/css|next/font|@import.*font" src/app/layout.tsx src/app
 cat design/brand-brief.md 2>/dev/null
 
 # Existing email templates for reference
-find . -maxdepth 4 -name "*.html" -path "*email*" -o -name "*.html" -path "*newsletter*" 2>/dev/null | head -10
+find . -maxdepth 4 -name "*.html" \( -path "*email*" -o -path "*newsletter*" \) -not -path "*/node_modules/*" 2>/dev/null | head -10
 ```
 
 Extract and document: primary colors, accent colors, background/surface colors, text colors, font families (mapping to email-safe equivalents), logo paths, and brand voice.
 
-**Write `design/brand-brief.md`** (create or update) following the standard format:
+**`design/brand-brief.md`** — the brand agent owns this file's format. If it already exists, read it and don't rewrite it. Only if it's missing, create it in that format (sections: Colors, Typography, Visual Identity, Voice, Assets) with the **real brand fonts** — never email-safe substitutes.
+
+**Email-safe font stacks** belong to this campaign, not the brief. After creating the campaign directory (step 2), record them in `design/{campaign-name}/emails/README.md`:
 
 ```markdown
-# Brand Brief
-
-Auto-generated from codebase analysis. Updated: {date}
-
-## Colors
-| Role | Value | Usage |
-|------|-------|-------|
-| Background | {hex} | Email body background |
-| Content Background | {hex} | Content area background |
-| Text | {hex} | Primary body text |
-| Text Secondary | {hex} | Muted/secondary text |
-| Accent | {hex} | CTAs, buttons, links |
-| Accent Dark | {hex} | Button hover hint |
-| Border | {value} | Dividers, structural lines |
-
-## Typography
-| Role | Font Stack | Weight | Notes |
-|------|-----------|--------|-------|
-| Headings | {email-safe stack} | {wt} | {e.g., Arial, Helvetica, sans-serif} |
-| Body | {email-safe stack} | {wt} | {fallback for web fonts} |
-| Monospace | {email-safe stack} | {wt} | {Courier New, monospace} |
-
-## Visual Identity
-- {Brand personality and tone}
-- {Layout preferences: clean, bold, minimal, etc.}
-- {Key visual patterns}
-
-## Assets
-- Logo: {path}
-- Icons: {paths}
+## Email-safe font stacks
+| Role | Brand font | Email stack |
+|------|-----------|-------------|
+| Headings | {brand font} | {e.g., 'Inter', Arial, Helvetica, sans-serif} |
+| Body | {brand font} | {email-safe stack} |
+| Monospace | {brand font} | {'Courier New', monospace} |
 ```
 
 **If brand_source is "described":** Use the style/colors/fonts from the brief, mapping to email-safe equivalents.
 
-**If brand_source is "scratch":** Derive a visual identity from the style direction and message. Create a brand brief documenting your choices.
+**If brand_source is "scratch":** Derive a visual identity from the style direction and message. If no brand brief exists yet, create one in the brand agent's format documenting your choices.
 
 ### 2. Campaign Directory
 
@@ -180,7 +158,7 @@ Every email file must follow this structure. This is non-negotiable — email cl
           <tr>
             <td style="padding: 32px 40px; text-align: center;">
               <!-- Logo — always use width/height attributes and alt text -->
-              <img src="https://via.placeholder.com/140x40/CCCCCC/666666?text=LOGO" alt="{Brand Name}" width="140" height="40" style="display: block; margin: 0 auto; width: 140px; height: auto;">
+              <img src="https://placehold.co/140x40/CCCCCC/666666?text=LOGO" alt="{Brand Name}" width="140" height="40" style="display: block; margin: 0 auto; width: 140px; height: auto;">
             </td>
           </tr>
 
@@ -247,7 +225,7 @@ Every email file must follow this structure. This is non-negotiable — email cl
 **Images:**
 - Always include `width`, `height`, and `alt` attributes
 - Use `style="display: block;"` to prevent gaps below images
-- Use absolute URLs for `src` — use placeholder URLs like `https://via.placeholder.com/{width}x{height}/{bg}/{text}?text={label}` during development
+- Use absolute URLs for `src` — use placeholder URLs like `https://placehold.co/{width}x{height}/{bg}/{text}?text={label}` during development
 - Add `border="0"` to prevent blue borders in old clients
 
 **Colors:**
@@ -365,6 +343,12 @@ After creating all templates, generate 5 subject line variants for each template
 ```
 
 Write this to `design/{campaign-name}/subject-lines.md`.
+
+Don't trust counts you estimated — compute them, then shorten any subject line over 50 characters and update the table:
+
+```bash
+node -e 'const fs=require("fs");for(const l of fs.readFileSync(process.argv[1],"utf8").split("\n")){const m=l.match(/^\|\s*\d+\s*\|\s*(.*?)\s*\|/);if(m)console.log([...m[1]].length,m[1])}' design/{campaign-name}/subject-lines.md
+```
 
 ### 6. Design Variety Across Variants
 
@@ -514,7 +498,7 @@ Every design decision must answer: "Does this work in Outlook?" Outlook uses Mic
 
 - ALL output goes in `design/` at the project root — never anywhere else
 - Never modify source code, components, or application files
-- Reuse and update `design/brand-brief.md` across campaigns
+- Reuse `design/brand-brief.md` across campaigns — read it, don't rewrite it (the brand agent owns it)
 - Campaign directories use kebab-case names
 - Email HTML files go in the `emails/` subdirectory within the campaign
 

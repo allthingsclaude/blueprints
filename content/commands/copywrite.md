@@ -42,7 +42,7 @@ $ARGUMENTS
 
 ### If the user provided a detailed brief above:
 
-Parse the brief for: content type, platform(s), campaign goal, tone/voice direction, and variant count. Infer reasonable defaults for anything missing based on the project context. Summarize your understanding in 2-3 sentences, then launch the copy agent.
+Parse the brief for: content type, platform(s), campaign goal, tone/voice direction, and variant count. Infer reasonable defaults for anything missing based on the project context. Summarize your understanding in 2-3 sentences, then launch the copywrite agent.
 
 ### If the brief is empty or vague:
 
@@ -50,7 +50,7 @@ Conduct a focused discovery questionnaire. Ask questions **one at a time**, adap
 
 #### First, determine the repo context:
 
-Check the "Existing Brand Brief", "Project Identity", "Existing Copy & Messaging", and "Landing Page Copy" sections above. If meaningful product copy was detected (README with clear positioning, meta descriptions, hero text, taglines, or an existing `design/brand-brief.md` with a "Voice & Tone" section), this is a **brand-rich repo** — the codebase contains enough to derive voice, tone, and messaging automatically.
+Check the "Existing Brand Brief", "Project Identity", "Existing Copy & Messaging", and "Landing Page Copy" sections above. If meaningful product copy was detected (README with clear positioning, meta descriptions, hero text, taglines, or an existing `design/brand-brief.md` with a `## Voice` section), this is a **brand-rich repo** — the codebase contains enough to derive voice, tone, and messaging automatically.
 
 #### Always ask (every context):
 
@@ -74,7 +74,7 @@ Offer platform-specific character limits — these will be auto-applied:
 | Instagram | Caption | 2,200 |
 | Instagram | Bio | 150 |
 | LinkedIn | Post | 3,000 |
-| LinkedIn | Headline | 120 |
+| LinkedIn | Headline | 220 |
 | Facebook | Post | 63,206 |
 | Email | Subject line | 60 |
 | Email | Preview text | 90 |
@@ -122,7 +122,7 @@ After gathering answers, **summarize the complete brief and ask for confirmation
 
 ### Launching the Agent
 
-Use the Task tool to launch the copy agent (subagent_type="copy") with the complete brief including:
+Use the `Agent` tool to launch the copywrite agent (subagent_type="copywrite") with the complete brief including:
 - Content type and platform(s) with exact character limits
 - Campaign goal and key messaging direction
 - Voice/tone source (and existing brand-brief.md content if available)

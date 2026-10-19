@@ -17,7 +17,7 @@ $ARGUMENTS
 ## Available Plans
 
 **Plans in {{PLANS_DIR}}/**:
-!`ls -1 {{PLANS_DIR}}/PLAN_*.md 2>/dev/null || echo "No plans found"`
+!`ls -1 {{PLANS_DIR}}/PLAN_*.md 2>/dev/null | tail -30 | grep . || echo "No plans found"`
 
 **Current Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
@@ -27,30 +27,18 @@ $ARGUMENTS
 
 ## Autonomous Execution Mode
 
-Launching the **implement agent** which will work independently in a separate context.
+Launching the **implement agent** once per phase, each in a fresh context — an agent's cost grows with how long it runs, so one phase per agent keeps every run short.
 
-### What the Agent Will Do
+### What Each Agent Will Do
 
-- ✅ Load `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md`
-- ✅ Check `{{TASKS_DIR}}/references/` for design references (images, mockups, wireframes)
-- ✅ Parse all phases, tasks, and dependencies
-- ✅ Create comprehensive task tracking (TodoWrite)
-- ✅ Execute tasks systematically with validation
-- ✅ Update plan document as tasks complete
-- ✅ Run type checks and linting after each task
-- ✅ Validate each phase before proceeding
-- ✅ Handle blockers (will pause and report)
-- ✅ Adapt plan if better approaches discovered
-- ✅ Run DRY checks after each phase to extract shared patterns
-- ✅ Return comprehensive summary when complete
+- ✅ Load only the parts of `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md` it needs (overview + its phase)
+- ✅ Follow `{{TASKS_DIR}}/CONVENTIONS.md` and check `{{TASKS_DIR}}/references/` for design references
+- ✅ Execute the phase's tasks with a typecheck after each one
+- ✅ Check off tasks in the plan and update STATE.md when the phase completes
+- ✅ Review the phase's code for consistency and duplication
+- ✅ Return a compact report: tasks done, files changed, validation results, blockers
 
-### What You'll See
-
-The agent will:
-- Work autonomously in a separate context
-- Come back with a **summary report** of what was done
-- Ask for your input if it encounters blockers
-- Update you on progress periodically
+The agents run unattended and don't commit. Blockers come back in the report at the end of a phase, not as questions mid-run.
 
 **This is hands-off autonomous implementation.**
 
@@ -66,4 +54,11 @@ Use `/implement` when:
 
 ---
 
-Use the Task tool to launch the implement agent (subagent_type="implement") with the plan name and any additional context from arguments.
+Find the plan's remaining phases first: list the headings with `grep -n -E '^#{1,4} ' {{PLANS_DIR}}/PLAN_{NN}_{NAME}.md` and find unchecked tasks with `grep -n -E '^[[:space:]]*([0-9]+\.|[-*]) \[ \]' {{PLANS_DIR}}/PLAN_{NN}_{NAME}.md` (start from the phase or task in the arguments, if given).
+
+Then, for each remaining phase **in order, one at a time**, use the `Agent` tool to launch the implement agent (subagent_type="implement") with the plan name, any additional context from the arguments, and "Execute Phase {N} only, then stop."
+
+- If a phase's report has **blockers**, stop and relay them to the user before launching the next phase.
+- Between phases, give the user a one-line status (phase done, tasks completed, validation result).
+
+When all phases are done (or you stop on a blocker), summarize the reports and suggest next steps: review the changes (`git diff`), commit them with `/commit`, and review the branch with `/preflight` before opening a PR.

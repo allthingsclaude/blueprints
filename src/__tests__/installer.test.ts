@@ -10,6 +10,11 @@ import {
   copyDirectory,
   installBlueprints,
   checkExistingInstallation,
+  cleanStaleFiles,
+  isBlueprintsFile,
+  readManifest,
+  listFiles,
+  LEGACY_COMMANDS,
   getModelForAgent,
   getAgentTier,
   copyAgentsWithPowerLevel,
@@ -229,14 +234,21 @@ describe('getAgentTier', () => {
 
   it('classifies heavyweight agents', () => {
     expect(getAgentTier('audit.md')).toBe('heavyweight');
-    expect(getAgentTier('debug.md')).toBe('heavyweight');
+    expect(getAgentTier('diagnose.md')).toBe('heavyweight');
     expect(getAgentTier('secure.md')).toBe('heavyweight');
   });
 
   it('defaults to standard for unlisted agents', () => {
     expect(getAgentTier('implement.md')).toBe('standard');
-    expect(getAgentTier('plan.md')).toBe('standard');
+    expect(getAgentTier('blueprint.md')).toBe('standard');
     expect(getAgentTier('refactor.md')).toBe('standard');
+  });
+
+  it('every tiered agent file exists in the package', () => {
+    const agents = fs.readdirSync(getSourcePaths().agents);
+    for (const file of [...LIGHTWEIGHT_AGENTS, ...RESEARCH_AGENTS, ...HEAVYWEIGHT_AGENTS]) {
+      expect(agents).toContain(file);
+    }
   });
 });
 
@@ -246,7 +258,7 @@ describe('getModelForAgent', () => {
     expect(getModelForAgent('research-codebase.md', 1)).toBe('haiku');
     expect(getModelForAgent('implement.md', 1)).toBe('haiku');
     expect(getModelForAgent('audit.md', 1)).toBe('sonnet');
-    expect(getModelForAgent('debug.md', 1)).toBe('sonnet');
+    expect(getModelForAgent('diagnose.md', 1)).toBe('sonnet');
   });
 
   it('level 2: lightweight/research haiku, standard/heavyweight sonnet', () => {
@@ -260,7 +272,7 @@ describe('getModelForAgent', () => {
     expect(getModelForAgent('commit.md', 3)).toBe('sonnet');
     expect(getModelForAgent('changelog.md', 3)).toBe('sonnet');
     expect(getModelForAgent('research-web.md', 3)).toBe('sonnet');
-    expect(getModelForAgent('plan.md', 3)).toBe('sonnet');
+    expect(getModelForAgent('blueprint.md', 3)).toBe('sonnet');
     expect(getModelForAgent('secure.md', 3)).toBe('sonnet');
   });
 
@@ -269,7 +281,7 @@ describe('getModelForAgent', () => {
     expect(getModelForAgent('research-codebase.md', 4)).toBe('sonnet');
     expect(getModelForAgent('parallelize.md', 4)).toBe('opus');
     expect(getModelForAgent('audit.md', 4)).toBe('opus');
-    expect(getModelForAgent('debug.md', 4)).toBe('opus');
+    expect(getModelForAgent('diagnose.md', 4)).toBe('opus');
     expect(getModelForAgent('secure.md', 4)).toBe('opus');
   });
 
@@ -492,5 +504,161 @@ describe('copyAgentsWithPowerLevel with template vars', () => {
     expect(content).toContain('model: opus');
     expect(content).toContain('tasks/plans/PLAN_{NAME}.md');
     expect(content).not.toContain('{{PLANS_DIR}}');
+  });
+});
+
+describe('installBlueprints: workflows, hooks and template vars', () => {
+  const testDir = path.join(os.tmpdir(), 'blueprints-test-support');
+
+  afterEach(() => {
+    if (fs.existsSync(testDir)) fs.rmSync(testDir, { recursive: true });
+  });
+
+  it('installs the preflight workflow and the phase-gate hook', async () => {
+    const result = await installBlueprints(testDir, 4);
+    const claudeDir = path.join(testDir, '.claude');
+
+    expect(result.workflows).toBeGreaterThan(0);
+    expect(fs.existsSync(path.join(claudeDir, 'workflows', 'preflight.js'))).toBe(true);
+
+    const hook = path.join(claudeDir, 'blueprints', 'hooks', 'phase-gate.sh');
+    expect(fs.existsSync(hook)).toBe(true);
+    if (process.platform !== 'win32') {
+      expect(fs.statSync(hook).mode & 0o111).not.toBe(0);
+    }
+  });
+
+  it('points the implement agent hook at the installed script', async () => {
+    await installBlueprints(testDir, 4);
+    const claudeDir = path.join(testDir, '.claude');
+    const implement = fs.readFileSync(path.join(claudeDir, 'agents', 'implement.md'), 'utf-8');
+
+    expect(implement).toContain(path.join(claudeDir, 'blueprints', 'hooks', 'phase-gate.sh'));
+  });
+
+  it('leaves no unreplaced template variables in any installed file', async () => {
+    await installBlueprints(testDir, 4, 'work');
+    const claudeDir = path.join(testDir, '.claude');
+
+    for (const dir of ['commands', 'agents', 'workflows', 'blueprints']) {
+      for (const rel of listFiles(path.join(claudeDir, dir))) {
+        const content = fs.readFileSync(path.join(claudeDir, dir, rel), 'utf-8');
+        expect(content, `${dir}/${rel}`).not.toMatch(/\{\{(TASKS_DIR|PLANS_DIR|SESSIONS_DIR|STATE_FILE|BLUEPRINTS_DIR|MODEL)\}\}/);
+      }
+    }
+  });
+
+  it('writes a manifest listing installed files', async () => {
+    await installBlueprints(testDir, 4);
+    const manifest = readManifest(path.join(testDir, '.claude'));
+
+    expect(manifest?.files?.commands).toContain('autopilot.md');
+    expect(manifest?.files?.agents).toContain('blueprint.md');
+    expect(manifest?.files?.workflows).toContain('preflight.js');
+    expect(manifest?.files?.hooks).toContain('phase-gate.sh');
+  });
+});
+
+describe('stale file cleanup', () => {
+  const testDir = path.join(os.tmpdir(), 'blueprints-test-stale');
+  const claudeDir = path.join(testDir, '.claude');
+  const marked = '---\ndescription: old\nauthor: "@markoradak"\n---\nOld blueprints file';
+  const unmarked = '---\ndescription: mine\n---\nMy own file';
+
+  afterEach(() => {
+    if (fs.existsSync(testDir)) fs.rmSync(testDir, { recursive: true });
+  });
+
+  it('never removes the user\'s own commands, agents, or workflows', async () => {
+    fs.mkdirSync(path.join(claudeDir, 'commands', 'team'), { recursive: true });
+    fs.mkdirSync(path.join(claudeDir, 'agents'), { recursive: true });
+    fs.mkdirSync(path.join(claudeDir, 'workflows'), { recursive: true });
+    fs.writeFileSync(path.join(claudeDir, 'commands', 'my-command.md'), unmarked);
+    fs.writeFileSync(path.join(claudeDir, 'commands', 'team', 'shared.md'), unmarked);
+    fs.writeFileSync(path.join(claudeDir, 'agents', 'my-agent.md'), unmarked);
+    fs.writeFileSync(path.join(claudeDir, 'workflows', 'my-flow.js'), 'export const meta = {}');
+
+    await installBlueprints(testDir, 4);
+    await installBlueprints(testDir, 4);
+
+    expect(fs.existsSync(path.join(claudeDir, 'commands', 'my-command.md'))).toBe(true);
+    expect(fs.existsSync(path.join(claudeDir, 'commands', 'team', 'shared.md'))).toBe(true);
+    expect(fs.existsSync(path.join(claudeDir, 'agents', 'my-agent.md'))).toBe(true);
+    expect(fs.existsSync(path.join(claudeDir, 'workflows', 'my-flow.js'))).toBe(true);
+  });
+
+  it('removes renamed blueprints files from a pre-manifest install, but not same-named user files', async () => {
+    fs.mkdirSync(path.join(claudeDir, 'commands'), { recursive: true });
+    fs.mkdirSync(path.join(claudeDir, 'agents'), { recursive: true });
+    fs.writeFileSync(path.join(claudeDir, 'commands', 'plan.md'), marked);
+    fs.writeFileSync(path.join(claudeDir, 'commands', 'verify.md'), unmarked);
+    fs.writeFileSync(path.join(claudeDir, 'agents', 'debug.md'), marked);
+    fs.writeFileSync(path.join(claudeDir, MANIFEST_VERSION_ONLY.name), MANIFEST_VERSION_ONLY.content);
+
+    const result = await installBlueprints(testDir, 4);
+
+    expect(fs.existsSync(path.join(claudeDir, 'commands', 'plan.md'))).toBe(false);
+    expect(fs.existsSync(path.join(claudeDir, 'agents', 'debug.md'))).toBe(false);
+    expect(fs.existsSync(path.join(claudeDir, 'commands', 'verify.md'))).toBe(true);
+    expect(fs.existsSync(path.join(claudeDir, 'commands', 'blueprint.md'))).toBe(true);
+    expect(result.removed).toBe(2);
+  });
+
+  it('with a manifest, removes only files the previous install listed', () => {
+    const src = path.join(testDir, 'src');
+    const dest = path.join(testDir, 'dest');
+    fs.mkdirSync(src, { recursive: true });
+    fs.mkdirSync(dest, { recursive: true });
+    fs.writeFileSync(path.join(src, 'kept.md'), marked);
+    fs.writeFileSync(path.join(dest, 'kept.md'), marked);
+    fs.writeFileSync(path.join(dest, 'dropped.md'), unmarked);
+    fs.writeFileSync(path.join(dest, 'users.md'), marked);
+
+    const removed = cleanStaleFiles(src, dest, ['kept.md', 'dropped.md']);
+
+    expect(removed).toBe(1);
+    expect(fs.existsSync(path.join(dest, 'dropped.md'))).toBe(false);
+    expect(fs.existsSync(path.join(dest, 'kept.md'))).toBe(true);
+    expect(fs.existsSync(path.join(dest, 'users.md'))).toBe(true);
+  });
+
+  it('only treats files with the marker in their frontmatter as blueprints files', () => {
+    fs.mkdirSync(testDir, { recursive: true });
+    const inBody = path.join(testDir, 'body.md');
+    const inFrontmatter = path.join(testDir, 'fm.md');
+    fs.writeFileSync(inBody, `---\ndescription: x\n---\n${'author: "@markoradak"'}`);
+    fs.writeFileSync(inFrontmatter, marked);
+
+    expect(isBlueprintsFile(inBody)).toBe(false);
+    expect(isBlueprintsFile(inFrontmatter)).toBe(true);
+  });
+
+  it('lists every renamed command as legacy', () => {
+    expect(LEGACY_COMMANDS).toEqual(expect.arrayContaining(['plan.md', 'verify.md', 'debug.md', 'design.md', 'copy.md']));
+  });
+});
+
+const MANIFEST_VERSION_ONLY = {
+  name: '.blueprints-version',
+  content: JSON.stringify({ version: '0.4.8', installedAt: '2026-06-08T09:03:00.421Z', powerLevel: 4 }),
+};
+
+describe('hidden files', () => {
+  const srcDir = path.join(os.tmpdir(), 'blueprints-test-hidden-src');
+  const destDir = path.join(os.tmpdir(), 'blueprints-test-hidden-dest');
+
+  afterEach(() => {
+    if (fs.existsSync(srcDir)) fs.rmSync(srcDir, { recursive: true });
+    if (fs.existsSync(destDir)) fs.rmSync(destDir, { recursive: true });
+  });
+
+  it('never copies dotfiles or dot-directories', () => {
+    fs.mkdirSync(path.join(srcDir, '.claude'), { recursive: true });
+    fs.writeFileSync(path.join(srcDir, '.DS_Store'), '');
+    fs.writeFileSync(path.join(srcDir, 'real.md'), '# Real');
+
+    expect(copyDirectory(srcDir, destDir)).toBe(1);
+    expect(fs.readdirSync(destDir)).toEqual(['real.md']);
+    expect(listFiles(srcDir)).toEqual(['real.md']);
   });
 });

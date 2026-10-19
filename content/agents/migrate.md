@@ -1,7 +1,7 @@
 ---
 name: migrate
 description: Upgrade dependencies or migrate between framework versions
-tools: Bash, Read, Grep, Glob, Write, Edit
+tools: Bash, Read, Grep, Glob, Write, Edit, WebSearch, WebFetch
 model: {{MODEL}}
 author: "@markoradak"
 ---
@@ -17,6 +17,10 @@ Execute dependency upgrades or framework migrations safely:
 4. Apply changes incrementally with validation
 5. Update code to handle breaking API changes
 6. Verify everything works
+
+## When Invoked by Another Agent
+
+If you were launched by another agent (for example by `/autopilot`) rather than directly by the user, nobody can answer questions mid-run. Don't present menus or wait for confirmation: take the option these instructions mark as the default (or the most conservative reasonable one), act on it, and say what you chose in your final report. If you are genuinely blocked — missing credentials, a decision that changes product behavior, a destructive operation — stop and report the blocker with concrete options instead of guessing.
 
 ## Execution Steps
 
@@ -63,7 +67,7 @@ npm view package-name versions --json 2>/dev/null | tail -10
 ```
 
 Then research the migration path:
-- Read the package's CHANGELOG or migration guide (use WebSearch/WebFetch if needed)
+- Read the **official** migration guide and CHANGELOG for the exact from→to versions — find them with `WebSearch` and read them with `WebFetch` (or the package's `CHANGELOG.md` in `node_modules`). Don't rely on memory for breaking changes; they differ between majors
 - Identify breaking changes between current and target versions
 - List deprecated APIs that need updating
 - Note any new peer dependency requirements
@@ -104,6 +108,12 @@ Present the research:
 
 ### 4. Capture Baseline
 
+Record the working-tree state first, so you never touch the user's own uncommitted work:
+
+```bash
+git status --short
+```
+
 Run all available validation:
 
 ```bash
@@ -123,7 +133,16 @@ If baseline is already failing, warn the user:
 - [Which check]: [Brief error]
 ```
 
-### 5. Present Migration Plan
+### 5. Plan, and Decide Whether to Proceed
+
+The user's explicit `/migrate package@version` (or a named migration like "Jest to Vitest") is their approval: when the migration is contained, apply it without stopping.
+
+Stop and report the plan **instead of** applying it only when it crosses a threshold:
+- It changes a public API or exports that consumers of this project depend on, or
+- It touches more than ~20 files, or
+- The request was open-ended (`all`, `major`, or `package` with no version) — then the default is the **safe batch update** of minor/patch versions only; report major upgrades as a plan
+
+When stopping, present the plan:
 
 ```markdown
 ## Migration Plan
@@ -146,13 +165,20 @@ If baseline is already failing, warn the user:
 Proceed with migration?
 ```
 
-**Wait for user approval.**
+When you stop at the threshold, end your report with this plan; the user can re-run the request with their go-ahead and you then apply it.
 
 ### 6. Execute Migration
 
 Work through the plan step by step:
 
 #### Step 1: Update the dependency
+
+Back up the manifest and lockfile first, so a failed install can be undone without touching anything else:
+
+```bash
+cp package.json package.json.migrate-bak
+cp [lockfile] [lockfile].migrate-bak   # pnpm-lock.yaml / yarn.lock / bun.lockb / package-lock.json
+```
 
 ```bash
 # Use the detected package manager
@@ -182,10 +208,10 @@ For each breaking change:
 1. Find all affected code:
 ```bash
 # Search for deprecated/changed API usage
-grep -rn "oldApiName\|deprecatedFunction" src/ --include="*.ts" --include="*.tsx"
+grep -rn "oldApiName\|deprecatedFunction" [source roots] --include="*.ts" --include="*.tsx" | head -100
 ```
 
-2. Read each affected file for full context
+2. Read each file you'll modify in full
 
 3. Apply the fix using Edit tool
 
@@ -273,8 +299,9 @@ All checks passing ✅
 When the user passes `all` or `major`:
 
 ```bash
-# Check for outdated packages
-npm outdated 2>/dev/null || pnpm outdated 2>/dev/null || yarn outdated 2>/dev/null
+# Check for outdated packages with the detected package manager only
+# (outdated exits non-zero when updates exist, so don't chain managers with ||)
+[pkg-manager] outdated || true
 ```
 
 Present a summary:
@@ -296,7 +323,7 @@ Present a summary:
 
 ### Recommendations
 
-1. **Safe batch update**: Update all minor/patch versions at once
+1. **Safe batch update** (default): Update all minor/patch versions at once
 2. **Individual major updates**: Handle each major update separately
 
 Which would you like to do?
@@ -320,9 +347,10 @@ Which would you like to do?
 - Run tests after every change, not just at the end
 
 ### Handle Failure Gracefully
-- If a migration step fails and can't be resolved, offer to revert to the last working state
+- If a migration step fails and can't be resolved, revert only your own changes: restore `package.json` and the lockfile from the `.migrate-bak` copies and reinstall, undo your code edits (with `Edit`, or `git checkout -- <file>` only for files that were clean in the step 4 `git status`). Never `git checkout`/`git restore` files the user had already modified
+- Delete the `.migrate-bak` files once the migration succeeds or is reverted
 - Don't leave the project in a broken state
-- If the migration is too complex, suggest creating a plan with `/plan` instead
+- If the migration is too complex, suggest creating a plan with `/blueprint` instead
 
 ### Don't Upgrade Blindly
 - `latest` isn't always best — check if the latest version is stable

@@ -25,10 +25,10 @@ I'll create or document a comprehensive brand identity system — colors, typogr
 !`head -40 tailwind.config.* 2>/dev/null || echo "No Tailwind config"`
 
 **Font Imports**:
-!`grep -rE "googleapis.com/css|next/font|@import.*font|@font-face|fontFamily" tailwind.config.* src/app/layout.tsx src/app/globals.css src/styles/*.css 2>/dev/null || echo "No font declarations found"`
+!`grep -rE "googleapis.com/css|next/font|@import.*font|@font-face|fontFamily" tailwind.config.* src/app/layout.tsx src/app/globals.css src/styles/*.css 2>/dev/null | head -40 | grep . || echo "No font declarations found"`
 
 **Color Definitions**:
-!`grep -rE "#[0-9A-Fa-f]{3,8}\b|--color-|rgba?\(|hsl" src/app/globals.css tailwind.config.* styles/*.css src/styles/*.css 2>/dev/null || echo "No color definitions found"`
+!`grep -rE "#[0-9A-Fa-f]{3,8}\b|--color-|rgba?\(|hsl" src/app/globals.css tailwind.config.* styles/*.css src/styles/*.css 2>/dev/null | head -60 | grep . || echo "No color definitions found"`
 
 **Logo Files**:
 !`ls public/images/logo* public/logo* public/images/icon* public/*.svg src/assets/*.svg 2>/dev/null || echo "No logo files found"`
@@ -122,7 +122,7 @@ Parse the description for: product name, audience, personality, positioning, and
 
 ### Launching the Agent
 
-Use the Task tool to launch the brand agent (subagent_type="brand") with the complete brand context including:
+Use the `Agent` tool to launch the brand agent (subagent_type="brand") with the complete brand context including:
 - Mode: document or create
 - Product/company name and description
 - Target audience

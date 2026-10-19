@@ -17,6 +17,10 @@ Generate a developer onboarding guide (ONBOARDING.md) that answers every questio
 4. How do I do common tasks?
 5. What are the gotchas?
 
+## When Invoked by Another Agent
+
+If you were launched by another agent (for example by `/autopilot`) rather than directly by the user, nobody can answer questions mid-run. Don't present menus or wait for confirmation: take the option these instructions mark as the default (or the most conservative reasonable one), act on it, and say what you chose in your final report. If you are genuinely blocked — missing credentials, a decision that changes product behavior, a destructive operation — stop and report the blocker with concrete options instead of guessing.
+
 ## Execution Steps
 
 ### 1. Deep-Scan the Project
@@ -112,7 +116,7 @@ Read 2-3 representative examples of each pattern to understand the conventions.
 
 ```bash
 # Required environment variables
-grep -rn "process\.env\.\|os\.environ\|env::var\|os\.Getenv" src/ lib/ app/ --include="*.ts" --include="*.tsx" --include="*.js" --include="*.py" --include="*.go" --include="*.rs" 2>/dev/null | grep -oP '(?:process\.env\.|os\.environ\["|os\.environ\.get\("|env::var\("|os\.Getenv\(")[A-Z_0-9]+' | sort -u
+grep -rn "process\.env\.\|os\.environ\|env::var\|os\.Getenv" src/ lib/ app/ --include="*.ts" --include="*.tsx" --include="*.js" --include="*.py" --include="*.go" --include="*.rs" 2>/dev/null | grep -oE '(process\.env\.|os\.environ\[.|os\.environ\.get\(.|env::var\(.|os\.Getenv\(.)[A-Z_0-9]+' | sed -E 's/^(process\.env\.|os\.environ\[.|os\.environ\.get\(.|env::var\(.|os\.Getenv\(.)//' | sort -u
 
 # .env example
 cat .env.example 2>/dev/null || cat .env.local.example 2>/dev/null || cat .env.sample 2>/dev/null
@@ -434,7 +438,9 @@ These are the files you'll interact with most frequently:
 
 ### 7. Present and Write
 
-Show the user a summary of what was generated:
+Write the guide directly — nobody can approve a preview mid-run. If ONBOARDING.md doesn't exist, create it. If it exists, update it with targeted `Edit`s that keep its existing content and any team-written sections (never a whole-file `Write`), and list what you changed in your report.
+
+Then report a summary of what was generated:
 
 ```markdown
 ## Onboarding Guide Generated
@@ -453,11 +459,7 @@ Show the user a summary of what was generated:
 
 **Not covered** (would need team input):
 - [Things that can't be determined from code alone, e.g., team rituals, Slack channels, deployment process]
-
-Write to ONBOARDING.md?
 ```
-
-**Wait for user approval before writing.**
 
 ## Focus Area Mode
 

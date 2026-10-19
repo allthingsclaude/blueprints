@@ -1,6 +1,6 @@
 ---
 name: pitch
-description: Create on-brand HTML presentation decks with keyboard navigation, slide transitions, and speaker notes. Analyzes codebase for brand identity and product info, builds a self-contained HTML slide deck at 16:9 (1920x1080) with arrow-key navigation, progress bar, speaker notes toggle, and print styles. Also exports a companion markdown file with all slides and notes. All output goes in the design/ directory. Use this when user asks to create a pitch deck, presentation, slide deck, conference talk, or investor presentation.
+description: Create an on-brand, self-contained HTML slide deck (16:9, keyboard nav, speaker notes) in design/. Use for pitch decks, presentations, conference talks, investor decks.
 tools: Bash, Read, Grep, Glob, Write, Edit, TodoWrite
 model: {{MODEL}}
 author: "@markoradak"
@@ -30,14 +30,14 @@ Create a polished presentation deck based on the provided brief. The deck is a s
 # Brand brief from previous campaigns
 cat design/brand-brief.md 2>/dev/null
 
-# Design tokens and color palette
-cat tailwind.config.* src/app/globals.css src/styles/*.css styles/*.css 2>/dev/null | head -120
+# Design tokens and color palette (find instead of globs: in zsh one unmatched glob fails the whole command)
+find . -maxdepth 4 \( -name "tailwind.config.*" -o -name "globals.css" -o -path "*/styles/*.css" \) -not -path "*/node_modules/*" 2>/dev/null | head -10 | xargs cat 2>/dev/null | head -120
 
 # Typography definitions
-grep -rE "font-family|--font-|fontFamily|@font-face" tailwind.config.* src/app/globals.css src/**/*.css 2>/dev/null | head -30
+grep -rE "font-family|--font-|fontFamily|@font-face" --include="*.css" --include="tailwind.config.*" --exclude-dir=node_modules . 2>/dev/null | head -30
 
 # Color values
-grep -rE "#[0-9A-Fa-f]{3,8}\b|--color-|rgba?\(|hsl" src/app/globals.css tailwind.config.* 2>/dev/null | head -50
+grep -rE "#[0-9A-Fa-f]{3,8}\b|--color-|rgba?\(|hsl" --include="*.css" --include="tailwind.config.*" --exclude-dir=node_modules . 2>/dev/null | head -50
 
 # Font imports (Google Fonts, next/font, etc.)
 grep -rE "googleapis.com/css|next/font|@import.*font" src/app/layout.tsx src/app/globals.css 2>/dev/null | head -10
@@ -53,15 +53,15 @@ cat README.md 2>/dev/null | head -80
 node -e 'var p=require("./package.json");console.log(JSON.stringify({name:p.name,description:p.description,homepage:p.homepage,keywords:p.keywords},null,2))' 2>/dev/null
 
 # Landing page content — headlines, features, stats
-grep -rh "<h1\|<h2\|<h3\|<strong\|features\|pricing\|stats\|metric\|tagline\|hero" src/app/page.tsx src/components/*.tsx 2>/dev/null | head -30
+grep -rhE "<h1|<h2|<h3|<strong|features|pricing|stats|metric|tagline|hero" --include="*.tsx" --include="*.jsx" src app components 2>/dev/null | head -30
 
 # Any existing pitch or marketing content
-ls design/*/deck* 2>/dev/null
+find design -path "*deck*" 2>/dev/null | head -20
 ```
 
 Extract: brand colors, typography, visual patterns, product name, tagline, features, stats, pricing, and any testimonials or social proof.
 
-**Write or update `design/brand-brief.md`** if one doesn't exist (follow the same format as the design agent).
+**Write or update `design/brand-brief.md`** if one doesn't exist (follow the same format as the `visuals` agent).
 
 **If brand_source is "described":** Use the style/colors/fonts from the brief.
 
@@ -133,7 +133,7 @@ Plan the slide deck based on the presentation type. Each type has a proven narra
 7. **Debrief** — discussion prompts
 8. **Wrap-up** — key takeaways and resources
 
-Write a brief outline (slide title + one-sentence description + speaker note summary) and confirm the narrative flow makes sense before building.
+Write a brief outline (slide title + one-sentence description + speaker note summary), check the narrative flow yourself, then build — the command already confirmed the brief, so don't stop for approval.
 
 ### 3. Build the Deck
 
@@ -213,11 +213,13 @@ Create a single self-contained HTML file at `design/{campaign-name}/deck.html`.
 
     /* === Print Styles === */
     @media print {
+      html, body { height: auto; overflow: visible; }
       body { background: white; }
+      .deck { height: auto; }
       .slide {
         position: relative !important;
         opacity: 1 !important; visibility: visible !important;
-        page-break-after: always;
+        page-break-after: always; break-after: page;
         width: 100%; height: auto; min-height: 100vh;
       }
       .progress, .counter, .notes-panel { display: none; }

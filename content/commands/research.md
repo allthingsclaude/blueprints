@@ -25,7 +25,7 @@ Analyze the query to determine the best research agent:
 - Keywords: "explore", "find in code", "how does our", "where is", "codebase structure"
 
 **Use `research-docs` agent when:**
-- Query mentions specific library/framework APIs (React, Next.js, Prisma, tRPC, etc.)
+- Query mentions specific library/framework APIs (React, Next.js, Prisma, tRPC, etc.) — it reads the docs for the installed version (Context7 if installed, otherwise the official docs on the web)
 - Looking for package documentation or how to use a dependency
 - Questions about official API references
 - Keywords: "library docs", "API reference", "how to use [library]", "documentation for"
@@ -36,7 +36,7 @@ Analyze the query to determine the best research agent:
 - Looking for online tutorials, guides, or examples
 - Researching industry standards or modern approaches
 - No specific library mentioned, or general "how to" questions
-- Keywords: "research online", "best practices", "modern approach", "latest", "tutorial"
+- Keywords: "research online", "best practices", "modern approach", "latest", "tutorial", "compare", "release notes", error messages
 
 **Default to `research-codebase`** if the query is ambiguous and could apply to understanding existing code.
 
@@ -44,7 +44,7 @@ Analyze the query to determine the best research agent:
 
 ## Execution
 
-Based on the query above, determine which agent to use and launch it with the Task tool:
+Based on the query above, determine which agent to use and launch it with the `Agent` tool:
 
 - `subagent_type="research-codebase"` for codebase exploration
 - `subagent_type="research-docs"` for library documentation

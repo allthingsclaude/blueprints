@@ -38,6 +38,8 @@ The test agent will:
 - No arguments → Run full suite, analyze failures
 - File pattern → Run targeted tests
 - `generate` → Identify untested files, create test templates
-- `watch` → Start test watcher
+- `watch` → Start the test watcher (handled here, not by the agent — see below)
 
-Use the Task tool to launch the test agent (subagent_type="test") with the focus area and any additional context from arguments.
+**If the argument is `watch`**: don't launch the agent — a watcher never exits, so a subagent would hang on it. Instead, find the project's watch script (e.g. `test:watch`, or the runner's watch mode) and run it yourself with the `Bash` tool's `run_in_background` option, or give the user the exact command to run in their own terminal.
+
+Otherwise, use the `Agent` tool to launch the test agent (subagent_type="test") with the focus area and any additional context from arguments.

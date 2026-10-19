@@ -1,6 +1,7 @@
 ---
 description: Detect parent branch and merge the current branch into it
 author: "@markoradak"
+disable-model-invocation: true
 ---
 
 # Merge into Parent Branch
@@ -16,10 +17,10 @@ I'll detect which branch the current branch was created from, then merge into it
 **Current Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Status**:
-!`git status --short`
+!`git status --short 2>/dev/null || echo "Not a git repository"`
 
 **Uncommitted Changes**:
-!`git diff --stat`
+!`git diff --stat 2>/dev/null || echo "No changes"`
 
 ---
 
@@ -40,13 +41,19 @@ git reflog show --format='%gs' <current-branch> | grep 'branch: Created from' | 
 
 This extracts the reflog entry recorded when the branch was created (e.g. `branch: Created from main`). Parse the branch name from the end of that line.
 
-**Fallback** — if the reflog entry is missing (e.g. branch was fetched, not created locally):
-- Compare merge-base distances to `main` and `master`:
-  ```
-  git merge-base --is-ancestor main HEAD && echo main
-  git merge-base --is-ancestor master HEAD && echo master
-  ```
-- If neither works, ask the user to specify the parent branch manually.
+**Fallbacks** — use them in order when the parsed value is `HEAD` or empty (`git checkout -b <branch>` without a start point, which is how `/autopilot` creates branches, records `Created from HEAD`), or when the reflog entry is missing (e.g. the branch was fetched, not created locally):
+1. The branch you were on when you first checked out this one (the oldest checkout into it):
+   ```
+   git reflog show --format='%gs' HEAD | grep -E "^checkout: moving from .+ to <current-branch>$" | tail -1 | sed -E 's/^checkout: moving from (.+) to .*/\1/'
+   ```
+   Ignore the result if it's the current branch itself or a commit hash.
+2. The remote's default branch: `git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null` (strip the `origin/` prefix)
+3. `main` or `master`, whichever is an ancestor:
+   ```
+   git merge-base --is-ancestor main HEAD && echo main
+   git merge-base --is-ancestor master HEAD && echo master
+   ```
+4. If none of these works, ask the user to specify the parent branch manually.
 
 ### 3. Confirm with the user
 

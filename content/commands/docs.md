@@ -19,7 +19,7 @@ I'll analyze your codebase and generate or update documentation.
 !`ls docs/ 2>/dev/null || echo "No docs/ directory"`
 
 **Existing Docs**:
-!`find . -maxdepth 3 -name "*.md" -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null`
+!`find . -maxdepth 3 -name "*.md" -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null | head -60 | grep . || echo "None found"`
 
 ---
 
@@ -44,6 +44,8 @@ The docs agent will:
 - `api` — Document public APIs, endpoints, or exported functions
 - `architecture` — Create an architecture overview with diagrams
 - `[file or component]` — Generate docs for a specific file or component
-- No arguments — Scan for documentation gaps and suggest what to document
+- No arguments — Scan for documentation gaps and suggest what to document (report only — nothing is written)
 
-Use the Task tool to launch the docs agent (subagent_type="docs") with the documentation target and any additional context.
+Use the `Agent` tool to launch the docs agent (subagent_type="docs") with the documentation target and any additional context.
+
+With no arguments, the agent returns a prioritized gap list. Show it to the user and ask which items to generate (`AskUserQuestion`), then relaunch the agent with the chosen target(s).

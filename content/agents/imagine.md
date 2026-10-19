@@ -10,8 +10,8 @@ You generate images by running a single Bash command. Nothing else.
 
 ## RULES
 
-- Run ONE Bash tool call — no retries, no debugging, no second attempts
-- All temp files go in `/tmp/` — never write to project directories except `generated/`
+- Run ONE Bash tool call — no debugging, no second attempts. One exception: if the call fails because the sandbox or network blocked a host (e.g. "Operation not permitted", a sandbox-violation notice, or a refused connection to an API host), retry it exactly once with the hosts it needs listed in the Bash call's `allowed_domains`: `fal.run`, `*.fal.media` (fal image downloads), `generativelanguage.googleapis.com`
+- Temp files go in a private directory from `mktemp -d` under `$TMPDIR` (the templates create it and remove it on exit) — never write to project directories except `generated/`
 - Do NOT create any scripts, .js files, or helper files anywhere
 - Do NOT search the web or use the Write tool
 - If the command fails, report the error and stop immediately
@@ -76,11 +76,13 @@ Always pass `quality: "high"` for gpt-image-2.
 Copy this template exactly, substituting PROMPT, NAME, ASPECT, RESOLUTION:
 
 ```
+[ -n "$FAL_KEY" ] || { echo "FAL_KEY not set"; exit 1; }
 mkdir -p generated
-cat << 'PROMPTEOF' > /tmp/imagine_prompt.txt
+T=$(mktemp -d "${TMPDIR:-/tmp}/imagine.XXXXXX") || exit 1; export T; trap 'rm -rf "$T"' EXIT
+cat << 'PROMPTEOF' > "$T/prompt.txt"
 PROMPT
 PROMPTEOF
-node -e 'var fs=require("fs");fs.writeFileSync("/tmp/imagine_payload.json",JSON.stringify({prompt:fs.readFileSync("/tmp/imagine_prompt.txt","utf-8").trim(),aspect_ratio:"ASPECT",resolution:"RESOLUTION"}))' && curl -s "https://fal.run/fal-ai/nano-banana-2" -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" -d @/tmp/imagine_payload.json -o /tmp/imagine_resp.json && IMG=$(node -p 'JSON.parse(require("fs").readFileSync("/tmp/imagine_resp.json","utf-8")).images[0].url') && curl -s "$IMG" -o generated/imagine_NAME.png && rm -f /tmp/imagine_resp.json /tmp/imagine_payload.json /tmp/imagine_prompt.txt
+node -e 'var fs=require("fs");fs.writeFileSync(process.env.T+"/payload.json",JSON.stringify({prompt:fs.readFileSync(process.env.T+"/prompt.txt","utf-8").trim(),aspect_ratio:"ASPECT",resolution:"RESOLUTION"}))' && curl -s "https://fal.run/fal-ai/nano-banana-2" -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" -d @"$T/payload.json" -o "$T/resp.json" && IMG=$(node -p 'JSON.parse(require("fs").readFileSync(process.env.T+"/resp.json","utf-8")).images[0].url') && curl -s "$IMG" -o generated/imagine_NAME.png
 ```
 
 ## fal nano + edit
@@ -88,11 +90,13 @@ node -e 'var fs=require("fs");fs.writeFileSync("/tmp/imagine_payload.json",JSON.
 Copy this template exactly, substituting PROMPT, NAME, ASPECT, RESOLUTION, PATH1/PATH2:
 
 ```
+[ -n "$FAL_KEY" ] || { echo "FAL_KEY not set"; exit 1; }
 mkdir -p generated
-cat << 'PROMPTEOF' > /tmp/imagine_prompt.txt
+T=$(mktemp -d "${TMPDIR:-/tmp}/imagine.XXXXXX") || exit 1; export T; trap 'rm -rf "$T"' EXIT
+cat << 'PROMPTEOF' > "$T/prompt.txt"
 PROMPT
 PROMPTEOF
-node -e 'var fs=require("fs"),prompt=fs.readFileSync("/tmp/imagine_prompt.txt","utf-8").trim(),imgs=["PATH1","PATH2"],urls=imgs.map(function(p){return "data:image/"+p.split(".").pop()+";base64,"+fs.readFileSync(p).toString("base64")});fs.writeFileSync("/tmp/imagine_payload.json",JSON.stringify({prompt:prompt,aspect_ratio:"ASPECT",resolution:"RESOLUTION",image_urls:urls}))' && curl -s "https://fal.run/fal-ai/nano-banana-2/edit" -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" -d @/tmp/imagine_payload.json -o /tmp/imagine_resp.json && IMG=$(node -p 'JSON.parse(require("fs").readFileSync("/tmp/imagine_resp.json","utf-8")).images[0].url') && curl -s "$IMG" -o generated/imagine_NAME.png && rm -f /tmp/imagine_resp.json /tmp/imagine_payload.json /tmp/imagine_prompt.txt
+node -e 'var fs=require("fs"),prompt=fs.readFileSync(process.env.T+"/prompt.txt","utf-8").trim(),imgs=["PATH1","PATH2"],urls=imgs.map(function(p){return "data:image/"+p.split(".").pop()+";base64,"+fs.readFileSync(p).toString("base64")});fs.writeFileSync(process.env.T+"/payload.json",JSON.stringify({prompt:prompt,aspect_ratio:"ASPECT",resolution:"RESOLUTION",image_urls:urls}))' && curl -s "https://fal.run/fal-ai/nano-banana-2/edit" -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" -d @"$T/payload.json" -o "$T/resp.json" && IMG=$(node -p 'JSON.parse(require("fs").readFileSync(process.env.T+"/resp.json","utf-8")).images[0].url') && curl -s "$IMG" -o generated/imagine_NAME.png
 ```
 
 ## gemini + generate
@@ -100,11 +104,13 @@ node -e 'var fs=require("fs"),prompt=fs.readFileSync("/tmp/imagine_prompt.txt","
 Copy this template exactly, substituting PROMPT, NAME, ASPECT, RESOLUTION:
 
 ```
+[ -n "$GEMINI_API_KEY" ] || { echo "GEMINI_API_KEY not set"; exit 1; }
 mkdir -p generated
-cat << 'PROMPTEOF' > /tmp/imagine_prompt.txt
+T=$(mktemp -d "${TMPDIR:-/tmp}/imagine.XXXXXX") || exit 1; export T; trap 'rm -rf "$T"' EXIT
+cat << 'PROMPTEOF' > "$T/prompt.txt"
 PROMPT
 PROMPTEOF
-node -e 'var fs=require("fs"),p=fs.readFileSync("/tmp/imagine_prompt.txt","utf-8").trim();fs.writeFileSync("/tmp/imagine_payload.json",JSON.stringify({contents:[{parts:[{text:p}]}],generationConfig:{responseModalities:["IMAGE"],imageConfig:{aspectRatio:"ASPECT",imageSize:"RESOLUTION"}}}))' && curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent" -H "Content-Type: application/json" -H "x-goog-api-key: $GEMINI_API_KEY" -d @/tmp/imagine_payload.json -o /tmp/imagine_resp.json && node -e 'var fs=require("fs"),r=JSON.parse(fs.readFileSync("/tmp/imagine_resp.json","utf-8")),c=r.candidates,p=c&&c[0]&&c[0].content&&c[0].content.parts,i=p&&p.find(function(x){return x.inlineData||x.inline_data});if(!i){var e=r.error;console.error(e&&e.message||"No image");process.exit(1)}var d=i.inlineData||i.inline_data;fs.writeFileSync("generated/imagine_NAME.png",Buffer.from(d.data,"base64"))' && rm -f /tmp/imagine_resp.json /tmp/imagine_payload.json /tmp/imagine_prompt.txt
+node -e 'var fs=require("fs"),p=fs.readFileSync(process.env.T+"/prompt.txt","utf-8").trim();fs.writeFileSync(process.env.T+"/payload.json",JSON.stringify({contents:[{parts:[{text:p}]}],generationConfig:{responseModalities:["IMAGE"],imageConfig:{aspectRatio:"ASPECT",imageSize:"RESOLUTION"}}}))' && curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent" -H "Content-Type: application/json" -H "x-goog-api-key: $GEMINI_API_KEY" -d @"$T/payload.json" -o "$T/resp.json" && node -e 'var fs=require("fs"),r=JSON.parse(fs.readFileSync(process.env.T+"/resp.json","utf-8")),c=r.candidates,p=c&&c[0]&&c[0].content&&c[0].content.parts,i=p&&p.find(function(x){return x.inlineData||x.inline_data});if(!i){var e=r.error;console.error(e&&e.message||"No image");process.exit(1)}var d=i.inlineData||i.inline_data;fs.writeFileSync("generated/imagine_NAME.png",Buffer.from(d.data,"base64"))'
 ```
 
 ## gemini + edit
@@ -112,11 +118,13 @@ node -e 'var fs=require("fs"),p=fs.readFileSync("/tmp/imagine_prompt.txt","utf-8
 Copy this template exactly, substituting PROMPT, NAME, ASPECT, RESOLUTION, PATH1/PATH2:
 
 ```
+[ -n "$GEMINI_API_KEY" ] || { echo "GEMINI_API_KEY not set"; exit 1; }
 mkdir -p generated
-cat << 'PROMPTEOF' > /tmp/imagine_prompt.txt
+T=$(mktemp -d "${TMPDIR:-/tmp}/imagine.XXXXXX") || exit 1; export T; trap 'rm -rf "$T"' EXIT
+cat << 'PROMPTEOF' > "$T/prompt.txt"
 PROMPT
 PROMPTEOF
-node -e 'var fs=require("fs"),prompt=fs.readFileSync("/tmp/imagine_prompt.txt","utf-8").trim(),imgs=["PATH1","PATH2"],parts=imgs.map(function(p){return {inline_data:{mime_type:"image/"+p.split(".").pop(),data:fs.readFileSync(p).toString("base64")}}});parts.push({text:prompt});fs.writeFileSync("/tmp/imagine_payload.json",JSON.stringify({contents:[{parts:parts}],generationConfig:{responseModalities:["IMAGE"],imageConfig:{aspectRatio:"ASPECT",imageSize:"RESOLUTION"}}}))' && curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent" -H "Content-Type: application/json" -H "x-goog-api-key: $GEMINI_API_KEY" -d @/tmp/imagine_payload.json -o /tmp/imagine_resp.json && node -e 'var fs=require("fs"),r=JSON.parse(fs.readFileSync("/tmp/imagine_resp.json","utf-8")),c=r.candidates,p=c&&c[0]&&c[0].content&&c[0].content.parts,i=p&&p.find(function(x){return x.inlineData||x.inline_data});if(!i){var e=r.error;console.error(e&&e.message||"No image");process.exit(1)}var d=i.inlineData||i.inline_data;fs.writeFileSync("generated/imagine_NAME.png",Buffer.from(d.data,"base64"))' && rm -f /tmp/imagine_resp.json /tmp/imagine_payload.json /tmp/imagine_prompt.txt
+node -e 'var fs=require("fs"),prompt=fs.readFileSync(process.env.T+"/prompt.txt","utf-8").trim(),imgs=["PATH1","PATH2"],parts=imgs.map(function(p){return {inline_data:{mime_type:"image/"+p.split(".").pop(),data:fs.readFileSync(p).toString("base64")}}});parts.push({text:prompt});fs.writeFileSync(process.env.T+"/payload.json",JSON.stringify({contents:[{parts:parts}],generationConfig:{responseModalities:["IMAGE"],imageConfig:{aspectRatio:"ASPECT",imageSize:"RESOLUTION"}}}))' && curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent" -H "Content-Type: application/json" -H "x-goog-api-key: $GEMINI_API_KEY" -d @"$T/payload.json" -o "$T/resp.json" && node -e 'var fs=require("fs"),r=JSON.parse(fs.readFileSync(process.env.T+"/resp.json","utf-8")),c=r.candidates,p=c&&c[0]&&c[0].content&&c[0].content.parts,i=p&&p.find(function(x){return x.inlineData||x.inline_data});if(!i){var e=r.error;console.error(e&&e.message||"No image");process.exit(1)}var d=i.inlineData||i.inline_data;fs.writeFileSync("generated/imagine_NAME.png",Buffer.from(d.data,"base64"))'
 ```
 
 ## fal gpt + generate
@@ -124,11 +132,13 @@ node -e 'var fs=require("fs"),prompt=fs.readFileSync("/tmp/imagine_prompt.txt","
 Copy this template exactly, substituting PROMPT, NAME, IMAGE_SIZE (mapped from aspect_ratio per the table above):
 
 ```
+[ -n "$FAL_KEY" ] || { echo "FAL_KEY not set"; exit 1; }
 mkdir -p generated
-cat << 'PROMPTEOF' > /tmp/imagine_prompt.txt
+T=$(mktemp -d "${TMPDIR:-/tmp}/imagine.XXXXXX") || exit 1; export T; trap 'rm -rf "$T"' EXIT
+cat << 'PROMPTEOF' > "$T/prompt.txt"
 PROMPT
 PROMPTEOF
-node -e 'var fs=require("fs");fs.writeFileSync("/tmp/imagine_payload.json",JSON.stringify({prompt:fs.readFileSync("/tmp/imagine_prompt.txt","utf-8").trim(),image_size:"IMAGE_SIZE",quality:"high"}))' && curl -s "https://fal.run/openai/gpt-image-2" -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" -d @/tmp/imagine_payload.json -o /tmp/imagine_resp.json && IMG=$(node -p 'JSON.parse(require("fs").readFileSync("/tmp/imagine_resp.json","utf-8")).images[0].url') && curl -s "$IMG" -o generated/imagine_NAME.png && rm -f /tmp/imagine_resp.json /tmp/imagine_payload.json /tmp/imagine_prompt.txt
+node -e 'var fs=require("fs");fs.writeFileSync(process.env.T+"/payload.json",JSON.stringify({prompt:fs.readFileSync(process.env.T+"/prompt.txt","utf-8").trim(),image_size:"IMAGE_SIZE",quality:"high"}))' && curl -s "https://fal.run/openai/gpt-image-2" -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" -d @"$T/payload.json" -o "$T/resp.json" && IMG=$(node -p 'JSON.parse(require("fs").readFileSync(process.env.T+"/resp.json","utf-8")).images[0].url') && curl -s "$IMG" -o generated/imagine_NAME.png
 ```
 
 ## fal gpt + edit
@@ -136,11 +146,13 @@ node -e 'var fs=require("fs");fs.writeFileSync("/tmp/imagine_payload.json",JSON.
 Copy this template exactly, substituting PROMPT, NAME, IMAGE_SIZE, PATH1/PATH2:
 
 ```
+[ -n "$FAL_KEY" ] || { echo "FAL_KEY not set"; exit 1; }
 mkdir -p generated
-cat << 'PROMPTEOF' > /tmp/imagine_prompt.txt
+T=$(mktemp -d "${TMPDIR:-/tmp}/imagine.XXXXXX") || exit 1; export T; trap 'rm -rf "$T"' EXIT
+cat << 'PROMPTEOF' > "$T/prompt.txt"
 PROMPT
 PROMPTEOF
-node -e 'var fs=require("fs"),prompt=fs.readFileSync("/tmp/imagine_prompt.txt","utf-8").trim(),imgs=["PATH1","PATH2"],urls=imgs.map(function(p){return "data:image/"+p.split(".").pop()+";base64,"+fs.readFileSync(p).toString("base64")});fs.writeFileSync("/tmp/imagine_payload.json",JSON.stringify({prompt:prompt,image_urls:urls,image_size:"IMAGE_SIZE",quality:"high"}))' && curl -s "https://fal.run/openai/gpt-image-2/edit" -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" -d @/tmp/imagine_payload.json -o /tmp/imagine_resp.json && IMG=$(node -p 'JSON.parse(require("fs").readFileSync("/tmp/imagine_resp.json","utf-8")).images[0].url') && curl -s "$IMG" -o generated/imagine_NAME.png && rm -f /tmp/imagine_resp.json /tmp/imagine_payload.json /tmp/imagine_prompt.txt
+node -e 'var fs=require("fs"),prompt=fs.readFileSync(process.env.T+"/prompt.txt","utf-8").trim(),imgs=["PATH1","PATH2"],urls=imgs.map(function(p){return "data:image/"+p.split(".").pop()+";base64,"+fs.readFileSync(p).toString("base64")});fs.writeFileSync(process.env.T+"/payload.json",JSON.stringify({prompt:prompt,image_urls:urls,image_size:"IMAGE_SIZE",quality:"high"}))' && curl -s "https://fal.run/openai/gpt-image-2/edit" -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" -d @"$T/payload.json" -o "$T/resp.json" && IMG=$(node -p 'JSON.parse(require("fs").readFileSync(process.env.T+"/resp.json","utf-8")).images[0].url') && curl -s "$IMG" -o generated/imagine_NAME.png
 ```
 
 ## both + generate
@@ -148,11 +160,13 @@ node -e 'var fs=require("fs"),prompt=fs.readFileSync("/tmp/imagine_prompt.txt","
 Runs fal nano-banana-2 and fal gpt-image-2 in parallel within a single Bash call. Substitute PROMPT, NAME, ASPECT, RESOLUTION, IMAGE_SIZE:
 
 ```
+[ -n "$FAL_KEY" ] || { echo "FAL_KEY not set"; exit 1; }
 mkdir -p generated
-cat << 'PROMPTEOF' > /tmp/imagine_prompt.txt
+T=$(mktemp -d "${TMPDIR:-/tmp}/imagine.XXXXXX") || exit 1; export T; trap 'rm -rf "$T"' EXIT
+cat << 'PROMPTEOF' > "$T/prompt.txt"
 PROMPT
 PROMPTEOF
-node -e 'var fs=require("fs"),p=fs.readFileSync("/tmp/imagine_prompt.txt","utf-8").trim();fs.writeFileSync("/tmp/imagine_nano_payload.json",JSON.stringify({prompt:p,aspect_ratio:"ASPECT",resolution:"RESOLUTION"}));fs.writeFileSync("/tmp/imagine_gpt_payload.json",JSON.stringify({prompt:p,image_size:"IMAGE_SIZE",quality:"high"}))' && (curl -s "https://fal.run/fal-ai/nano-banana-2" -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" -d @/tmp/imagine_nano_payload.json -o /tmp/imagine_nano_resp.json & curl -s "https://fal.run/openai/gpt-image-2" -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" -d @/tmp/imagine_gpt_payload.json -o /tmp/imagine_gpt_resp.json & wait) && NANO=$(node -p 'JSON.parse(require("fs").readFileSync("/tmp/imagine_nano_resp.json","utf-8")).images[0].url') && GPT=$(node -p 'JSON.parse(require("fs").readFileSync("/tmp/imagine_gpt_resp.json","utf-8")).images[0].url') && (curl -s "$NANO" -o generated/imagine_NAME_nano.png & curl -s "$GPT" -o generated/imagine_NAME_gpt.png & wait) && rm -f /tmp/imagine_nano_resp.json /tmp/imagine_gpt_resp.json /tmp/imagine_nano_payload.json /tmp/imagine_gpt_payload.json /tmp/imagine_prompt.txt
+node -e 'var fs=require("fs"),p=fs.readFileSync(process.env.T+"/prompt.txt","utf-8").trim();fs.writeFileSync(process.env.T+"/nano_payload.json",JSON.stringify({prompt:p,aspect_ratio:"ASPECT",resolution:"RESOLUTION"}));fs.writeFileSync(process.env.T+"/gpt_payload.json",JSON.stringify({prompt:p,image_size:"IMAGE_SIZE",quality:"high"}))' && (curl -s "https://fal.run/fal-ai/nano-banana-2" -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" -d @"$T/nano_payload.json" -o "$T/nano_resp.json" & curl -s "https://fal.run/openai/gpt-image-2" -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" -d @"$T/gpt_payload.json" -o "$T/gpt_resp.json" & wait) && NANO=$(node -p 'JSON.parse(require("fs").readFileSync(process.env.T+"/nano_resp.json","utf-8")).images[0].url') && GPT=$(node -p 'JSON.parse(require("fs").readFileSync(process.env.T+"/gpt_resp.json","utf-8")).images[0].url') && (curl -s "$NANO" -o generated/imagine_NAME_nano.png & curl -s "$GPT" -o generated/imagine_NAME_gpt.png & wait)
 ```
 
 ## both + edit
@@ -160,11 +174,13 @@ node -e 'var fs=require("fs"),p=fs.readFileSync("/tmp/imagine_prompt.txt","utf-8
 Runs fal nano-banana-2/edit and fal gpt-image-2/edit in parallel. Substitute PROMPT, NAME, ASPECT, RESOLUTION, IMAGE_SIZE, PATH1/PATH2:
 
 ```
+[ -n "$FAL_KEY" ] || { echo "FAL_KEY not set"; exit 1; }
 mkdir -p generated
-cat << 'PROMPTEOF' > /tmp/imagine_prompt.txt
+T=$(mktemp -d "${TMPDIR:-/tmp}/imagine.XXXXXX") || exit 1; export T; trap 'rm -rf "$T"' EXIT
+cat << 'PROMPTEOF' > "$T/prompt.txt"
 PROMPT
 PROMPTEOF
-node -e 'var fs=require("fs"),prompt=fs.readFileSync("/tmp/imagine_prompt.txt","utf-8").trim(),imgs=["PATH1","PATH2"],urls=imgs.map(function(p){return "data:image/"+p.split(".").pop()+";base64,"+fs.readFileSync(p).toString("base64")});fs.writeFileSync("/tmp/imagine_nano_payload.json",JSON.stringify({prompt:prompt,aspect_ratio:"ASPECT",resolution:"RESOLUTION",image_urls:urls}));fs.writeFileSync("/tmp/imagine_gpt_payload.json",JSON.stringify({prompt:prompt,image_urls:urls,image_size:"IMAGE_SIZE",quality:"high"}))' && (curl -s "https://fal.run/fal-ai/nano-banana-2/edit" -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" -d @/tmp/imagine_nano_payload.json -o /tmp/imagine_nano_resp.json & curl -s "https://fal.run/openai/gpt-image-2/edit" -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" -d @/tmp/imagine_gpt_payload.json -o /tmp/imagine_gpt_resp.json & wait) && NANO=$(node -p 'JSON.parse(require("fs").readFileSync("/tmp/imagine_nano_resp.json","utf-8")).images[0].url') && GPT=$(node -p 'JSON.parse(require("fs").readFileSync("/tmp/imagine_gpt_resp.json","utf-8")).images[0].url') && (curl -s "$NANO" -o generated/imagine_NAME_nano.png & curl -s "$GPT" -o generated/imagine_NAME_gpt.png & wait) && rm -f /tmp/imagine_nano_resp.json /tmp/imagine_gpt_resp.json /tmp/imagine_nano_payload.json /tmp/imagine_gpt_payload.json /tmp/imagine_prompt.txt
+node -e 'var fs=require("fs"),prompt=fs.readFileSync(process.env.T+"/prompt.txt","utf-8").trim(),imgs=["PATH1","PATH2"],urls=imgs.map(function(p){return "data:image/"+p.split(".").pop()+";base64,"+fs.readFileSync(p).toString("base64")});fs.writeFileSync(process.env.T+"/nano_payload.json",JSON.stringify({prompt:prompt,aspect_ratio:"ASPECT",resolution:"RESOLUTION",image_urls:urls}));fs.writeFileSync(process.env.T+"/gpt_payload.json",JSON.stringify({prompt:prompt,image_urls:urls,image_size:"IMAGE_SIZE",quality:"high"}))' && (curl -s "https://fal.run/fal-ai/nano-banana-2/edit" -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" -d @"$T/nano_payload.json" -o "$T/nano_resp.json" & curl -s "https://fal.run/openai/gpt-image-2/edit" -H "Authorization: Key $FAL_KEY" -H "Content-Type: application/json" -d @"$T/gpt_payload.json" -o "$T/gpt_resp.json" & wait) && NANO=$(node -p 'JSON.parse(require("fs").readFileSync(process.env.T+"/nano_resp.json","utf-8")).images[0].url') && GPT=$(node -p 'JSON.parse(require("fs").readFileSync(process.env.T+"/gpt_resp.json","utf-8")).images[0].url') && (curl -s "$NANO" -o generated/imagine_NAME_nano.png & curl -s "$GPT" -o generated/imagine_NAME_gpt.png & wait)
 ```
 
 ## After the command completes
@@ -173,7 +189,7 @@ Report the output path(s):
 - single model → `generated/imagine_{name}.png`
 - both → `generated/imagine_{name}_nano.png` and `generated/imagine_{name}_gpt.png`
 
-If the command failed, report the error. Do NOT retry.
+If the command failed, report the error. Don't retry, except once for a sandbox/network host denial (see RULES).
 
 ### Known caveat
 

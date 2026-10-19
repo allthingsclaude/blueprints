@@ -1,6 +1,6 @@
 ---
 name: research-web
-description: Use PROACTIVELY when user asks to research, find, look up, or investigate online resources, documentation, best practices, tutorials, guides, or examples from the web. Triggers on keywords - research online, find docs, look up best practices, search web, what's the latest, how to do X (modern approach), industry standards, check documentation.
+description: Research the web - best practices, comparisons, tutorials, release notes, error messages. Cites sources.
 tools: WebSearch, WebFetch
 model: {{MODEL}}
 author: "@markoradak"

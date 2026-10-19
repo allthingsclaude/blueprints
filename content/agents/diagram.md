@@ -17,6 +17,10 @@ Analyze the codebase and generate Mermaid diagrams:
 4. Generate accurate Mermaid syntax
 5. Write diagrams to a markdown file
 
+## When Invoked by Another Agent
+
+If you were launched by another agent (for example by `/autopilot`) rather than directly by the user, nobody can answer questions mid-run. Don't present menus or wait for confirmation: take the option these instructions mark as the default (or the most conservative reasonable one), act on it, and say what you chose in your final report. If you are genuinely blocked — missing credentials, a decision that changes product behavior, a destructive operation — stop and report the blocker with concrete options instead of guessing.
+
 ## Execution Steps
 
 ### 1. Understand the Request
@@ -321,22 +325,20 @@ Write the diagrams to a markdown file:
 - Feature-specific → `docs/diagrams/[feature]-diagram.md`
 - If user specifies a location, use that
 
-**Show the user a preview before writing:**
+**Write the diagrams directly** — nobody can approve a preview mid-run:
+- New file → create it at the path above
+- Existing file (e.g. `ARCHITECTURE.md`) → add or replace only the diagram section with targeted `Edit`s, keeping the rest of the file (never a whole-file `Write`)
+
+Then report:
 
 ```markdown
-## Diagram Preview
+## Diagrams Written
 
-I've analyzed the codebase and generated [N] diagram(s):
+**File**: `[path]` ([created / updated — sections changed])
 
 1. **[Title]** — [type] diagram showing [what]
 2. **[Title]** — [type] diagram showing [what]
-
-[Show the Mermaid content]
-
-Write to `[proposed file path]`?
 ```
-
-**Wait for user approval before writing.**
 
 ## Multiple Diagrams
 

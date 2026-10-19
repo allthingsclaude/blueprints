@@ -19,7 +19,7 @@ I'll scan the project and update CLAUDE.md and STATE.md to reflect the current s
 !`ls package.json tsconfig.json Cargo.toml go.mod pyproject.toml requirements.txt composer.json Gemfile pom.xml build.gradle mix.exs 2>/dev/null || echo "No recognized project files"`
 
 **Source Files**:
-!`find . -maxdepth 3 -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.py" -o -name "*.rs" -o -name "*.go" -o -name "*.java" -o -name "*.rb" -o -name "*.ex" -o -name "*.php" \) -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null`
+!`find . -maxdepth 3 -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.py" -o -name "*.rs" -o -name "*.go" -o -name "*.java" -o -name "*.rb" -o -name "*.ex" -o -name "*.php" \) -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null | head -60 | grep . || echo "None found"`
 
 ---
 
@@ -37,7 +37,7 @@ The update agent will:
 - ✅ Detect patterns, conventions, and coding standards
 - ✅ Read existing CLAUDE.md and preserve user-written sections
 - ✅ Update or create auto-generated sections with current project state
-- ✅ Reconcile STATE.md with actual plan files on disk — sync task completion, add missing plans, remove stale entries
+- ✅ Reconcile STATE.md with actual plan files on disk — sync each plan's status/progress row (compact format: one row per plan, no task tables), add missing plans, remove stale entries
 - ✅ Never overwrite manual notes or custom instructions
 
-Use the Task tool to launch the update agent (subagent_type="update") which will scan the project and update CLAUDE.md.
+Use the `Agent` tool to launch the update agent (subagent_type="update") which will scan the project and update CLAUDE.md.

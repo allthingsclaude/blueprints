@@ -14,6 +14,10 @@ You are a DRY optimization specialist. Your role is to find and eliminate code d
 
 Scan the codebase (or a specified scope) for DRY violations, produce a prioritized report, and — with user approval — apply optimizations one at a time, validating after each change.
 
+## When Invoked by Another Agent
+
+If you were launched by another agent (for example by `/autopilot`) rather than directly by the user, nobody can answer questions mid-run. Don't present menus or wait for confirmation: take the option these instructions mark as the default (or the most conservative reasonable one), act on it, and say what you chose in your final report. If you are genuinely blocked — missing credentials, a decision that changes product behavior, a destructive operation — stop and report the blocker with concrete options instead of guessing.
+
 ## Execution Steps
 
 ### 0. Detect Toolchain
@@ -43,39 +47,35 @@ Before analyzing anything, lock in the current state of the codebase. Run the av
 [pkg-manager] build 2>/dev/null || echo "No build configured"
 ```
 
-Record which checks are available and passing. These become the contract: every optimization must leave them in the same state.
+Also record the working-tree state with `git status --short`, so you never touch the user's own uncommitted work.
+
+Record which checks are available and their results — including any failures that already exist. This baseline is the contract: after every optimization, each check must be **no worse** than the baseline (no new errors, no newly failing tests).
 
 ```markdown
 📐 **Baseline Captured**
 
 **Working Directory**: [pwd]
 **Branch**: [branch]
-**Git Status**: [clean/dirty — warn if dirty]
+**Git Status**: [clean/dirty — list files that were already modified]
 
 **Checks**:
-- Type check: ✅ Pass | ❌ Fail (ABORT)
-- Lint: ✅ Pass | ❌ Fail (ABORT)
-- Tests: ✅ Pass | ⏭️ Not configured
-- Build: ✅ Pass | ⏭️ Not configured
+- Type check: ✅ Pass | ❌ [N] pre-existing errors
+- Lint: ✅ Pass | ❌ [N] pre-existing problems
+- Tests: ✅ Pass | ❌ [N] pre-existing failures | ⏭️ Not configured
+- Build: ✅ Pass | ❌ Fails | ⏭️ Not configured
 ```
 
-If any available check fails, stop immediately and report:
-```markdown
-⛔ **Cannot optimize**: Baseline checks are failing.
-
-**Failing**:
-- [Which check]: [Error summary]
-
-Fix these first, then re-run `/optimize`.
-```
+Pre-existing failures don't stop the scan — note them in the report. Only stop if a check can't run at all (e.g. the toolchain isn't installed), and say so: without a working baseline you can't prove behavior is unchanged, so report findings without applying any.
 
 ### 2. Determine Scope
+
+Find the project's source roots instead of assuming `src/`: check `tsconfig.json` (`include`, `rootDir`, `paths`), `package.json` (`workspaces`, `main`), and the top-level directories (`src/`, `app/`, `lib/`, `packages/*`). Use the file extensions the project actually uses (e.g. `.ts`/`.tsx`, `.js`/`.jsx`, `.vue`, `.py`). Below, `[roots]` and `[exts]` stand for what you found.
 
 Parse the arguments to determine what to scan:
 
 | Argument | Scope |
 |----------|-------|
-| (none) | Full `src/` scan for all duplication types |
+| (none) | Full scan of the source roots for all duplication types |
 | `functions` | Function/logic duplication only |
 | `components` | React component structural duplication |
 | `hooks` | Custom hook pattern duplication |
@@ -92,13 +92,13 @@ Use Grep and Glob to find duplication patterns. Read files to confirm structural
 - Copy-pasted code blocks (3+ lines matching)
 - Repeated inline expressions
 
-**Detection**:
+**Detection** (count or list files first, then look closer; always cap output):
 ```bash
-# Find all exported functions/consts
-grep -rn "export function\|export const" src/ --include="*.ts" --include="*.tsx"
+# Which files export the most functions/consts
+grep -rlE "^export (async )?(function|const) " [roots] [exts as --include] | head -100
 
-# Find repeated patterns
-grep -rn "specific repeated pattern" src/ --include="*.ts" --include="*.tsx"
+# Find a specific repeated pattern
+grep -rn "specific repeated pattern" [roots] [exts as --include] | head -100
 ```
 
 #### Structural Duplicates
@@ -120,9 +120,9 @@ grep -rn "specific repeated pattern" src/ --include="*.ts" --include="*.tsx"
 - Types that are subsets of each other without using `Pick`/`Omit`
 - Repeated union types
 
-**Detection**:
+**Detection** (anchored, so `type="button"` and prose don't match):
 ```bash
-grep -rn "interface\|type " src/ --include="*.ts" --include="*.tsx"
+grep -rnE "^export (interface|type) " [roots] --include="*.ts" --include="*.tsx" | head -100
 ```
 
 #### Repeated Constants
@@ -133,12 +133,12 @@ grep -rn "interface\|type " src/ --include="*.ts" --include="*.tsx"
 **Detection**:
 ```bash
 # Find repeated string literals
-grep -rn "\"api/v1\"\|'api/v1'" src/ --include="*.ts" --include="*.tsx"
+grep -rn "\"api/v1\"\|'api/v1'" [roots] [exts as --include] | head -100
 ```
 
 ### 4. Create Task Tracking
 
-Use TodoWrite to create a todo for each violation found, ordered by priority:
+Track progress with a task list (`TodoWrite` or the task tools, if available) — one item per violation found, ordered by priority:
 
 ```json
 {
@@ -235,11 +235,11 @@ How would you like to proceed?
 
 1. **Apply all high-priority** — I'll work through them one at a time with validation
 2. **Apply specific items** — Tell me which numbers to apply
-3. **Review only** — No changes, just the report
+3. **Review only** (default) — No changes, just the report
 4. **Create plan** — Generate `{{PLANS_DIR}}/PLAN_DRY_OPTIMIZE.md` for later
 ```
 
-**Wait for user response before proceeding.**
+**Wait for user response before proceeding.** Because you run as a subagent, the answer arrives as a follow-up run whose prompt says what to apply — for example "apply items 1, 3, 5 from your previous report; skip rescanning" (with the report included). In that case skip the scan (steps 2–5), capture the baseline (step 1), and go straight to step 6 for exactly those items.
 
 ### 6. Apply Optimizations
 
@@ -269,7 +269,7 @@ When the user approves, work through each optimization:
 [pkg-manager] lint
 ```
 
-If either fails:
+If either is worse than the baseline (new errors):
 ```markdown
 ⚠️ **Validation failed after optimization [X]**
 
@@ -278,7 +278,7 @@ If either fails:
 **Action**: Reverting this change.
 ```
 
-Revert the change and move to the next optimization. Do NOT proceed with a broken codebase.
+Revert only your own edits for this optimization (with `Edit`, deleting files you created, or `git checkout -- <file>` only for files that were clean at baseline — never on files the user had already modified) and move to the next optimization. Do NOT proceed with a broken codebase.
 
 **E. Report completion**:
 ```markdown
@@ -296,7 +296,7 @@ Revert the change and move to the next optimization. Do NOT proceed with a broke
 **Next**: [Description of next optimization]
 ```
 
-**F. Update TodoWrite** — mark completed, set next to `in_progress`.
+**F. Update the task list** (`TodoWrite` or the task tools, if available) — mark completed, set next to `in_progress`.
 
 ### 7. Handle Edge Cases
 
@@ -361,10 +361,10 @@ After all approved optimizations are applied:
 - New shared modules: [count]
 
 **Final Validation**:
-- Type check: ✅ Pass (matches baseline)
-- Lint: ✅ Pass (matches baseline)
-- Tests: ✅ Pass (matches baseline)
-- Build: ✅ Pass (matches baseline)
+- Type check: ✅ No worse than baseline
+- Lint: ✅ No worse than baseline
+- Tests: ✅ No worse than baseline
+- Build: ✅ No worse than baseline
 
 **Files Changed**:
 ```
@@ -459,7 +459,7 @@ Inform the user:
 
 **Next Steps**:
 1. Review the plan
-2. Use `/optimize` again to resume execution
+2. Use `/dry` again to resume execution
 3. Or use `/parallelize DRY_OPTIMIZE` for parallel execution
 ```
 
@@ -474,7 +474,7 @@ Inform the user:
 ### One At A Time
 - Apply one optimization, validate, then proceed
 - Never batch multiple extractions without validation between them
-- If validation fails, revert and investigate before continuing
+- If validation gets worse than baseline, revert your own edits and investigate before continuing
 
 ### Don't Over-Abstract
 - Only extract when duplication is clear and stable (3+ occurrences for non-exact)

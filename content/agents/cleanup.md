@@ -20,6 +20,10 @@ Analyze the codebase (or a specific area) to identify and safely remove:
 5. Console statements left from debugging
 6. Commented-out code blocks
 
+## When Invoked by Another Agent
+
+If you were launched by another agent (for example by `/autopilot`) rather than directly by the user, nobody can answer questions mid-run. Don't present menus or wait for confirmation: take the option these instructions mark as the default (or the most conservative reasonable one), act on it, and say what you chose in your final report. If you are genuinely blocked — missing credentials, a decision that changes product behavior, a destructive operation — stop and report the blocker with concrete options instead of guessing.
+
 ## Execution Steps
 
 ### 1. Determine Scope
@@ -49,18 +53,32 @@ cat package.json 2>/dev/null | head -30
 
 ### 3. Capture Baseline
 
-Run available validation commands and record results:
+Record the working-tree state first, so you never touch the user's own uncommitted work:
+
+```bash
+git status --short
+```
+
+Then run the available validation commands and record the results (including any failures that already exist):
 - Type check (if available)
 - Lint (if available)
+- Tests (if available)
+- Build (if available)
 
-These MUST still pass after cleanup.
+After cleanup, every check must be no worse than this baseline.
 
 ### 4. Scan for Issues
 
 #### Unused Imports
-- Use Grep to find all import statements
-- For each import, check if the imported symbol is used in the file
-- Flag imports where zero symbols are referenced
+- Detect unused imports and locals with the project's own tooling first — it's more accurate and far cheaper than grepping every import:
+  - A one-off `tsc --noEmit --noUnusedLocals --noUnusedParameters` (TypeScript projects; don't change `tsconfig.json`)
+  - The ESLint unused-imports / `no-unused-vars` rule, if configured
+  - An existing `knip` config, if the project has one
+- Use `Grep` only to confirm a tool's finding in the file
+- **Never remove**:
+  - Side-effect imports with no bindings (`import './globals.css'`, `import 'server-only'`, `import 'reflect-metadata'`, polyfills) — removing them breaks the app while typecheck and lint stay green
+  - Type-only imports (`import type …`) unless the tooling reports them unused
+  - JSX-runtime imports (e.g. `import React from 'react'` in projects using the classic JSX runtime)
 
 #### Dead Code
 - Find all `export` declarations
@@ -80,7 +98,9 @@ These MUST still pass after cleanup.
 #### Console Statements
 - Find `console.log`, `console.warn`, `console.debug` statements
 - Exclude `console.error` in catch blocks (likely intentional)
-- Flag all others for removal
+- `console.log` / `console.debug` in browser or app code → candidates for removal
+- **Never** flag console output in CLI entry points, `bin/`, `scripts/`, logger modules, or server startup code — there it is the program's output
+- `console.warn` → manual review (often intentional, e.g. deprecation notices)
 
 #### Commented Code
 - Find large blocks (3+ lines) of commented-out code
@@ -116,15 +136,20 @@ Include detailed findings for each category with file:line references.
 
 ### 6. Apply Fixes (with user approval)
 
-**Wait for user confirmation before making any changes.**
+**Default: report only.** Don't change anything until the user approves specific items.
 
-**Auto-fixable** (safe to apply):
-- Remove unused imports
-- Remove console.log/debug/warn statements (NOT console.error in catch blocks)
+Because you run as a subagent, approval arrives as a follow-up run whose prompt says which items to apply — for example "apply items 1, 3, 5 from your previous report; skip rescanning" (with the report included). In that case:
+- Skip steps 4–5 (no rescan) and apply exactly the listed items
+- Still capture the baseline (step 3) and validate afterwards (step 7)
+
+**Auto-fixable** (safe to apply once approved):
+- Remove unused imports reported by the project's tooling (never side-effect, type-only, or JSX-runtime imports)
+- Remove `console.log` / `console.debug` in browser or app code (never in CLI entry points, `bin/`, `scripts/`, logger modules, or server startup; NOT `console.error` in catch blocks)
 - Remove commented-out code blocks
 - Organize/sort imports
 
 **Requires manual review** (present options, let user decide):
+- `console.warn` statements
 - Removing exported functions (might have external consumers)
 - Changing `any` types (needs proper typing)
 - Removing TODO comments (needs human decision)
@@ -133,8 +158,9 @@ Include detailed findings for each category with file:line references.
 ### 7. Validate After Cleanup
 
 After applying fixes:
-- Run type check → MUST match baseline
-- Run lint → MUST match baseline
+- Run type check → no worse than baseline
+- Run lint → no worse than baseline
+- Run tests (and build, if available) → no worse than baseline — tests catch dynamic usage and framework conventions that typecheck misses
 - Show git diff summary
 - Report lines removed
 
@@ -143,7 +169,7 @@ After applying fixes:
 1. **Never remove code that might be dynamically referenced** (string-based imports, reflection)
 2. **Never remove exports without checking all consumers** (including test files, config files)
 3. **One category at a time**: Apply fixes per category, validate, then proceed
-4. **Revert on failure**: If validation fails after a change, revert immediately
+4. **Revert on failure — only your own edits**: If validation fails after a change, undo just the edits you made (with `Edit`, or `git checkout -- <file>` only for files that were clean in the step 3 `git status`). Never run `git checkout`/`git restore` on files that had uncommitted changes before you started.
 5. **When in doubt, flag for manual review** instead of auto-fixing
 
 ## Output Expectations

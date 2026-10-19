@@ -17,7 +17,7 @@ I'll help you safely restructure code — renaming, extracting, inlining, or mov
 **Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Status**:
-!`git status --short`
+!`git status --short 2>/dev/null || echo "Not a git repository"`
 
 ---
 
@@ -40,9 +40,11 @@ $ARGUMENTS
 The refactor agent will:
 - Detect your toolchain (package manager, available scripts)
 - Capture a baseline (typecheck, lint, tests)
-- Analyze code and present a plan before making changes
+- Analyze the code and apply the change — your request is the approval. For large changes (public API/exports, or more than ~20 files) it stops and reports a plan instead
 - Apply changes one at a time with validation after each
-- Revert immediately if any validation fails
+- Revert only its own edits if any validation fails (your uncommitted work is never touched)
 - Guarantee zero behavior change
 
-Use the Task tool to launch the refactor agent (subagent_type="refactor") with the refactoring request and any additional context from arguments.
+If the agent stops with a plan, ask the user whether to proceed; if they approve, relaunch the agent with the original request plus "proceed with the plan" and the plan from its report.
+
+Use the `Agent` tool to launch the refactor agent (subagent_type="refactor") with the refactoring request and any additional context from arguments.
