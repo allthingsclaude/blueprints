@@ -35,7 +35,7 @@ Dispatched runs are worktrees under `.claude/worktrees/` on a `feat/*` branch; c
 - what the run left for the user, decided on its own, or needs decided: `grep -n -E '^- (Left for the user|Provisional|Needs your decision)' "$WT/{plan file}"`
 
 Classify each run:
-- **Finished**: `✅ Complete`, nothing uncommitted (other than `{{STATE_FILE}}`), at least one commit. Tasks marked **(USER)** may remain; they're listed, not blocking.
+- **Finished**: `✅ Complete`, nothing uncommitted (other than `{{STATE_FILE}}`), at least one commit, and no `- Needs your decision` line in its plan. Tasks marked **(USER)** may remain; they're listed, not blocking.
 - **Not finished**: `🚧 In Progress` (probably still running), `⏸️ Paused` (stopped on a blocker, a decision only the user can make, or an open critical finding; its plan notes say why), or uncommitted changes
 - **Empty**: no commits
 
@@ -67,7 +67,7 @@ Merge dependencies first (`**Depends on**` in the plan headers), then the smalle
 After merging: remove the worktrees of the completed runs and delete their branches (`git branch -d`).
 ```
 
-Ask the user to confirm or change anything (skip with `--yes`). To change a run's decision, leave that run out: it stays in its worktree, where the user can rework it (by attaching to its session, or running `/autopilot` in that worktree) and integrate it later.
+Ask the user to confirm or change anything (skip with `--yes`). From `/autopilot`, include a "Not now" option: it ends here without merging. To change a run's decision, leave that run out: it stays in its worktree, where the user can rework it (by attaching to its session, or running `/autopilot` in that worktree) and integrate it later.
 
 ## 5. Merge One at a Time
 

@@ -7,7 +7,7 @@ Followed by `/dispatch`, and by `/autopilot` when the user takes its offer to ru
 From the caller:
 - **Plans**: the plans the user named, or none (step 3 then suggests a set). From `/autopilot`: the plan it was asked to run, if any, followed by the other ready plans it found.
 - **Caller**: `dispatch` or `autopilot`.
-- **`--yes`**: skip the confirmation in step 6 (only `/dispatch` passes it).
+- **`--yes`**: skip the confirmation in step 6 (`/dispatch --yes`, or `/autopilot --full`).
 - **`--max N`**: at most N runs at once (default 3).
 <!-- claude-only -->
 - **`--permission-mode <mode>`**: passed to each background session; otherwise they start in the user's default mode.
@@ -103,7 +103,7 @@ Then ask with `AskUserQuestion`, in one call (at most 4 questions; ask the rest 
 - **Permission mode**, unless `--permission-mode` was given. The runs start in the user's default mode: the most specific `permissions.defaultMode` in `.claude/settings.local.json`, `.claude/settings.json` and `~/.claude/settings.json` (`grep -h defaultMode` them), `default` if none. In `auto`, `dontAsk` or `bypassPermissions` they run unattended, so don't ask. Otherwise they would stop at their first file edit or command until the user approves it in `claude agents`, so ask: "Start the runs in auto mode (Recommended)" (passed as `--permission-mode auto`; if auto mode isn't available on the user's account, `claude --bg` says so and they can pick again) or "Keep {mode}, I'll approve as they go". Never choose `bypassPermissions` or `dontAsk` for the user.
 <!-- /claude-only -->
 
-With `--yes`, skip the confirmation and take your recommended option for each Decide-now question; the report lists them as provisional.
+With `--yes`, skip the confirmation and don't ask the Decide-now questions. Record each in the plan's Notes instead: an internal, reversible choice as `- Provisional: {your recommendation} ({why})`, anything else (money, a public API, product behavior) as `- Needs your decision: {question}`, which the run sets aside. Also skip the permission-mode question. If the runs would start in a mode that stops at edits, say so prominently in the report: each run will wait for approval at its first edit.
 
 If the user declines and a plan will run here instead, write their answers about that plan into its Notes now (`- Decided ({date}): {question} → {answer}`, uncommitted), so `/autopilot` doesn't ask them again, then hand back.
 
@@ -200,7 +200,7 @@ No `--full` is needed: `$autopilot` recognizes a dispatched run and never waits 
 |------|----------|--------|--------------|
 | 02_PAYMENTS | .claude/worktrees/payments | feat/payments | paid smoke test |
 
-**Decided before dispatch**: {question → answer, per plan; "(provisional)" for the ones taken with `--yes`}
+**Decided before dispatch**: {question → answer, per plan; with `--yes`, the provisional choices and the questions left for you}
 **Queued**: 03_CHECKOUT — wave 2, after 02_PAYMENTS
 
 **Next**:

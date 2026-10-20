@@ -53,7 +53,7 @@ You are the orchestrator: delegate the work to the specialist agents below and k
 ### Step 0: Parse Arguments
 
 Parse `$ARGUMENTS` for (in order):
-- **`--full`** flag: run the entire loop without stopping for approval prompts. Remove it from the remaining arguments.
+- **`--full`** flag: never stop to ask — whatever needs the user is set aside and listed at the end (see **When to Ask**). Without it, autopilot still asks only what needs the user. Remove it from the remaining arguments.
 - **`--repos a,b,c`** flag: overrides auto-detection for multi-repo mode (comma-separated child directory names). Remove it and its value; store as `REPOS_OVERRIDE`.
 - **Plan names**: a word names a plan when it matches an existing `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md` (case-insensitive, as `{NAME}`, `{NN}_{NAME}`, `PLAN_{NN}_{NAME}`, or just `{NN}`).
   - **Two or more** remaining words name plans → the user wants them built together: go to **Parallel Runs**.
@@ -62,6 +62,32 @@ Parse `$ARGUMENTS` for (in order):
 
 A plan is **complete** when its row in `## Plans` says `✅ Complete`, or when no task is left unchecked in its phase sections except tasks marked **(USER)** (steps only the user can do). Count only from the first phase heading to the next section that isn't a phase: Success Criteria and testing checklists also use `- [ ]` and nobody ticks them.
 
+### When to Ask
+
+Ask only when the answer is genuinely the user's. Decide everything else yourself and keep going.
+
+**Decide yourself**: internal choices that are easy to change later — naming, file structure, internal defaults and constants, small plan adjustments, how to handle a minor review finding. Take the option you'd recommend, record it where the project keeps decisions (if it has a decision log), add `- Provisional: {decision} ({why}; how to change it)` to the plan's `## Notes & Observations`, and list it under **Decided for you** in the final report.
+
+**Needs the user** (this list wins when a choice fits both):
+- spending money (paid runs, cloud resources), credentials, accounts or access
+- deleting data, rewriting git history, or anything else destructive or outside this repository
+- security design, a public API, or product behavior the plan doesn't settle — including significant plan changes an agent proposes
+- the user's own uncommitted work
+- checks still failing after the fix rounds, or a technical blocker you can't get past
+- an unresolved critical review finding
+
+What happens to those depends on the mode:
+- **Default**: ask with `AskUserQuestion` (at most 4 questions per call; put everything that's pending into one), but don't stop for it. First launch whatever doesn't depend on the answer, then ask. If nothing later depends on it (a paid run at the end of the plan, say), finish Steps 5–6 first and ask at the end. For a step only the user can do, they can do it themselves, approve one you can run (such as a paid run), or leave it for later; anything they leave for later is set aside as with `--full`.
+- **`--full`**, and every dispatched run: never ask.
+  - A step only the user can do is set aside: leave its checkbox unchecked, mark the task **(USER)** at the start of its text, add `- Left for the user: {step} ({why})` to the plan's Notes (unless it's already there), tell the agents to skip it, and carry on.
+  - A decision only the user can make, or an open critical finding: leave the tasks that depend on it unchecked, add `- Needs your decision: {question} (blocks: {tasks})` to the Notes, and carry on with the rest. Skip a phase that depends on it; Step 5 still reviews what was built.
+  - Checks still failing after the fix rounds, or a technical blocker: don't build on top of it. Stop and finish Step 6 as `⏸️ Paused`, with the failure in the report.
+  - The run ends `⏸️ Paused` while a `Needs your decision` note or a failing check is open. Steps marked **(USER)** don't keep it from completing. The final report lists everything that was set aside.
+
+**Record answers, then act on them**: write each answer from the user into the plan's Notes as `- Decided ({date}): {question} → {answer}`, replacing the matching `- Needs your decision` line if there is one. Then act on it: relaunch the implement agent for the tasks that were waiting (telling it what was decided), or for a preflight item, launch one fixer and commit its fix. Do the same for your own provisional decisions that leave work undone.
+
+**On resume** (Steps 1a and 1b), read the plan's open notes first: `grep -n -E '^- (Needs your decision|Left for the user)' {plan file}`. In default mode, ask the open decisions before launching agents. With `--full`, tell the agents to skip the tasks they block. Implement agents don't read the Notes section, so pass them the `Decided` and `Provisional` lines that matter for their phase in the prompt.
+
 ### Worktree Mode (dispatched runs)
 
 This is a run that `/dispatch` (or this command's Parallel Runs offer) started when both hold: the two **Checkout** paths above differ (this is a linked git worktree), and the STATE.md header has a `**Target**` line and a `**Branch**` matching the current branch. Other plans may be running in sibling worktrees at the same time, and nobody is watching this session. In any other worktree (for example one you opened yourself), ignore this section and follow the normal steps.
@@ -69,19 +95,17 @@ This is a run that `/dispatch` (or this command's Parallel Runs offer) started w
 Differences from the normal steps:
 
 - **Plan required**: run the named plan, or the active plan in this worktree's STATE.md. If there's neither, stop: "This worktree needs an existing plan. Create plans in the main checkout, then run `/autopilot` there." Don't brainstorm, write plans, or bootstrap here, and skip **Parallel Runs** and **Dispatched Runs**.
-- **No approval prompts**: work as with `--full`, whether or not it was passed; where Steps 4b and 5d say to stop or ask, follow the two rules below instead. Read the plan's `## Notes & Observations` first: the lines starting "Decided before dispatch" are the user's answers, and "Left for the user" lines are steps to set aside.
-- **Set aside what only the user can do** instead of stopping: a paid run or anything else that spends money, credentials or access, a sign-off, changes outside this repository. Leave its checkbox unchecked and mark the task **(USER)** at the start of its text, add `- Left for the user: {step} ({why})` to the plan's Notes (unless it's already there), tell the implement agents to skip it, and carry on with everything that doesn't depend on it. Stop early (Step 6, `⏸️ Paused`) only when nothing else can move.
-- **Decisions**: when a choice comes up that the plan and its notes don't settle (from an agent, or a preflight `needsDecision` item), and it's easy to change later (behavior, thresholds, naming, structure), take the option you'd recommend and carry on: record it where the project keeps decisions, if it has a decision log, and add `- Provisional: {decision} ({why}; how to change it)` to the plan's Notes, so integration shows it to the user. A choice that's costly or hard to undo (spending money, deleting data, security design, public API): leave the tasks that depend on it unchecked, add `- Needs your decision: {question} (blocks: {tasks})` to the Notes, and carry on with the rest; the run then ends `⏸️ Paused`. An unresolved critical preflight finding also ends it `⏸️ Paused`.
+- **Never asks**: follow **When to Ask** as with `--full`, whether or not it was passed; integration shows the user what you decided and set aside. Read the plan's `## Notes & Observations` first: the lines starting "Decided before dispatch" are the user's answers, and "Left for the user" lines are steps already set aside. Stop early (Step 6, `⏸️ Paused`) only when nothing else can move.
 - **Single repo**: skip multi-repo detection.
 - **Branch**: the dispatch already checked it out. In Step 3, skip 3a and branch creation: use the current branch and the `**Base**` from STATE.md.
 - **Dependencies**: a fresh worktree has none installed. Before Step 4 or Step 5, whichever comes first, install them once with the lockfile-respecting command for the detected toolchain (e.g. `pnpm install --frozen-lockfile`, `npm ci`, `yarn install --immutable`, `bun install --frozen-lockfile`, `uv sync --locked`, `poetry install`), unless they're already present.
 - **STATE.md is local**: the dispatch marks it `skip-worktree`, so git ignores your edits. Keep updating it as usual (it's how this run resumes), but never stage or commit it, and tell the commit agent not to. If `git add` warns that it's outside the sparse-checkout definition, that's this setting working. Whenever you update the header, change only the fields you're updating and keep `**Branch**`, `**Base**` and `**Target**`.
-- **Step 6**: don't launch the update agent — integration syncs CLAUDE.md and the main checkout's STATE.md once, after merging. First commit whatever is still uncommitted apart from STATE.md (plan notes, decision-log entries) with the commit agent ("docs: record {NAME} notes for integration"), so integration finds a clean worktree. Keep `**Active**` and `**File**` on this plan (don't reset them to None) and set `**Status**` to `✅ Complete` when the plan is complete (only **(USER)** tasks left) and no critical finding is open, otherwise `⏸️ Paused`, so integration knows which plan this run built and whether it finished. In the report, list the steps left for the user and the provisional decisions, and replace the PR steps with: "Run `/autopilot` (or `/integrate`) from the main checkout ({main checkout path}) to merge this run once the others finish."
+- **Step 6**: don't launch the update agent — integration syncs CLAUDE.md and the main checkout's STATE.md once, after merging. First commit whatever is still uncommitted apart from STATE.md (plan notes, decision-log entries) with the commit agent ("docs: record {NAME} notes for integration"), so integration finds a clean worktree. Keep `**Active**` and `**File**` on this plan (don't reset them to None) and set `**Status**` to `✅ Complete` when the plan is complete (only **(USER)** tasks left) and no `Needs your decision` note or failing check is open, otherwise `⏸️ Paused`, so integration knows which plan this run built and whether it finished. In the report, list the steps left for the user and the provisional decisions, and replace the PR steps with: "Run `/autopilot` (or `/integrate`) from the main checkout ({main checkout path}) to merge this run once the others finish."
 
 ### Dispatched Runs (main checkout)
 
 Skip this in worktree mode. If the STATE.md header has a `**Dispatched**` line, check on those runs first: `grep -H -E '^\*\*(Active|Status)\*\*' .claude/worktrees/*/{{STATE_FILE}}`. A run is **finished** when its status is `✅ Complete`; a `⏸️ Paused` run stopped on something it needs from the user (its plan's Notes say what).
-- **No plan named, and some runs finished** → say which runs finished, which are still going, and which are paused and why, and ask whether to merge the finished ones now. With `--full`, merge them without asking. Yes → read `{{BLUEPRINTS_DIR}}/procedures/integrate.md` and follow it with caller `autopilot` (and `--yes` with `--full`); this session ends with its report. No → continue below.
+- **No plan named, and some runs finished** → say which runs finished, which are still going, and which are paused and why, then merge the finished ones: read `{{BLUEPRINTS_DIR}}/procedures/integrate.md` and follow it with caller `autopilot` (and `--yes` with `--full`). Its confirmation, which shows the decisions the runs made for the user, is the one question; if the user answers "Not now", end here ("Run `/autopilot` again when you want them merged"). Otherwise this session ends with its report.
 - **Otherwise** → mention the runs in one line ("02 and 04 are still running in worktrees; 03 is paused: needs your decision on …") and continue below. A paused run can be merged as it is with `/integrate {plan}`, or finished in its worktree.
 
 While runs are going, never edit files under `.claude/worktrees/` from here, and tell the agents you launch the same. If a typecheck, lint or test run here picks up files from there, exclude that directory (for example ESLint `--ignore-pattern '.claude/**'`, Jest `--testPathIgnorePatterns '/.claude/worktrees/'`).
@@ -107,9 +131,10 @@ Skip this in worktree mode and in multi-repo mode.
 Look for `{{STATE_FILE}}` in `./` first, then `../` (useful when run from inside a child repo of a multi-repo setup). If found in the parent, say: "Found {{TASKS_DIR}}/ in the parent directory — treating it as the working root. Run `/autopilot` from `{parent_abspath}` next time." and change the working directory to the parent before continuing.
 
 If a plan name was given and it isn't the active plan, skip to **1b**. Otherwise, if the STATE.md header shows an active plan (`🚧 In Progress` or `⏸️ Paused`):
-- Locate the plan's phases with `grep -n -E '^#{1,4} ' {plan file}` and find the first phase with unchecked tasks (`grep -n -E '^[[:space:]]*([0-9]+\.|[-*]) \[ \]' {plan file}` shows where they are)
+- Read its open notes first (see **When to Ask**, On resume)
+- Locate the plan's phases with `grep -n -E '^#{1,4} ' {plan file}` and find the first phase with unchecked tasks, not counting tasks marked **(USER)** (`grep -n -E '^[[:space:]]*([0-9]+\.|[-*]) \[ \]' {plan file}` shows where they are)
 - **If tasks remain** → report "Resuming active plan: {NAME}, Phase {N}" and go to **Step 3**, then **Step 4**
-- **If all phases are done but the plan isn't marked complete** → go to **Step 3**, then **Step 5**
+- **If all phases are done but the plan isn't marked complete** → go to **Step 3**, then **Step 5**. In default mode, ask about any **(USER)** tasks once along the way (When to Ask).
 
 #### 1b. Run a Named Plan
 
@@ -117,7 +142,7 @@ Outside worktree mode, check the `**Dispatched**` and `**Queued**` header lines 
 - **Dispatched** → if its run is finished (`✅ Complete` in `.claude/worktrees/{name}/{{STATE_FILE}}`), offer to merge it now (the integrate procedure, as in **Dispatched Runs**, with this plan). Otherwise stop: "{NAME} is being built in its own worktree (`.claude/worktrees/{name}`). Attach to its session there, or run `/autopilot` here once it's done to merge it."
 - **Queued** → if the plans it waits for are complete, remove it from the `**Queued**` line (drop the line when it's empty) and continue. Otherwise say which plans it waits for and ask before running it here (with `--full`, stop).
 
-If a plan name was given, load that plan and activate it in `{{STATE_FILE}}`. Update these header fields, and keep the `**Dispatched**`/`**Queued**` lines (Step 3 rewrites `**Branch**`/`**Base**`):
+If a plan name was given, load that plan and read its open notes (see **When to Ask**, On resume). If it's complete except tasks marked **(USER)** (integration leaves plans like that), ask about those tasks (When to Ask); for any the user approves, activate the plan, create its branch (Step 3) and run just those tasks, then finish with Step 6. Otherwise activate it in `{{STATE_FILE}}`. Update these header fields, and keep the `**Dispatched**`/`**Queued**` lines (Step 3 rewrites `**Branch**`/`**Base**`):
 ```markdown
 **Active**: {NN}_{NAME}
 **File**: {{PLANS_DIR}}/PLAN_{NN}_{NAME}.md
@@ -136,12 +161,12 @@ and set the plan's row in `## Plans` to `🚧 In Progress` (add a row if missing
 4. Converge on a clear approach
 
 **If there are no arguments**, pick up the plans first. Look for the next plan:
-1. an unfinished plan that's already under way (its row says `🚧 In Progress` or `⏸️ Paused` and it isn't on the `**Dispatched**` line), else
+1. an unfinished plan that's already under way (its row says `🚧 In Progress` or `⏸️ Paused` and it isn't on the `**Dispatched**` line; with `--full`, skip one whose remaining tasks all wait on a `Needs your decision` note, since it would only pause again), else
 2. the next ready plan (see **Parallel Runs**, step 1; find them now if that section was skipped): the one other ready plans depend on, otherwise the lowest-numbered.
 
-If there is one, and the user hasn't already answered about it in **Parallel Runs**, ask: "Next up: {plan} ({Phase N, x/y tasks done} or {ready; 03 waits for it}). Continue with it, or build something new?" With `--full`, continue without asking. Continue → **1b** with that plan.
+If there is one, and the user hasn't already chosen something else in **Parallel Runs**, say "Next up: {plan} ({Phase N, x/y tasks done} or {ready; 03 waits for it}). To build something else, run `/autopilot` with a description." and continue with it in **1b**.
 
-Otherwise, or if the user wants something new, ask: "What would you like to build? Describe the feature or change you have in mind." Then brainstorm as above.
+Otherwise, or if the user chose something else, ask: "What would you like to build? Describe the feature or change you have in mind." Then brainstorm as above.
 
 **Brainstorm rules:**
 - DO NOT create, modify, or implement any code
@@ -154,7 +179,7 @@ Otherwise, or if the user wants something new, ask: "What would you like to buil
 
 **New project** (most of these hold: no `src/`/`app/`/`lib/`, empty or missing project manifest, fewer than 5 source files, or the user said "new project"):
 1. Unless `{{PLANS_DIR}}/PLAN_00_INITIAL.md` exists, launch the blueprint agent with the `Agent` tool (`subagent_type: "blueprint"`) with plan name `INITIAL {NAME}` and the full brainstorm brief (stack, package manager, dependencies, structure, services, constraints). Then launch the bootstrap agent (`subagent_type: "bootstrap"`) with the same brief — it reuses `PLAN_00_INITIAL.md` and writes `bootstrap.sh`.
-2. Ask: "Bootstrap script is ready. Should I run it to set up the project?" (with `--full`, run it). If yes → `bash bootstrap.sh --yes` (the shell here has no interactive input, so the script's own confirmation prompt must be skipped).
+2. Run the bootstrap script, unless the bootstrap agent's report lists steps that need the user (global installs, credentials, paid services); those follow **When to Ask**. Run it as `bash bootstrap.sh --yes` (the shell here has no interactive input, so the script's own confirmation prompt must be skipped).
 3. Launch the update agent (`subagent_type: "update"`) to create CLAUDE.md.
 4. **COMMIT CHECKPOINT**: launch the commit agent (`subagent_type: "commit"`) with context "chore: bootstrap {NAME} project scaffolding".
 
@@ -183,7 +208,7 @@ Always do all three discoveries before deciding:
 | `CWD_IS_REPO` | single | `[.]` |
 | Otherwise | fail | "No git repo here, and the plan references no child directories with `.git/`. cd into a repo, initialize one, or fix the plan's paths." |
 
-**Ambiguity warning**: if `CHILD_REPOS` is non-empty, `AFFECTED_CHILDREN` is empty, and cwd is a repo, warn: "Detected child repos {list}, but the plan doesn't reference any of them by directory name. Proceeding in single-repo mode. If you meant multi-repo, prefix the plan's file paths with the repo name (e.g. `{child}/src/...`) or re-run with `--repos {child}`." Ask the user to confirm (with `--full`, continue and keep the warning in the final report).
+**Ambiguity warning**: if `CHILD_REPOS` is non-empty, `AFFECTED_CHILDREN` is empty, and cwd is a repo, warn: "Detected child repos {list}, but the plan doesn't reference any of them by directory name. Proceeding in single-repo mode. If you meant multi-repo, prefix the plan's file paths with the repo name (e.g. `{child}/src/...`) or re-run with `--repos {child}`." Continue in single-repo mode and keep the warning in the final report.
 
 Report: "Branching in this repo." or "Plan touches {N} child repo(s): {list}. Will branch in each. Parent repo (if any) left untouched."
 
@@ -237,8 +262,8 @@ Find the phase's line range from the heading list and count its unchecked tasks 
 Launch it with the `Agent` tool with the plan name and: "Execute Phase {N} only, then stop." (For a pass: "Execute only these tasks of Phase {N}: …, then stop." Add "Skip the phase's validation items" to every pass but the last.) Include any reference files from `{{TASKS_DIR}}/references/` for showcase. **Multi-repo**: include the affected repos and their paths (the plan's file paths should already be prefixed with the repo name).
 
 When the agent reports:
-- **Blockers** (including tasks marked **(USER)**, which agents leave to you) → present them to the user and ask how to proceed: they can do the step themselves, or approve one you can run (such as a paid run): then launch the implement agent for just that task, saying the user approved it, and drop its **(USER)** mark. Don't continue until they're resolved or the user says to skip. (With `--full`, still stop on blockers that need a product decision, credentials, or a destructive operation. In worktree mode, see Worktree Mode.)
-- **Plan changes it proposed** → apply small ones to the plan; ask the user about significant ones.
+- **Blockers** (including tasks marked **(USER)**, which agents leave to you) and **choices** the plan doesn't settle → follow **When to Ask**. If the user approves a step you can run (such as a paid run), launch the implement agent for just that task, saying the user approved it, and drop its **(USER)** mark. Move on to the next phase only when it doesn't depend on what's still open.
+- **Plan changes it proposed** → apply small ones to the plan (decide yourself); significant ones need the user.
 
 #### 4c. Commit the Phase
 
@@ -289,7 +314,7 @@ The workflow runs in the background: `audit`, `secure`, `a11y` (UI changes only)
 #### 5d. Commit and Decide
 
 - **COMMIT CHECKPOINT**: if fixes were made (`changesMade`, or `git status --short` is non-empty), launch the commit agent with context "fix: address preflight findings for {NAME}" (per repo in multi-repo mode).
-- **Unresolved critical findings or `needsDecision` items** → present them to the user and ask how to proceed. With `--full`, don't guess: finish Step 6 with status `⏸️ Paused` and list them in the report. In worktree mode, see Worktree Mode.
+- **`needsDecision` items and unresolved critical findings** → follow **When to Ask**. They're usually the user's (auth, encryption, public API, product behavior); decide yourself only internal, reversible ones. Act on each answer or decision with one fixer and a commit. With `--full`, record the rest as `Needs your decision` notes and finish Step 6 as `⏸️ Paused`.
 - Report briefly:
 ```markdown
 **Preflight**: {N} confirmed · {M} dropped as false positives · {K} fixed · {U} unresolved
@@ -303,8 +328,8 @@ The workflow runs in the background: `audit`, `secure`, `a11y` (UI changes only)
 **UPDATE CLAUDE.md and STATE.md** (skip in worktree mode): launch the update agent (`subagent_type: "update"`) to sync CLAUDE.md with new patterns, dependencies, or structure from this session and to reconcile STATE.md (it also migrates a legacy-format STATE.md). If it changed CLAUDE.md, commit it (commit agent, "docs: update CLAUDE.md for {NAME}").
 
 **STATE UPDATE**:
-- All phases and validation passed → (worktree mode: see Worktree Mode) `**Active**: None`, `**File**`/`**Phase**`: `—`, `**Status**: ✅ Complete`, and the plan's row `✅ Complete`
-- Partially complete (blockers, user stopped, unresolved findings) → keep `**Active**` on the plan, `**Status**: ⏸️ Paused`, `**Phase**` = last completed phase
+- All phases and validation passed (tasks marked **(USER)** may remain; they're listed under **Left for you**) → (worktree mode: see Worktree Mode) `**Active**: None`, `**File**`/`**Phase**`: `—`, `**Status**: ✅ Complete`, and the plan's row `✅ Complete`
+- Partially complete (open decisions, unresolved critical findings, failing checks, or the user stopped) → keep `**Active**` on the plan, `**Status**: ⏸️ Paused`, `**Phase**` = last completed phase
 - Update `**Updated**`
 
 Final summary:
@@ -324,6 +349,9 @@ Final summary:
 **Preflight**: {confirmed} confirmed · {fixed} fixed · {dropped} false positives dropped · {unresolved} unresolved
 {list unresolved / needs-decision items, if any}
 
+**Decided for you** (easy to change; see the plan's notes): {one line each, or "—"}
+**Left for you**: {steps marked (USER), and decisions still open, or "—"}
+
 **Next Steps**:
 - Review: `git log {BASE}..feat/{name} --oneline`
 - Open a PR: `gh pr create`
@@ -341,13 +369,14 @@ Autopilot commits **early and often** with the commit agent, which picks the con
 **When to commit**: after bootstrap scaffolding, after the plan is written (git repos only), after each phase, after preflight fixes, after CLAUDE.md updates.
 **When NOT to commit**: no changes (empty diff), or validation is failing and fixes haven't been applied yet.
 
-Commits are non-destructive, so they happen automatically with or without `--full`. `--full` only removes the other approval gates.
+Commits are non-destructive, so they happen automatically with or without `--full`. `--full` only changes what happens to things that need the user (see **When to Ask**).
 
 ## Critical Guidelines
 
 ### Be Autonomous But Not Reckless
 - Run the full loop without unnecessary prompts, and commit after every milestone
-- Always stop for blockers and for validation failures that can't be fixed automatically
+- Ask only what needs the user (see **When to Ask**), and keep working while you wait
+- Never build on failing checks: after the fix rounds, they need the user
 - Never force-push, delete branches, or make destructive changes without asking
 
 ### Multi-Repo Mode
