@@ -17,7 +17,7 @@ $ARGUMENTS
 ## Available Plans
 
 **Active Plan**:
-!`sed -n '1,/^---$/p' {{STATE_FILE}} 2>/dev/null || echo "No active plan"`
+!`head -n 40 {{STATE_FILE}} 2>/dev/null || echo "No active plan"`
 
 **Plans in {{PLANS_DIR}}/**:
 !`ls -1 {{PLANS_DIR}}/PLAN_*.md 2>/dev/null | tail -30 | grep . || echo "No plans found"`

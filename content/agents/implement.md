@@ -142,6 +142,8 @@ At the end of your scope:
 
 ### 5. Handle Blockers
 
+A task marked **(USER)** is a step only the user can do (a paid run, credentials or access, a sign-off): don't attempt it, leave it unchecked, and list it in your report as left for the user.
+
 If you hit a blocker:
 1. Leave the task unchecked
 2. Finish any other in-scope tasks that don't depend on it

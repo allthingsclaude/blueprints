@@ -14,7 +14,7 @@ Loading the handoff document from your previous session.
 
 ## Active Plan (STATE.md header)
 
-!`sed -n '1,/^---$/p' {{STATE_FILE}} 2>/dev/null || echo "No active plan"`
+!`head -n 40 {{STATE_FILE}} 2>/dev/null || echo "No active plan"`
 
 ---
 

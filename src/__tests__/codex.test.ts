@@ -182,12 +182,35 @@ describe('installCodex', () => {
   it('gives dispatch the Codex launch commands instead of Claude Code background sessions', async () => {
     await installCodex('project', root, 4);
     const paths = getCodexPaths('project', root);
-    const dispatch = fs.readFileSync(path.join(paths.skills, 'dispatch', 'SKILL.md'), 'utf-8');
+    const procedure = path.join(paths.support, 'procedures', 'dispatch.md');
+    const dispatch = fs.readFileSync(procedure, 'utf-8');
 
-    expect(dispatch).toContain("codex -C \"{WT}\" --add-dir \"{COMMON}\" '$autopilot {NN}_{NAME} --full'");
+    expect(dispatch).toContain("codex -C \"{WT}\" --add-dir \"{COMMON}\" '$autopilot {NN}_{NAME}'");
     expect(dispatch).toContain('`codex agents`');
     expect(dispatch).toContain('`$integrate`');
     expect(dispatch).not.toContain('--permission-mode');
+    expect(dispatch).not.toMatch(/claude --bg|claude agents|<!-- \/?(claude|codex)-only -->|AskUserQuestion|subagent_type/);
+    const integrate = fs.readFileSync(path.join(paths.support, 'procedures', 'integrate.md'), 'utf-8');
+    expect(integrate).not.toMatch(/claude attach|claude -w|claude agents|<!-- \/?(claude|codex)-only -->|AskUserQuestion|subagent_type/);
+    expect(fs.readFileSync(path.join(paths.skills, 'autopilot', 'SKILL.md'), 'utf-8')).not.toMatch(/claude -w|claude --bg/);
+
+    const skill = fs.readFileSync(path.join(paths.skills, 'dispatch', 'SKILL.md'), 'utf-8');
+    expect(skill).toContain(procedure);
+    expect(fs.readFileSync(path.join(paths.skills, 'autopilot', 'SKILL.md'), 'utf-8')).toContain(procedure);
+  });
+
+  it('removes procedures a previous install shipped that are gone now', async () => {
+    const paths = getCodexPaths('project', root);
+    await installCodex('project', root, 4);
+    const stale = path.join(paths.support, 'procedures', 'old.md');
+    fs.writeFileSync(stale, 'old');
+    const manifest = JSON.parse(fs.readFileSync(paths.manifest, 'utf-8'));
+    manifest.procedures.push('old.md');
+    fs.writeFileSync(paths.manifest, JSON.stringify(manifest));
+
+    const result = await installCodex('project', root, 4);
+    expect(fs.existsSync(stale)).toBe(false);
+    expect(result.removed).toBeGreaterThan(0);
   });
 
   it('never overwrites a skill or agent the user wrote', async () => {

@@ -17,7 +17,7 @@ Generate a comprehensive HANDOFF.md file at `{{SESSIONS_DIR}}/HANDOFF.md` that e
 You only see your prompt, not the conversation — the session's decisions, open threads, and next steps come from the summary the caller passes you. Use it as the primary source for "why"; git tells you "what".
 
 1. **Analyze Git State and the Active Plan**
-   - Read the STATE.md header: `sed -n '1,/^---$/p' {{STATE_FILE}} 2>/dev/null` — note the active plan and phase, if any
+   - Read the STATE.md header: `head -n 40 {{STATE_FILE}} 2>/dev/null` — note the active plan and phase, if any
    - Review recent commits: `git log -3 --stat`
    - Size the uncommitted work: `git diff HEAD --stat` (and `git diff --cached --stat` for what's staged)
    - Understand the progression of work

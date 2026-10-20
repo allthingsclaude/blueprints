@@ -1,6 +1,6 @@
 ---
 description: Full autonomous development loop - from idea to committed code
-argument-hint: --full feature description or plan name
+argument-hint: [--full] plan name(s) or feature description
 disable-model-invocation: true
 author: "@markoradak"
 ---
@@ -17,8 +17,9 @@ Full autonomous development loop. I'll take it from idea to committed code on a 
 
 **Branch**: !`git branch --show-current 2>/dev/null || echo "(not a repo — will scan children)"`
 
-**Git Dirs** (git dir, then common dir — they differ in a linked worktree):
-!`git rev-parse --path-format=absolute --git-dir --git-common-dir 2>/dev/null || echo "(not a repo)"`
+**Checkout** (this checkout's top level, then the main checkout — they differ in a linked worktree):
+!`git rev-parse --show-toplevel 2>/dev/null || echo "(not a repo)"`
+!`git worktree list --porcelain 2>/dev/null | head -1 || true`
 
 **Git Status**:
 !`git status --short 2>/dev/null | head -40 | grep . || echo "(clean, or not a repo)"`
@@ -26,8 +27,8 @@ Full autonomous development loop. I'll take it from idea to committed code on a 
 **Child Git Repos** (for multi-repo mode):
 !`find . -mindepth 2 -maxdepth 2 -name .git -type d 2>/dev/null || true`
 
-**Active Plan** (STATE.md header):
-!`sed -n '1,/^---$/p' {{STATE_FILE}} 2>/dev/null || echo "No active plan"`
+**STATE.md** (header and plans):
+!`head -n 40 {{STATE_FILE}} 2>/dev/null || echo "No active plan"`
 
 **Available Plans**:
 !`ls -1 {{PLANS_DIR}}/PLAN_*.md 2>/dev/null | tail -30 | grep . || echo "No plans found"`
@@ -54,21 +55,48 @@ You are the orchestrator: delegate the work to the specialist agents below and k
 Parse `$ARGUMENTS` for (in order):
 - **`--full`** flag: run the entire loop without stopping for approval prompts. Remove it from the remaining arguments.
 - **`--repos a,b,c`** flag: overrides auto-detection for multi-repo mode (comma-separated child directory names). Remove it and its value; store as `REPOS_OVERRIDE`.
-- **Plan name**: if the first remaining word matches an existing plan `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md` (case-insensitive, as `{NAME}`, `{NN}_{NAME}`, `PLAN_{NN}_{NAME}`, or just `{NN}`), execute that plan. A named plan always wins over resuming a different active plan.
+- **Plan names**: a word names a plan when it matches an existing `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md` (case-insensitive, as `{NAME}`, `{NN}_{NAME}`, `PLAN_{NN}_{NAME}`, or just `{NN}`).
+  - **Two or more** remaining words name plans → the user wants them built together: go to **Parallel Runs**.
+  - **The first word** names a plan → execute that plan. A named plan always wins over resuming a different active plan.
 - **Feature description**: otherwise, treat the remaining arguments as a feature description to brainstorm.
+
+A plan is **complete** when its row in `## Plans` says `✅ Complete`, or when no task is left unchecked in its phase sections except tasks marked **(USER)** (steps only the user can do). Count only from the first phase heading to the next section that isn't a phase: Success Criteria and testing checklists also use `- [ ]` and nobody ticks them.
 
 ### Worktree Mode (dispatched runs)
 
-This is a run that `/dispatch` started when both hold: the two **Git Dirs** paths above differ (this is a linked git worktree), and the STATE.md header has a `**Target**` line and a `**Branch**` matching the current branch. Other plans may be running in sibling worktrees at the same time. In any other worktree (for example one opened with `claude -w`), ignore this section and follow the normal steps.
+This is a run that `/dispatch` (or this command's Parallel Runs offer) started when both hold: the two **Checkout** paths above differ (this is a linked git worktree), and the STATE.md header has a `**Target**` line and a `**Branch**` matching the current branch. Other plans may be running in sibling worktrees at the same time, and nobody is watching this session. In any other worktree (for example one you opened yourself), ignore this section and follow the normal steps.
 
 Differences from the normal steps:
 
-- **Plan required**: run the named plan, or the active plan in this worktree's STATE.md. If there's neither, stop: "This worktree needs an existing plan. Create plans in the main checkout, then run `/dispatch`." Don't brainstorm, write plans, or bootstrap here.
+- **Plan required**: run the named plan, or the active plan in this worktree's STATE.md. If there's neither, stop: "This worktree needs an existing plan. Create plans in the main checkout, then run `/autopilot` there." Don't brainstorm, write plans, or bootstrap here, and skip **Parallel Runs** and **Dispatched Runs**.
+- **No approval prompts**: work as with `--full`, whether or not it was passed; where Steps 4b and 5d say to stop or ask, follow the two rules below instead. Read the plan's `## Notes & Observations` first: the lines starting "Decided before dispatch" are the user's answers, and "Left for the user" lines are steps to set aside.
+- **Set aside what only the user can do** instead of stopping: a paid run or anything else that spends money, credentials or access, a sign-off, changes outside this repository. Leave its checkbox unchecked and mark the task **(USER)** at the start of its text, add `- Left for the user: {step} ({why})` to the plan's Notes (unless it's already there), tell the implement agents to skip it, and carry on with everything that doesn't depend on it. Stop early (Step 6, `⏸️ Paused`) only when nothing else can move.
+- **Decisions**: when a choice comes up that the plan and its notes don't settle (from an agent, or a preflight `needsDecision` item), and it's easy to change later (behavior, thresholds, naming, structure), take the option you'd recommend and carry on: record it where the project keeps decisions, if it has a decision log, and add `- Provisional: {decision} ({why}; how to change it)` to the plan's Notes, so integration shows it to the user. A choice that's costly or hard to undo (spending money, deleting data, security design, public API): leave the tasks that depend on it unchecked, add `- Needs your decision: {question} (blocks: {tasks})` to the Notes, and carry on with the rest; the run then ends `⏸️ Paused`. An unresolved critical preflight finding also ends it `⏸️ Paused`.
 - **Single repo**: skip multi-repo detection.
-- **Branch**: `/dispatch` already checked it out. In Step 3, skip 3a and branch creation: use the current branch and the `**Base**` from STATE.md.
+- **Branch**: the dispatch already checked it out. In Step 3, skip 3a and branch creation: use the current branch and the `**Base**` from STATE.md.
 - **Dependencies**: a fresh worktree has none installed. Before Step 4 or Step 5, whichever comes first, install them once with the lockfile-respecting command for the detected toolchain (e.g. `pnpm install --frozen-lockfile`, `npm ci`, `yarn install --immutable`, `bun install --frozen-lockfile`, `uv sync --locked`, `poetry install`), unless they're already present.
-- **STATE.md is local**: `/dispatch` marks it `skip-worktree`, so git ignores your edits. Keep updating it as usual (it's how this run resumes), but never stage or commit it, and tell the commit agent not to. If `git add` warns that it's outside the sparse-checkout definition, that's this setting working. Whenever you update the header, change only the fields you're updating and keep `**Branch**`, `**Base**` and `**Target**`.
-- **Step 6**: don't launch the update agent — `/integrate` syncs CLAUDE.md and the main checkout's STATE.md once, after merging. Keep `**Active**` and `**File**` on this plan (don't reset them to None) and set `**Status**` to `✅ Complete` or `⏸️ Paused`, so `/integrate` knows which plan this run built and whether it finished. Replace the PR steps in the report with: "Run `/integrate` from the main checkout ({main checkout path}) once the other dispatched plans finish."
+- **STATE.md is local**: the dispatch marks it `skip-worktree`, so git ignores your edits. Keep updating it as usual (it's how this run resumes), but never stage or commit it, and tell the commit agent not to. If `git add` warns that it's outside the sparse-checkout definition, that's this setting working. Whenever you update the header, change only the fields you're updating and keep `**Branch**`, `**Base**` and `**Target**`.
+- **Step 6**: don't launch the update agent — integration syncs CLAUDE.md and the main checkout's STATE.md once, after merging. First commit whatever is still uncommitted apart from STATE.md (plan notes, decision-log entries) with the commit agent ("docs: record {NAME} notes for integration"), so integration finds a clean worktree. Keep `**Active**` and `**File**` on this plan (don't reset them to None) and set `**Status**` to `✅ Complete` when the plan is complete (only **(USER)** tasks left) and no critical finding is open, otherwise `⏸️ Paused`, so integration knows which plan this run built and whether it finished. In the report, list the steps left for the user and the provisional decisions, and replace the PR steps with: "Run `/autopilot` (or `/integrate`) from the main checkout ({main checkout path}) to merge this run once the others finish."
+
+### Dispatched Runs (main checkout)
+
+Skip this in worktree mode. If the STATE.md header has a `**Dispatched**` line, check on those runs first: `grep -H -E '^\*\*(Active|Status)\*\*' .claude/worktrees/*/{{STATE_FILE}}`. A run is **finished** when its status is `✅ Complete`; a `⏸️ Paused` run stopped on something it needs from the user (its plan's Notes say what).
+- **No plan named, and some runs finished** → say which runs finished, which are still going, and which are paused and why, and ask whether to merge the finished ones now. With `--full`, merge them without asking. Yes → read `{{BLUEPRINTS_DIR}}/procedures/integrate.md` and follow it with caller `autopilot` (and `--yes` with `--full`); this session ends with its report. No → continue below.
+- **Otherwise** → mention the runs in one line ("02 and 04 are still running in worktrees; 03 is paused: needs your decision on …") and continue below. A paused run can be merged as it is with `/integrate {plan}`, or finished in its worktree.
+
+While runs are going, never edit files under `.claude/worktrees/` from here, and tell the agents you launch the same. If a typecheck, lint or test run here picks up files from there, exclude that directory (for example ESLint `--ignore-pattern '.claude/**'`, Jest `--testPathIgnorePatterns '/.claude/worktrees/'`).
+
+### Parallel Runs
+
+Skip this in worktree mode and in multi-repo mode.
+
+**Several plans named** → read `{{BLUEPRINTS_DIR}}/procedures/dispatch.md` and follow it with caller `dispatch` and those plans (add `--yes` with `--full`). This session ends with its report; don't start a plan here.
+
+**One plan named, or none** → before starting a plan here, check whether other plans could be built at the same time, each in its own worktree. Skip this without a word with `--full`, when the user described a new feature instead of naming a plan, and when the plan to run is already **under way** (a task in its phase sections is checked, or its `feat/` branch exists) or is on the `**Dispatched**` or `**Queued**` line (Step 1b handles those). The plan to run is the named one, or else the active plan in STATE.md, if any.
+
+1. **Find the ready plans**: from the `## Plans` rows (`grep -E '^\|' {{STATE_FILE}}` lists them all) and each plan's `**Depends on**` line (`grep -m1 -i 'depends on' {{PLANS_DIR}}/PLAN_*.md` reads them all at once), the plans that are not complete, not under way, not on the `**Dispatched**` line, and whose dependencies are all complete. A plan on the `**Queued**` line counts once the plans it waits for are complete.
+2. **Nothing else ready** (apart from the plan to run) → continue with Step 1 and don't mention it.
+3. **Otherwise** → read `{{BLUEPRINTS_DIR}}/procedures/dispatch.md` and follow it with caller `autopilot` and these plans, the plan to run first. Its overlap check decides which can really run together, and its confirmation is the only question you ask. It hands back when the user answers "just {plan} here" or "something else", when the plan to run can't start in the first wave, when fewer than two plans can start together, or when a precondition fails: then continue with Step 1. If it launches the runs, this session's work is done: end with its report, and don't start any plan here.
 
 ---
 
@@ -86,8 +114,8 @@ If a plan name was given and it isn't the active plan, skip to **1b**. Otherwise
 #### 1b. Run a Named Plan
 
 Outside worktree mode, check the `**Dispatched**` and `**Queued**` header lines first:
-- **Dispatched** → stop: "{NAME} is running in its own worktree (`.claude/worktrees/{name}`). Attach to its session there, or run `/integrate` once it's done."
-- **Queued** → `/dispatch` planned it to run after other plans are merged. Say so and ask before running it here (with `--full`, stop).
+- **Dispatched** → if its run is finished (`✅ Complete` in `.claude/worktrees/{name}/{{STATE_FILE}}`), offer to merge it now (the integrate procedure, as in **Dispatched Runs**, with this plan). Otherwise stop: "{NAME} is being built in its own worktree (`.claude/worktrees/{name}`). Attach to its session there, or run `/autopilot` here once it's done to merge it."
+- **Queued** → if the plans it waits for are complete, remove it from the `**Queued**` line (drop the line when it's empty) and continue. Otherwise say which plans it waits for and ask before running it here (with `--full`, stop).
 
 If a plan name was given, load that plan and activate it in `{{STATE_FILE}}`. Update these header fields, and keep the `**Dispatched**`/`**Queued**` lines (Step 3 rewrites `**Branch**`/`**Base**`):
 ```markdown
@@ -155,7 +183,7 @@ Report: "Branching in this repo." or "Plan touches {N} child repo(s): {list}. Wi
 
 #### 3b. Pre-flight: Dirty Working State
 
-For each affected repo, run `git status --short` (from `$PARENT_DIR/{repo}` in multi-repo mode). If any repo is dirty, list them and ask:
+For each affected repo, run `git status --short` (from `$PARENT_DIR/{repo}` in multi-repo mode), ignoring what this session wrote itself (`{{STATE_FILE}}`, and the plan's notes from the parallel-runs question). If any repo is dirty, list them and ask:
 - **stash** — `git stash push -u -m 'autopilot pre-branch'` in each dirty repo (restore later with `git stash pop`)
 - **abort** — stop so the user can handle the changes
 - **continue** — carry the changes onto the new branch
@@ -167,7 +195,7 @@ With `--full`, default to **abort** — never silently stash or carry unintended
 Branch name: plan name in lowercase kebab-case with a `feat/` prefix (e.g. `USER_AUTH` → `feat/user-auth`).
 
 In each target repo (use absolute paths: `cd "$PARENT_DIR/{repo}"`):
-1. If `feat/{name}` exists → `git checkout feat/{name}`; otherwise record the base commit first, `git rev-parse HEAD`, then `git checkout -b feat/{name}`
+1. If `feat/{name}` exists → `git checkout feat/{name}` (if git says it's checked out in another worktree, a dispatched run is building it: stop and say so); otherwise record the base commit first, `git rev-parse HEAD`, then `git checkout -b feat/{name}`
 2. If the branch already existed and STATE.md has no base for it, compute one: `git merge-base "$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null || echo main)" HEAD` (fall back to `master` if `main` doesn't exist)
 
 **STATE UPDATE**: add these header lines to `{{STATE_FILE}}` (above the `---`):
@@ -197,17 +225,19 @@ Find the phase's line range from the heading list and count its unchecked tasks 
 |---|---|---|
 | Landing page / homepage / marketing page / hero section / showcase page | Any | `showcase` |
 | Regular | 1-5 | `implement` |
-| Regular | 6+ | `parallelize` |
+| Regular | 6+ that can be built independently of each other | `parallelize` |
+| Regular | 6+ that build on each other | `implement`, in passes of a few tasks each, one after another |
 
-Launch it with the `Agent` tool with the plan name and: "Execute Phase {N} only, then stop." Include any reference files from `{{TASKS_DIR}}/references/` for showcase. **Multi-repo**: include the affected repos and their paths (the plan's file paths should already be prefixed with the repo name).
+Launch it with the `Agent` tool with the plan name and: "Execute Phase {N} only, then stop." (For a pass: "Execute only these tasks of Phase {N}: …, then stop." Add "Skip the phase's validation items" to every pass but the last.) Include any reference files from `{{TASKS_DIR}}/references/` for showcase. **Multi-repo**: include the affected repos and their paths (the plan's file paths should already be prefixed with the repo name).
 
 When the agent reports:
-- **Blockers** → present them to the user and ask how to proceed. Don't continue until they're resolved or the user says to skip. (With `--full`, still stop on blockers that need a product decision, credentials, or a destructive operation.)
+- **Blockers** (including tasks marked **(USER)**, which agents leave to you) → present them to the user and ask how to proceed: they can do the step themselves, or approve one you can run (such as a paid run): then launch the implement agent for just that task, saying the user approved it, and drop its **(USER)** mark. Don't continue until they're resolved or the user says to skip. (With `--full`, still stop on blockers that need a product decision, credentials, or a destructive operation. In worktree mode, see Worktree Mode.)
 - **Plan changes it proposed** → apply small ones to the plan; ask the user about significant ones.
 
 #### 4c. Commit the Phase
 
 **COMMIT CHECKPOINT** after each phase:
+- **Checks first**: don't rely on the implement agent's own test run, which may predate its last edit. Tell the commit agent to run typecheck, lint and the test suite before committing (tests without build-tool caches, e.g. `turbo run test --force`), and to commit nothing and report the failing command with its trimmed output if any of them fails. (While dispatched runs are going, exclude `.claude/worktrees/` from these checks.) On a failure, launch one fixer (`subagent_type: "general-purpose"`): "These checks fail after Phase {N} of {plan}: {output}. Fix what the phase's changes broke, minimally, following `{{TASKS_DIR}}/CONVENTIONS.md` and CLAUDE.md. Rerun the failing checks. Don't commit." Then run the commit agent again. At most 2 rounds; still failing → treat it as a blocker (4b).
 - **Single-repo**: launch the commit agent with what the phase accomplished; the message should reference the plan and phase (e.g. "feat: implement user authentication (PLAN_AUTH Phase 1)").
 - **Multi-repo**: set `PARENT_DIR=$(pwd)`. For each affected repo: `cd "$PARENT_DIR/{repo}"`, skip it if `git status --short` is empty, otherwise launch the commit agent with the phase summary and the repo name. Afterwards, `cd "$PARENT_DIR"` unconditionally and confirm with `pwd`. Record commit hashes per repo for the final report.
 
@@ -253,7 +283,7 @@ The workflow runs in the background: `audit`, `secure`, `a11y` (UI changes only)
 #### 5d. Commit and Decide
 
 - **COMMIT CHECKPOINT**: if fixes were made (`changesMade`, or `git status --short` is non-empty), launch the commit agent with context "fix: address preflight findings for {NAME}" (per repo in multi-repo mode).
-- **Unresolved critical findings or `needsDecision` items** → present them to the user and ask how to proceed. With `--full`, don't guess: finish Step 6 with status `⏸️ Paused` and list them in the report.
+- **Unresolved critical findings or `needsDecision` items** → present them to the user and ask how to proceed. With `--full`, don't guess: finish Step 6 with status `⏸️ Paused` and list them in the report. In worktree mode, see Worktree Mode.
 - Report briefly:
 ```markdown
 **Preflight**: {N} confirmed · {M} dropped as false positives · {K} fixed · {U} unresolved
@@ -291,7 +321,7 @@ Final summary:
 **Next Steps**:
 - Review: `git log {BASE}..feat/{name} --oneline`
 - Open a PR: `gh pr create`
-- Or continue: `/autopilot` resumes from STATE.md
+- Or continue: `/autopilot` resumes from STATE.md, and offers to build other ready plans in parallel
 ```
 
 **Multi-repo**: same summary, with a per-repo section (branch, commits, preflight result, `cd {repo} && gh pr create`). Open one PR per repo; they can reference each other's branch name.
@@ -320,7 +350,7 @@ Commits are non-destructive, so they happen automatically with or without `--ful
 - Plans should prefix file paths with the repo directory (e.g. `{repo}/src/models/...`) so agents write to the right place and repo detection works.
 
 ### Compose Existing Agents
-- Agents: `bootstrap`, `blueprint`, `implement`, `parallelize`, `showcase`, `audit`, `secure`, `a11y`, `test`, `commit`, `update` — plus the `preflight` workflow
+- Agents: `bootstrap`, `blueprint`, `implement`, `parallelize`, `showcase`, `audit`, `secure`, `a11y`, `test`, `commit`, `update` — plus the `preflight` workflow and the dispatch and integrate procedures for parallel runs
 - Don't do their jobs inline — delegate to specialists
 - Always use the commit agent for commits
 

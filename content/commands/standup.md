@@ -14,10 +14,12 @@ Generating a standup summary from recent activity.
 
 **Current Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
-**Author**: !`git config user.name 2>/dev/null || echo "Unknown"`
+**Author**: !`git config --get user.name 2>/dev/null || echo "Unknown"`
 
-**Your Commits (last 48 hours, all branches)**:
-!`git log --all --since="48 hours ago" --author="$(git config user.email)" --format="%h %s (%ar)" 2>/dev/null | head -60 | grep . || echo "No recent commits"`
+**Email**: !`git config --get user.email 2>/dev/null || echo "Unknown"`
+
+**Commits (last 48 hours, all branches; yours are the ones with the email above)**:
+!`git log --all --since="48 hours ago" --format="%h %ae %s (%ar)" 2>/dev/null | head -100 | grep . || echo "No recent commits"`
 
 **Uncommitted Changes**:
 !`git diff --stat 2>/dev/null | tail -25 | grep . || echo "None"`
@@ -28,11 +30,10 @@ Generating a standup summary from recent activity.
 **Stashed Work**:
 !`git stash list 2>/dev/null | head -10 | grep . || echo "No stashes"`
 
-**Active Plan** (STATE.md header):
-!`sed -n '1,/^---$/p' {{STATE_FILE}} 2>/dev/null || echo "No active plan"`
+**Active Plan** (STATE.md header and plans):
+!`head -n 40 {{STATE_FILE}} 2>/dev/null || echo "No active plan"`
 
-**Next Unchecked Tasks in the Active Plan**:
-!`p=$(sed -n 's/^\*\*File\*\*: *//p' {{STATE_FILE}} 2>/dev/null | head -1); if [ -f "$p" ]; then grep -n -m 8 -E '^[[:space:]]*([0-9]+\.|[-*]) \[ \]' "$p" | grep . || echo "No unchecked tasks"; else echo "No active plan"; fi`
+**Next Unchecked Tasks in the Active Plan**: if the header above names a plan `**File**`, list its first unchecked tasks with `grep -n -m 8 -E '^[[:space:]]*([0-9]+\.|[-*]) \[ \]' {plan file}`.
 
 ## Timeframe Override
 

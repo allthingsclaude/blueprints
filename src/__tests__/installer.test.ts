@@ -534,7 +534,7 @@ describe('installBlueprints: workflows, hooks and template vars', () => {
     const claudeDir = path.join(testDir, '.claude');
     const implement = fs.readFileSync(path.join(claudeDir, 'agents', 'implement.md'), 'utf-8');
 
-    expect(implement).toContain(path.join(claudeDir, 'blueprints', 'hooks', 'phase-gate.sh'));
+    expect(implement).toContain(path.join(claudeDir, 'blueprints', 'hooks', 'phase-gate.sh').replace(/\\/g, '/'));
   });
 
   it('leaves no unreplaced template variables in any installed file', async () => {
@@ -553,15 +553,67 @@ describe('installBlueprints: workflows, hooks and template vars', () => {
     await installBlueprints(testDir, 4);
     const claudeDir = path.join(testDir, '.claude');
 
-    for (const dir of ['commands', 'agents']) {
+    for (const dir of ['commands', 'agents', 'blueprints']) {
       for (const rel of listFiles(path.join(claudeDir, dir))) {
         const content = fs.readFileSync(path.join(claudeDir, dir, rel), 'utf-8');
         expect(content, `${dir}/${rel}`).not.toMatch(/<!-- \/?(claude|codex)-only -->/);
         expect(content, `${dir}/${rel}`).not.toContain('codex -C');
       }
     }
-    const dispatch = fs.readFileSync(path.join(claudeDir, 'commands', 'dispatch.md'), 'utf-8');
-    expect(dispatch).toContain('claude --bg');
+    const dispatch = fs.readFileSync(path.join(claudeDir, 'blueprints', 'procedures', 'dispatch.md'), 'utf-8');
+    expect(dispatch).toContain('claude --bg --name "{name}" "/autopilot {NN}_{NAME}"');
+  });
+
+  it('installs the shared procedures and points the commands at them', async () => {
+    await installBlueprints(testDir, 4);
+    const claudeDir = path.join(testDir, '.claude');
+    const procedures = path.join(claudeDir, 'blueprints', 'procedures');
+
+    for (const name of ['dispatch.md', 'integrate.md']) {
+      expect(fs.existsSync(path.join(procedures, name)), name).toBe(true);
+    }
+    const commands = path.join(claudeDir, 'commands');
+    const rendered = (name: string) => path.join(procedures, name).replace(/\\/g, '/');
+    expect(fs.readFileSync(path.join(commands, 'dispatch.md'), 'utf-8')).toContain(rendered('dispatch.md'));
+    expect(fs.readFileSync(path.join(commands, 'integrate.md'), 'utf-8')).toContain(rendered('integrate.md'));
+    const autopilot = fs.readFileSync(path.join(commands, 'autopilot.md'), 'utf-8');
+    expect(autopilot).toContain(rendered('dispatch.md'));
+    expect(autopilot).toContain(rendered('integrate.md'));
+  });
+
+  it('renders absolute support paths for a relative install path', async () => {
+    const cwd = process.cwd();
+    fs.mkdirSync(testDir, { recursive: true });
+    process.chdir(testDir);
+    try {
+      await installBlueprints('sub', 4);
+    } finally {
+      process.chdir(cwd);
+    }
+    const dispatch = fs.readFileSync(path.join(testDir, 'sub', '.claude', 'commands', 'dispatch.md'), 'utf-8');
+    const expected = path.join(fs.realpathSync(testDir), 'sub', '.claude', 'blueprints', 'procedures', 'dispatch.md').replace(/\\/g, '/');
+    expect(dispatch.replace(/\/private\/var\//g, '/var/')).toContain(expected.replace(/\/private\/var\//g, '/var/'));
+  });
+
+  it('removes a procedure a previous install shipped that is gone now, and upgrades from a manifest without procedures', async () => {
+    const claudeDir = path.join(testDir, '.claude');
+    const procedures = path.join(claudeDir, 'blueprints', 'procedures');
+    await installBlueprints(testDir, 4);
+
+    const manifestFile = path.join(claudeDir, '.blueprints-version');
+    const manifest = JSON.parse(fs.readFileSync(manifestFile, 'utf-8'));
+    delete manifest.files.procedures;
+    fs.writeFileSync(manifestFile, JSON.stringify(manifest));
+    await installBlueprints(testDir, 4);
+    expect(fs.existsSync(path.join(procedures, 'dispatch.md'))).toBe(true);
+
+    fs.writeFileSync(path.join(procedures, 'old.md'), 'old');
+    const again = JSON.parse(fs.readFileSync(manifestFile, 'utf-8'));
+    again.files.procedures.push('old.md');
+    fs.writeFileSync(manifestFile, JSON.stringify(again));
+    const result = await installBlueprints(testDir, 4);
+    expect(fs.existsSync(path.join(procedures, 'old.md'))).toBe(false);
+    expect(result.removed).toBeGreaterThan(0);
   });
 
   it('writes a manifest listing installed files', async () => {
@@ -572,6 +624,7 @@ describe('installBlueprints: workflows, hooks and template vars', () => {
     expect(manifest?.files?.agents).toContain('blueprint.md');
     expect(manifest?.files?.workflows).toContain('preflight.js');
     expect(manifest?.files?.hooks).toContain('phase-gate.sh');
+    expect(manifest?.files?.procedures).toContain('dispatch.md');
   });
 });
 
@@ -696,13 +749,55 @@ describe('selectToolBlocks', () => {
 
   it('every block in the shipped content is closed', () => {
     const sources = getSourcePaths();
-    for (const dir of [sources.commands, sources.agents]) {
+    for (const dir of [sources.commands, sources.agents, sources.procedures]) {
       for (const rel of listFiles(dir)) {
         const content = fs.readFileSync(path.join(dir, rel), 'utf-8');
         for (const tool of ['claude', 'codex'] as const) {
           expect(selectToolBlocks(content, tool), rel).not.toMatch(/<!-- \/?(claude|codex)-only -->/);
         }
       }
+    }
+  });
+});
+
+describe('context commands', () => {
+  // Claude Code runs a command's `!` lines up front only when its read-only check accepts them;
+  // otherwise it hands them to the model as "Run these commands first", which costs a turn.
+  const injections = (): Array<[string, string]> => {
+    const sources = getSourcePaths();
+    const found: Array<[string, string]> = [];
+    for (const dir of [sources.commands, sources.agents]) {
+      for (const rel of listFiles(dir)) {
+        for (const match of fs.readFileSync(path.join(dir, rel), 'utf-8').matchAll(/!`([^`]+)`/g)) {
+          found.push([rel, match[1]]);
+        }
+      }
+    }
+    return found;
+  };
+
+  it('use only sed line ranges, which the read-only check accepts', () => {
+    for (const [rel, command] of injections()) {
+      for (const script of command.matchAll(/\bsed -n '([^']*)'/g)) {
+        expect(script[1], `${rel}: ${command}`).toMatch(/^(\d+|\d+,\d+)?p$/);
+      }
+    }
+  });
+
+  it('use no git flags outside the read-only allowlist', () => {
+    for (const [rel, command] of injections()) {
+      expect(command, rel).not.toContain('--path-format');
+      expect(command, rel).not.toMatch(/\bgit config (?!--get\b)/);
+    }
+  });
+
+  it('use no command substitution or shell variables', () => {
+    // Known exceptions, handed to the model: history parses its arguments in the shell,
+    // and imagine reports whether API keys are set without printing them.
+    const exceptions = new Set(['history.md', 'imagine.md']);
+    for (const [rel, command] of injections()) {
+      if (exceptions.has(rel)) continue;
+      expect(command, `${rel}: ${command}`).not.toMatch(/\$\(|^\s*\w+=/);
     }
   });
 });

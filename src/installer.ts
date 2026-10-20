@@ -20,6 +20,8 @@ export interface SourcePaths {
   agents: string;
   workflows: string;
   hooks: string;
+  /** Step-by-step procedures shared by several commands (e.g. dispatch, used by /dispatch and /autopilot) */
+  procedures: string;
 }
 
 export interface InstallResult {
@@ -96,7 +98,8 @@ export function buildTemplateVars(tasksDir: string = DEFAULT_TASKS_DIR, blueprin
     '{{STATE_FILE}}': `${tasksDir}/STATE.md`,
   };
   if (blueprintsDir) {
-    vars['{{BLUEPRINTS_DIR}}'] = blueprintsDir;
+    // Forward slashes work in prompts and shells on every platform, including Windows
+    vars['{{BLUEPRINTS_DIR}}'] = blueprintsDir.replace(/\\/g, '/');
   }
   return vars;
 }
@@ -137,6 +140,7 @@ export interface InstalledFiles {
   agents: string[];
   workflows: string[];
   hooks: string[];
+  procedures?: string[];
 }
 
 export interface Manifest {
@@ -174,6 +178,8 @@ export function getInstallPaths(basePath: string): InstallPaths {
   if (basePath.startsWith('~')) {
     resolvedPath = path.join(os.homedir(), basePath.slice(1));
   }
+  // Installed files reference their own paths (hook scripts, procedures), so they must be absolute
+  resolvedPath = path.resolve(resolvedPath);
 
   // If the path already ends with .claude, use it directly
   // Otherwise, append .claude
@@ -204,6 +210,7 @@ export function getSourcePaths(): SourcePaths {
     agents: path.join(packageRoot, 'content', 'agents'),
     workflows: path.join(packageRoot, 'content', 'workflows'),
     hooks: path.join(packageRoot, 'content', 'hooks'),
+    procedures: path.join(packageRoot, 'content', 'procedures'),
   };
 }
 
@@ -278,8 +285,8 @@ export function copyDirectory(srcDir: string, destDir: string, tasksDir?: string
 }
 
 /**
- * Copy script files (workflows, hooks) with template variables replaced.
- * Shell scripts are made executable.
+ * Copy support files (workflows, hooks, procedures) with template variables replaced.
+ * Markdown keeps only its Claude Code blocks; shell scripts are made executable.
  */
 export function copyTemplatedFiles(srcDir: string, destDir: string, tasksDir?: string, blueprintsDir?: string): number {
   if (!fs.existsSync(srcDir)) return 0;
@@ -291,8 +298,11 @@ export function copyTemplatedFiles(srcDir: string, destDir: string, tasksDir?: s
     const destFile = path.join(destDir, rel);
     ensureDir(path.dirname(destFile));
 
-    const content = fs.readFileSync(srcFile, 'utf-8');
-    fs.writeFileSync(destFile, replaceTemplateVars(content, tasksDir, blueprintsDir), 'utf-8');
+    let content = replaceTemplateVars(fs.readFileSync(srcFile, 'utf-8'), tasksDir, blueprintsDir);
+    if (rel.endsWith('.md')) {
+      content = selectToolBlocks(content, 'claude');
+    }
+    fs.writeFileSync(destFile, content, 'utf-8');
     if (rel.endsWith('.sh')) {
       fs.chmodSync(destFile, 0o755);
     }
@@ -451,11 +461,13 @@ export async function installBlueprints(targetPath: string, powerLevel: AgentPow
   // Remove files a previous install put here that are no longer shipped (never the user's own files)
   const previous = readManifest(installPaths.base)?.files ?? null;
   const hooksDest = path.join(installPaths.support, 'hooks');
+  const proceduresDest = path.join(installPaths.support, 'procedures');
   let removed = 0;
   removed += cleanStaleFiles(sourcePaths.commands, installPaths.commands, previous ? previous.commands ?? [] : null, LEGACY_COMMANDS);
   removed += cleanStaleFiles(sourcePaths.agents, installPaths.agents, previous ? previous.agents ?? [] : null, LEGACY_AGENTS);
   removed += cleanStaleFiles(sourcePaths.workflows, installPaths.workflows, previous?.workflows ?? []);
   removed += cleanStaleFiles(sourcePaths.hooks, hooksDest, previous?.hooks ?? []);
+  removed += cleanStaleFiles(sourcePaths.procedures, proceduresDest, previous?.procedures ?? []);
 
   const blueprintsDir = installPaths.support;
 
@@ -468,6 +480,7 @@ export async function installBlueprints(targetPath: string, powerLevel: AgentPow
   // Copy workflows and hook scripts
   const workflowsCount = copyTemplatedFiles(sourcePaths.workflows, installPaths.workflows, tasksDir, blueprintsDir);
   copyTemplatedFiles(sourcePaths.hooks, hooksDest, tasksDir, blueprintsDir);
+  copyTemplatedFiles(sourcePaths.procedures, proceduresDest, tasksDir, blueprintsDir);
 
   // Write version marker and manifest of installed files
   const manifest: Manifest = {
@@ -480,6 +493,7 @@ export async function installBlueprints(targetPath: string, powerLevel: AgentPow
       agents: listFiles(sourcePaths.agents),
       workflows: listFiles(sourcePaths.workflows),
       hooks: listFiles(sourcePaths.hooks),
+      procedures: listFiles(sourcePaths.procedures),
     },
   };
   fs.writeFileSync(path.join(installPaths.base, MANIFEST_FILE), JSON.stringify(manifest, null, 2), 'utf-8');

@@ -236,6 +236,7 @@ Generate `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md` with this exact structure:
 4. **Keep Phases Self-Contained**: Each phase's Goal, Tasks, and Validation should make sense without reading other phases
 5. **Read Context**: Review actual files discussed, not just conversation
 6. **Stay Lean**: Omit sections that don't apply rather than filling them with placeholders
+7. **Mark the User's Steps**: start a task that only the user can do (a paid run, granting credentials or access, a sign-off, a change outside this repository) with **(USER)**, so agents leave it to them and parallel runs can plan around it
 
 ## What to Capture
 

@@ -50,6 +50,7 @@ export interface CodexManifest {
   tasksDir: string;
   skills: string[];
   agents: string[];
+  procedures?: string[];
 }
 
 /** Marker written into every file blueprints installs for Codex */
@@ -355,6 +356,9 @@ export async function installCodex(
   const commandNames = commandFiles.map(f => f.replace(/\.md$/, ''));
   const agentNames = agentFiles.map(f => f.replace(/\.md$/, ''));
 
+  const procedureFiles = listFiles(source.procedures).filter(f => f.endsWith('.md'));
+  const proceduresDir = path.join(paths.support, 'procedures');
+
   ensureDir(paths.skills);
   ensureDir(paths.agents);
   ensureDir(paths.support);
@@ -374,6 +378,14 @@ export async function installCodex(
     if (agentNames.includes(name)) continue;
     const file = path.join(paths.agents, `${name}.toml`);
     if (hasMarker(file)) {
+      fs.unlinkSync(file);
+      removed++;
+    }
+  }
+  for (const rel of previous?.procedures ?? []) {
+    if (procedureFiles.includes(rel)) continue;
+    const file = path.join(proceduresDir, rel);
+    if (fs.existsSync(file)) {
       fs.unlinkSync(file);
       removed++;
     }
@@ -415,6 +427,14 @@ export async function installCodex(
     installedAgents.push(name);
   }
 
+  // Procedures shared by several skills (e.g. dispatch, followed by $dispatch and $autopilot)
+  for (const rel of procedureFiles) {
+    const content = replaceTemplateVars(fs.readFileSync(path.join(source.procedures, rel), 'utf-8'), vars.tasksDir, vars.blueprintsDir);
+    const target = path.join(proceduresDir, rel);
+    ensureDir(path.dirname(target));
+    fs.writeFileSync(target, `${convertTextForCodex(content, commandNames).text.trim()}\n\n<!-- ${CODEX_MARKER} -->\n`, 'utf-8');
+  }
+
   // Typecheck gate for the implement agent: same script as Claude Code, registered as a Codex hook
   let hookRegistered = false;
   const gateSource = path.join(source.hooks, 'phase-gate.sh');
@@ -450,6 +470,7 @@ export async function installCodex(
     tasksDir,
     skills: installedSkills,
     agents: installedAgents,
+    procedures: procedureFiles,
   };
   fs.writeFileSync(paths.manifest, `${JSON.stringify(manifest, null, 2)}\n`, 'utf-8');
 

@@ -26,8 +26,10 @@ I'll orchestrate a complete release for your project — detecting existing rele
 **Latest Tags**:
 !`git tag --sort=-version:refname 2>/dev/null | head -5 | grep . || echo "No tags found"`
 
-**Commits Since Last Tag**:
-!`git log --oneline -100 $(git describe --tags --abbrev=0 2>/dev/null | sed 's/$/..HEAD/') 2>/dev/null || echo "No git history"`
+**Last Tag**: !`git describe --tags --abbrev=0 2>/dev/null || echo "(no tags)"`
+
+**Recent Commits** (the ones since the last tag are what this release ships; with no tag, all of them):
+!`git log --oneline --decorate -100 2>/dev/null || echo "No git history"`
 
 **Release Scripts Detected**:
 !`grep -E '"[^"]*(release|version|bump|publish)[^"]*"[[:space:]]*:' package.json 2>/dev/null | head -20 | grep . || echo "None in package.json"`

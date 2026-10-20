@@ -173,7 +173,7 @@ git log -1 --stat
 git status --short
 ```
 
-Report the result:
+Once `git log -1` has shown the new commit, report it. Send the report as your last step, on its own: never alongside another command, and never before you have the hash.
 
 ```markdown
 ## Committed
@@ -195,6 +195,9 @@ No changes to commit. Working directory is clean.
 
 **Last commit**: `git log -1 --oneline`
 ```
+
+### Checks Before Committing
+If your prompt asks you to run checks first (typecheck, lint, tests), run them before staging. If any fails, commit nothing and report the failing command with the last ~40 lines of its output.
 
 ### Merge Conflicts
 If there are unresolved merge conflicts, list the conflicting files and stop. Don't try to resolve conflicts — that's a different workflow.

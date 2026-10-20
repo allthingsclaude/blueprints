@@ -226,7 +226,7 @@ STATE.md is a small index that commands inject into every run, so it must stay s
 
 ```bash
 ls -1 {{PLANS_DIR}}/PLAN_*.md 2>/dev/null || echo "No plans found"
-sed -n '1,/^---$/p' {{STATE_FILE}} 2>/dev/null || echo "No STATE.md found"
+head -n 40 {{STATE_FILE}} 2>/dev/null || echo "No STATE.md found"
 grep -c '^### PLAN_\|^#### Phase' {{STATE_FILE}} 2>/dev/null
 ```
 
@@ -244,7 +244,7 @@ grep -cE '^[[:space:]]*([0-9]+\.|[-*]) \[[ xX]\]' {{PLANS_DIR}}/PLAN_{NN}_{NAME}
 grep -n -iE '^#{2,4} .*phase' {{PLANS_DIR}}/PLAN_{NN}_{NAME}.md
 ```
 
-Plan status: no unchecked task boxes left in the phase sections → `✅ Complete` (items marked as needing the user, e.g. **(USER)**, don't keep a plan open); some done → `🚧 In Progress`; none done → `⏳ Not started`. For the active plan, the current phase is the first phase section that still has an unchecked task — check it with a ranged read of that section if the counts don't settle it.
+Plan status: no unchecked task boxes left in the phase sections → `✅ Complete` (tasks marked **(USER)**, steps only the user can do, don't keep a plan open; add `· left for you: {steps}` to its Progress); some done → `🚧 In Progress`; none done → `⏳ Not started`. For the active plan, the current phase is the first phase section that still has an unchecked task — check it with a ranged read of that section if the counts don't settle it.
 
 #### 5c. Rebuild STATE.md
 
@@ -275,7 +275,7 @@ Keep any **Branch** / **Base** / **Repos** / **Target** / **Dispatched** / **Que
 - **Plans on disk but not in STATE.md** → add a row
 - **Plans in STATE.md but not on disk** → remove the row (plan file was deleted)
 - **Progress mismatch** → the plan file's checkboxes are the source of truth
-- **Active plan detection** → if the current Active plan still has incomplete tasks, keep it. Otherwise, if any plan has incomplete tasks, set the highest-numbered one as Active; if all plans are complete, set Active to `None`. Never make a plan listed on the `**Dispatched**` or `**Queued**` line Active — it runs (or will run) in its own worktree — and keep those plans' rows as they are
+- **Active plan detection** (unless your prompt says to leave `**Active**` as it is) → if the current Active plan still has incomplete tasks, keep it. Otherwise, if any plan has incomplete tasks, set the highest-numbered one as Active; if all plans are complete, set Active to `None`. Never make a plan listed on the `**Dispatched**` or `**Queued**` line Active — it runs (or will run) in its own worktree — and keep those plans' rows as they are
 - **Phase detection** → for the active plan, set Phase to the first phase that has incomplete tasks
 
 #### 5d. Migrate a Legacy STATE.md
