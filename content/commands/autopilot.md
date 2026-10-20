@@ -92,11 +92,11 @@ Skip this in worktree mode and in multi-repo mode.
 
 **Several plans named** → read `{{BLUEPRINTS_DIR}}/procedures/dispatch.md` and follow it with caller `dispatch` and those plans (add `--yes` with `--full`). This session ends with its report; don't start a plan here.
 
-**One plan named, or none** → before starting a plan here, check whether other plans could be built at the same time, each in its own worktree. Skip this without a word with `--full`, when the user described a new feature instead of naming a plan, and when the plan to run is already **under way** (a task in its phase sections is checked, or its `feat/` branch exists) or is on the `**Dispatched**` or `**Queued**` line (Step 1b handles those). The plan to run is the named one, or else the active plan in STATE.md, if any.
+**One plan named, or none** → before starting a plan here, check whether other plans could be built at the same time, each in its own worktree. Skip this without a word with `--full`, when the user described a new feature instead of naming a plan, and when the plan to run is already **under way** (a task in its phase sections is checked, or its `feat/` branch exists) or is on the `**Dispatched**` or `**Queued**` line (Step 1b handles those). The plan to run is the named one, else the active plan in STATE.md, else (no arguments) the plan Step 1c would suggest next.
 
 1. **Find the ready plans**: from the `## Plans` rows (`grep -E '^\|' {{STATE_FILE}}` lists them all) and each plan's `**Depends on**` line (`grep -m1 -i 'depends on' {{PLANS_DIR}}/PLAN_*.md` reads them all at once), the plans that are not complete, not under way, not on the `**Dispatched**` line, and whose dependencies are all complete. A plan on the `**Queued**` line counts once the plans it waits for are complete.
 2. **Nothing else ready** (apart from the plan to run) → continue with Step 1 and don't mention it.
-3. **Otherwise** → read `{{BLUEPRINTS_DIR}}/procedures/dispatch.md` and follow it with caller `autopilot` and these plans, the plan to run first. Its overlap check decides which can really run together, and its confirmation is the only question you ask. It hands back when the user answers "just {plan} here" or "something else", when the plan to run can't start in the first wave, when fewer than two plans can start together, or when a precondition fails: then continue with Step 1. If it launches the runs, this session's work is done: end with its report, and don't start any plan here.
+3. **Otherwise** → read `{{BLUEPRINTS_DIR}}/procedures/dispatch.md` and follow it with caller `autopilot` and these plans, the plan to run first. Its overlap check decides which can really run together, and its confirmation is the only question you ask. It hands back when the user answers "just {plan} here" (then run that plan: Step 1b), "something else" (Step 1c, without suggesting a plan again), when the plan to run can't start in the first wave, when fewer than two plans can start together, or when a precondition fails: then continue with Step 1. If it launches the runs, this session's work is done: end with its report, and don't start any plan here.
 
 ---
 
@@ -127,7 +127,7 @@ If a plan name was given, load that plan and activate it in `{{STATE_FILE}}`. Up
 ```
 and set the plan's row in `## Plans` to `🚧 In Progress` (add a row if missing). If the header pointed at a different plan that was `🚧 In Progress`, set that plan's row to `⏸️ Paused`. Then go to **Step 3**, then **Step 4**.
 
-#### 1c. No Active Work — Brainstorm
+#### 1c. No Active Work — Next Plan or Brainstorm
 
 **If arguments contain a feature description**, explore the idea — you are NOT implementing yet:
 1. Understand the user's intent
@@ -135,7 +135,13 @@ and set the plan's row in `## Plans` to `🚧 In Progress` (add a row if missing
 3. Explore the codebase for relevant context (`Grep`, `Glob`, targeted `Read`s)
 4. Converge on a clear approach
 
-**If there are no arguments**, ask: "What would you like to build? Describe the feature or change you have in mind." Then brainstorm as above.
+**If there are no arguments**, pick up the plans first. Look for the next plan:
+1. an unfinished plan that's already under way (its row says `🚧 In Progress` or `⏸️ Paused` and it isn't on the `**Dispatched**` line), else
+2. the next ready plan (see **Parallel Runs**, step 1; find them now if that section was skipped): the one other ready plans depend on, otherwise the lowest-numbered.
+
+If there is one, and the user hasn't already answered about it in **Parallel Runs**, ask: "Next up: {plan} ({Phase N, x/y tasks done} or {ready; 03 waits for it}). Continue with it, or build something new?" With `--full`, continue without asking. Continue → **1b** with that plan.
+
+Otherwise, or if the user wants something new, ask: "What would you like to build? Describe the feature or change you have in mind." Then brainstorm as above.
 
 **Brainstorm rules:**
 - DO NOT create, modify, or implement any code

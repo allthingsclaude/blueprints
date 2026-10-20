@@ -426,7 +426,7 @@ brainstorm → /blueprint → branch → phase 1 → commit → phase 2 → comm
 - **Phases** run in fresh agents: `implement` for small phases, `parallelize` (several `implement` streams at once) for phases with 6+ independent tasks, `implement` in a few passes when the tasks build on each other, `showcase` for landing pages. Before each phase's commit, typecheck, lint and the tests run again, fresh; failures go to a fixer before anything is committed.
 - **Preflight** reviews the whole branch at the end. `audit`, `secure`, `a11y` (only when UI files changed) and `test` run in parallel without editing anything; every finding is checked by an independent verifier; one fixer applies the confirmed ones and runs typecheck, lint and tests; each fix is rechecked, with at most two rounds. It runs as the `preflight` workflow when [dynamic workflows](https://code.claude.com/docs/en/workflows) are available, and as parallel subagents otherwise. You can also run `/preflight` on any branch yourself.
 - **Typecheck gate**: when an `implement` agent tries to finish, a stop hook runs the project's typecheck script and hands any errors back to it once. Set `BLUEPRINTS_PHASE_GATE=0` to turn it off.
-- **Resuming**: progress lives in the plan's checkboxes and `tasks/STATE.md`, so running `/autopilot` again picks up where it stopped.
+- **Resuming**: progress lives in the plan's checkboxes and `tasks/STATE.md`, so running `/autopilot` again picks up where it stopped. With nothing in progress, it suggests the next ready plan (the one others wait for first), and offers to merge finished parallel runs.
 
 ### Several plans at once
 

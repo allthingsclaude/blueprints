@@ -97,7 +97,7 @@ Usage: {N} runs at once use about {N}× the tokens per hour of one `/autopilot` 
 ```
 
 Then ask with `AskUserQuestion`, in one call (at most 4 questions; ask the rest in a second call):
-- **Run them?** "Run wave 1 as shown" and "Change something" (the user says what). From `/autopilot`, add "No, just run {plan} here" when it was asked to run one plan, or "No, something else" when it wasn't; that answer ends this procedure and hands back to `/autopilot`.
+- **Run them?** "Run wave 1 as shown" and "Change something" (the user says what). From `/autopilot`, add "No, just run {plan} here" when it has a plan to run, and "No, something else" when the user didn't name one; either answer ends this procedure and hands back to `/autopilot`.
 - Each **Decide now** question, with its options and your recommendation first.
 <!-- claude-only -->
 - **Permission mode**, unless `--permission-mode` was given. The runs start in the user's default mode: the most specific `permissions.defaultMode` in `.claude/settings.local.json`, `.claude/settings.json` and `~/.claude/settings.json` (`grep -h defaultMode` them), `default` if none. In `auto`, `dontAsk` or `bypassPermissions` they run unattended, so don't ask. Otherwise they would stop at their first file edit or command until the user approves it in `claude agents`, so ask: "Start the runs in auto mode (Recommended)" (passed as `--permission-mode auto`; if auto mode isn't available on the user's account, `claude --bg` says so and they can pick again) or "Keep {mode}, I'll approve as they go". Never choose `bypassPermissions` or `dontAsk` for the user.
