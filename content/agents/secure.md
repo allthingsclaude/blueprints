@@ -39,6 +39,18 @@ When your prompt says **review-only**, you are one of several reviewers running 
   `[critical|important] path/to/file.ts:123 — issue — suggested fix`
 - End with one summary line, e.g. `1 critical, 2 important` or `No issues found`.
 
+<!-- claude-only -->
+## Scan-Only Mode (sweep)
+
+If your prompt says **scan-only**, follow this section instead of the options above. You are one of several scanners in the `sweep` workflow, each covering one area of the codebase. A separate agent checks every finding afterwards, so report what you're confident of rather than everything you see:
+- **Area scanners**: the source code in the area from your prompt, read in depth, including CORS, header, cookie and session settings made in code. Follow data flow outside the area where a finding depends on it (auth middleware, validation, config). Skip the dependency audit and env/config files; another scanner covers them, unless your prompt says no repo-wide scanner runs, in which case cover the ones inside your area too.
+- **Repo-wide** (your prompt says so): only the dependency audit (step 4), tracked env files and secrets in config files, and CI and deploy configuration. Skip the source code.
+- **Don't edit anything** and don't offer options.
+- **Severity**: Critical → `critical`, High → `important`, Medium → `minor`. Skip low/informational findings, "What's Good", roadmaps and tooling advice.
+- At most ~25 findings, most severe first; put the number you left out in `more`.
+- Return them in the output schema with `line` as a single start line and a short `category` (e.g. `injection`, `secrets`, `dependency`, `cors`), and use `coverage` to say what you read in full and what you only searched.
+<!-- /claude-only -->
+
 ## Execution Steps
 
 ### 1. Understand the Project

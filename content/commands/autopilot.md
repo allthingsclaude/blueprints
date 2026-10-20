@@ -261,6 +261,16 @@ Find the phase's line range from the heading list and count its unchecked tasks 
 
 Launch it with the `Agent` tool with the plan name and: "Execute Phase {N} only, then stop." (For a pass: "Execute only these tasks of Phase {N}: …, then stop." Add "Skip the phase's validation items" to every pass but the last.) Include any reference files from `{{TASKS_DIR}}/references/` for showcase. **Multi-repo**: include the affected repos and their paths (the plan's file paths should already be prefixed with the repo name).
 
+<!-- claude-only -->
+**`parallelize` as a workflow**: if the `Workflow` tool is available, run the saved workflow **`streams`** instead of the `parallelize` agent, with args `{ "plan": "{NN}_{NAME}", "phase": N, "updateState": false, "tests": false }` (4c runs the tests), plus `"context"` carrying what you'd tell the agent: this phase's `Decided`/`Provisional` notes, the tasks to skip (marked **(USER)**, or blocked by a `Needs your decision` note with `--full`), "don't touch `.claude/worktrees/` and leave it out of checks" while dispatched runs are going, and in multi-repo mode the repos and their paths. It splits the phase into streams, builds them in parallel, then finishes what crossed stream boundaries and typechecks, lints and fixes the combined result. Wait for the completion notification — don't poll. Then:
+- `checkedOff` is false → check the `done` tasks off in the plan yourself.
+- `notDone` tasks (including those of a stream that returned nothing) → launch the implement agent for just those tasks before committing, unless they are **(USER)** tasks or wait on a decision.
+- `blockers`, `userTasks`, `choices` and `planChanges` → handle them as in an agent's report, below.
+- Not `passing` → carry on to 4c; its checks and fixer rounds deal with it.
+
+If the workflow isn't available or the run fails, launch the `parallelize` agent; if the run got as far as building (`git status` shows its changes), tell the agent the tasks may be partly built: check the diff first and finish what's missing rather than start over.
+<!-- /claude-only -->
+
 When the agent reports:
 - **Blockers** (including tasks marked **(USER)**, which agents leave to you) and **choices** the plan doesn't settle → follow **When to Ask**. If the user approves a step you can run (such as a paid run), launch the implement agent for just that task, saying the user approved it, and drop its **(USER)** mark. Move on to the next phase only when it doesn't depend on what's still open.
 - **Plan changes it proposed** → apply small ones to the plan (decide yourself); significant ones need the user.

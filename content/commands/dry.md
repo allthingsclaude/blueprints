@@ -45,6 +45,10 @@ The DRY agent will:
 - `functions` / `components` / `hooks` / `types` / `constants` → Category-specific scan
 - File/folder path → Scoped deep scan
 
+<!-- claude-only -->
+**Whole codebase or a folder, as a workflow**: unless the argument is a single file, and if the `Workflow` tool is available, run the saved workflow **`sweep`** instead of the agent, with args `{ "kinds": ["dry"] }`, plus `"scope"` for a category (`functions`, `components`, `hooks`, `types`, `constants`) and `"paths"` for a folder. It scans the code area by area in parallel (each scanner also looks for copies in the rest of the codebase), and a separate agent checks every finding. It changes nothing. Wait for the completion notification, then show its result as the report: the `confirmed` findings by priority, with their locations and whether each is safe to auto-apply, with their ids; `unverified` ones separately, flagged as unchecked; how many were `dropped` as false positives; and any `missingScanners` (areas that weren't scanned), `skipped` areas and `leftOut` count. Ask which to apply with `AskUserQuestion`, then relaunch the agent as below, naming the ids and including the findings (e.g. "apply DRY-1, DRY-3 from this report; skip rescanning"). For a single file, or when the workflow isn't available or the run fails, launch the agent:
+<!-- /claude-only -->
+
 Use the `Agent` tool to launch the DRY agent (subagent_type="dry") which will capture the baseline, scan for DRY violations, present a prioritized report, and — with user approval — apply optimizations one at a time with validation after each change.
 
-The agent reports first and changes nothing. After the user picks which items to apply, relaunch the agent with the approved item list and its report (e.g. "apply items 1, 3, 5 from your previous report; skip rescanning") rather than the original request, so it doesn't redo the scan.
+The agent reports first and changes nothing. After the user picks which items to apply, relaunch the agent with the approved item list and the report it came from (e.g. "apply items 1, 3, 5 from your previous report; skip rescanning") rather than the original request, so it doesn't redo the scan.

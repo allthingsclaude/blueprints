@@ -21,7 +21,6 @@ import {
   RESEARCH_AGENTS,
   LIGHTWEIGHT_AGENTS,
   HEAVYWEIGHT_AGENTS,
-  TEMPLATE_VARS,
   replaceTemplateVars,
   selectToolBlocks
 } from '../installer.js';
@@ -520,7 +519,9 @@ describe('installBlueprints: workflows, hooks and template vars', () => {
     const claudeDir = path.join(testDir, '.claude');
 
     expect(result.workflows).toBeGreaterThan(0);
-    expect(fs.existsSync(path.join(claudeDir, 'workflows', 'preflight.js'))).toBe(true);
+    for (const name of ['preflight', 'sweep', 'streams']) {
+      expect(fs.existsSync(path.join(claudeDir, 'workflows', `${name}.js`)), name).toBe(true);
+    }
 
     const hook = path.join(claudeDir, 'blueprints', 'hooks', 'phase-gate.sh');
     expect(fs.existsSync(hook)).toBe(true);

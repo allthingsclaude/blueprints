@@ -66,6 +66,12 @@ The orchestrator picks the number of streams from the size of the work (see its 
 
 ---
 
+<!-- claude-only -->
+**As a workflow (preferred)**: if the `Workflow` tool is available, run the saved workflow **`streams`** instead of the orchestrator agent, with args `{ "plan": "{plan, if named}" }`, plus `"phase"` for a phase number, `"tasks"` for a task range and `"maxStreams"` for a max-agents count; for work described in words rather than a plan, pass `"description"` instead of `"plan"`. The orchestrator records the checks, installs new packages and splits the tasks into streams that never touch the same file; one `implement` (or `showcase`) agent per stream builds them in parallel; then the orchestrator finishes what crossed stream boundaries, runs typecheck, lint, the tests and the tasks' validation steps once on the combined result, fixes new failures (at most 2 rounds) and checks the tasks off. Wait for the completion notification — don't poll. Its result is the report: `status`, `done` tasks per stream, `notDone` with reasons (including the tasks of a stream that returned nothing), `checks` and `failing`, `fixes`, `conflicts`, plus `userTasks`, `choices`, `planChanges` and `blockers`. If `checkedOff` is false, check the `done` tasks off in the plan yourself.
+
+If the workflow isn't available or the run fails, launch the agent. If the run got as far as building (`git status` shows its changes), tell the agent the tasks may be partly built: check the diff first and finish what's missing rather than start over.
+<!-- /claude-only -->
+
 Use the `Agent` tool to launch the parallelize orchestrator agent (subagent_type="parallelize") which will analyze the plan, partition work, spawn agents, and coordinate parallel execution. Pass along any max-agents count from the arguments.
 
 When it returns, relay its report (and any blockers) to the user, then suggest next steps: review the changes (`git diff`), run the project's tests, commit with `/commit`, and review the branch with `/preflight` before opening a PR.

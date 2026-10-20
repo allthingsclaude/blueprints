@@ -54,6 +54,10 @@ The security agent will:
 3. **Create fix plan** — Generate `{{PLANS_DIR}}/PLAN_SECURITY_FIXES.md`
 4. **Fix all** — Work through all findings by priority
 
+<!-- claude-only -->
+**Whole codebase or a folder, as a workflow**: with no argument, a focus area (`auth`, `api`, `secrets`) or a folder path, and the `Workflow` tool available, run the saved workflow **`sweep`** instead of the agent, with args `{ "kinds": ["secure"] }`, plus `"scope"` for a focus area and `"paths"` for a folder. It splits the code into areas and scans them in parallel (one more scanner covers dependencies and repo-level config), and a separate agent checks every finding. It changes nothing. Wait for the completion notification, then show its result as the report: the `confirmed` findings grouped by severity with their ids; `unverified` ones separately, flagged as unchecked; how many were `dropped` as false positives; and any `missingScanners` (areas that weren't scanned), `skipped` areas and `leftOut` count. Then continue with **When the agent returns**, offering the options above for those findings. For `deps`, a single file, or when the workflow isn't available or the run fails, launch the agent:
+<!-- /claude-only -->
+
 Use the `Agent` tool to launch the secure agent (subagent_type="secure") which will perform a comprehensive security analysis and provide actionable remediation guidance.
 
 **When the agent returns**: show the user its report, then ask which option they want with `AskUserQuestion` (the agent runs as a subagent and can't ask). For a fix or fix-plan option, relaunch the secure agent with the reported findings and "Fix these findings — don't re-scan" (naming which findings, per the chosen option), so it doesn't scan everything again.

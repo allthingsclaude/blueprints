@@ -74,7 +74,7 @@ Control which models power your agents:
 | `/blueprint` | Create a structured implementation plan from your requirements |
 | `/kickoff` | Execute a plan interactively with approval gates (collaborative) |
 | `/implement` | Execute a plan autonomously (hands-off) |
-| `/parallelize` | Execute independent plan tasks across multiple agents simultaneously |
+| `/parallelize` | Execute independent plan tasks across multiple agents simultaneously (as the `streams` workflow when workflows are available) |
 | `/autopilot` | Full autonomous development loop — from idea to committed code |
 | `/dispatch` | Run several plans at once, each in its own git worktree and background session (`/autopilot` offers this too) |
 | `/integrate` | Merge finished `/dispatch` runs back one at a time, testing after each merge |
@@ -102,12 +102,13 @@ Control which models power your agents:
 |---------|-------------|
 | `/audit` | Pre-commit security and quality review |
 | `/preflight` | Workflow: parallel audit, security, accessibility and test review of a branch — every finding verified, then one fix pass |
+| `/sweep` | Workflow: scan the whole codebase for security, cleanup, accessibility or duplication issues, one scanner per area — a separate agent checks each finding, and nothing is changed |
 | `/test` | Run tests, analyze failures, generate test coverage |
-| `/cleanup` | Find and remove dead code, unused imports, technical debt |
+| `/cleanup` | Find and remove dead code, unused imports, technical debt (whole-codebase scans run as `/sweep`) |
 | `/refactor` | Safe refactoring — rename, extract, inline, or move code with validation |
-| `/dry` | Eliminate DRY violations without changing behavior |
-| `/secure` | Run a focused security scan on your codebase |
-| `/a11y` | Audit your frontend for accessibility issues |
+| `/dry` | Eliminate DRY violations without changing behavior (whole-codebase scans run as `/sweep`) |
+| `/secure` | Run a focused security scan on your codebase (whole-codebase scans run as `/sweep`) |
+| `/a11y` | Audit your frontend for accessibility issues (whole-frontend scans run as `/sweep`) |
 | `/todo` | Scan codebase for TODO/FIXME/HACK markers and present an organized summary |
 
 ### Code Operations
@@ -326,6 +327,8 @@ Clean up and refactor existing code safely.
 /finalize
 ```
 
+For a whole codebase, `/sweep cleanup dry` (or `/secure`, `/cleanup`, `/a11y`, `/dry` with no argument) splits the code into areas, scans them in parallel, and has a separate agent check each finding before you see it (any it couldn't check are flagged). Nothing changes until you pick which findings to apply, except that `/a11y fix` applies the safe ones straight away.
+
 ### 5. Session Continuity
 
 Switch contexts or resume work across sessions.
@@ -423,7 +426,7 @@ When you have a plan, choose how to execute it:
 brainstorm → /blueprint → branch → phase 1 → commit → phase 2 → commit → … → preflight → fixes → commit → update CLAUDE.md
 ```
 
-- **Phases** run in fresh agents: `implement` for small phases, `parallelize` (several `implement` streams at once) for phases with 6+ independent tasks, `implement` in a few passes when the tasks build on each other, `showcase` for landing pages. Before each phase's commit, typecheck, lint and the tests run again, fresh; failures go to a fixer before anything is committed.
+- **Phases** run in fresh agents: `implement` for small phases, `parallelize` (several `implement` streams at once, as the `streams` workflow when workflows are available) for phases with 6+ independent tasks, `implement` in a few passes when the tasks build on each other, `showcase` for landing pages. Before each phase's commit, typecheck, lint and the tests run again, fresh; failures go to a fixer before anything is committed.
 - **Preflight** reviews the whole branch at the end. `audit`, `secure`, `a11y` (only when UI files changed) and `test` run in parallel without editing anything; every finding is checked by an independent verifier; one fixer applies the confirmed ones and runs typecheck, lint and tests; each fix is rechecked, with at most two rounds. It runs as the `preflight` workflow when [dynamic workflows](https://code.claude.com/docs/en/workflows) are available, and as parallel subagents otherwise. You can also run `/preflight` on any branch yourself.
 - **Typecheck gate**: when an `implement` agent tries to finish, a stop hook runs the project's typecheck script and hands any errors back to it once. Set `BLUEPRINTS_PHASE_GATE=0` to turn it off.
 - **Asks only what's yours to decide**: choices that are easy to change later (naming, structure, thresholds, small plan adjustments, minor review findings) it makes itself, notes in the plan, and lists under **Decided for you** at the end. It asks about spending money, credentials or access, anything destructive, security design, public APIs, and product behavior the plan doesn't settle — and keeps building whatever doesn't depend on the answer while it waits.
@@ -474,7 +477,7 @@ Things that work differently in Codex:
 - **Invoke skills with `$`**: `$autopilot`, `$blueprint`, `$kickoff`. `$autopilot`, `$dispatch`, `$integrate`, `$release`, `$merge` and `$flush` only run when you invoke them; the rest Codex can also pick up from your request.
 - **Context commands**: Claude Code runs a command's `!` lines before the prompt; in Codex they become the first steps the skill runs.
 - **Power level** sets each agent's reasoning effort (low / medium / high) instead of a model, since available models depend on your plan. Agents use your session's model.
-- **Review step**: there are no workflows in Codex, so `$autopilot` runs its review with parallel agents (the same fallback Claude Code uses without workflows).
+- **No workflows**: Codex has no workflows, so `$autopilot` runs its review with parallel agents, `$parallelize` uses its orchestrator agent, and `$secure`, `$cleanup`, `$a11y` and `$dry` scan with a single agent (the same fallbacks Claude Code uses without workflows). There is no `$sweep`.
 - **Parallel streams**: Codex agents can't start agents of their own by default, so `$parallelize` runs its streams one after another. To run them in parallel, add this to `~/.codex/config.toml`:
   ```toml
   [agents]
@@ -578,7 +581,9 @@ After installation, your `.claude` directory will contain:
 │   ├── changelog.md
 │   └── ...
 ├── workflows/
-│   └── preflight.js   # Branch review workflow (runs as /preflight)
+│   ├── preflight.js       # Branch review workflow (runs as /preflight)
+│   ├── sweep.js           # Whole-codebase scan workflow (runs as /sweep; used by /secure, /cleanup, /a11y, /dry)
+│   └── streams.js         # Parallel streams for plan tasks (used by /parallelize and /autopilot)
 ├── blueprints/
 │   ├── hooks/
 │   │   └── phase-gate.sh   # Typecheck gate used by the implement agent
@@ -610,7 +615,7 @@ tasks/                         # Runtime artifacts (created during use)
 - Node.js 20.0.0 or higher
 - Claude Code CLI — v2.1.296 or later for the per-agent compaction settings (older versions ignore them). Parallel runs (`/autopilot`'s offer or `/dispatch`) launch with `claude --bg`, which needs background agents (`claude agents`); without it, it prints the commands for you to run.
 - Or Codex — tested with Codex CLI 0.163 (skills in `.agents/skills`, TOML custom agents, hooks)
-- Optional: [dynamic workflows](https://code.claude.com/docs/en/workflows) for `/preflight` as a workflow (on paid plans; Pro users enable them in `/config`). Without them, autopilot runs the same review with parallel subagents.
+- Optional: [dynamic workflows](https://code.claude.com/docs/en/workflows) for `/preflight`, `/sweep` and `streams` (on paid plans; Pro users enable them in `/config`). Without them, autopilot runs the same review with parallel subagents, `/parallelize` uses its orchestrator agent, and the scan commands use a single agent.
 - The typecheck gate needs `sh` (macOS, Linux, or Git Bash on Windows); without it the gate is skipped.
 
 ## License

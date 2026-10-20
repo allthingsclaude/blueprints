@@ -179,6 +179,20 @@ describe('installCodex', () => {
     }
   });
 
+  it('keeps the workflow routes out of skills, since Codex has no workflows', async () => {
+    await installCodex('project', root, 4);
+    const paths = getCodexPaths('project', root);
+    for (const name of ['parallelize', 'secure', 'cleanup', 'a11y', 'dry', 'autopilot']) {
+      const skill = fs.readFileSync(path.join(paths.skills, name, 'SKILL.md'), 'utf-8');
+      expect(skill, name).not.toMatch(/`sweep`|`streams`|"kinds"|"updateState"/);
+    }
+    expect(fs.readFileSync(path.join(paths.skills, 'parallelize', 'SKILL.md'), 'utf-8')).toContain('parallelize orchestrator agent');
+    for (const name of ['parallelize', 'secure', 'cleanup', 'a11y', 'dry']) {
+      const agent = fs.readFileSync(path.join(paths.agents, `${name}.toml`), 'utf-8');
+      expect(agent, name).not.toMatch(/Scan-Only Mode|Partition-only mode|Workflow Modes|`streams` workflow|`sweep`/);
+    }
+  });
+
   it('gives dispatch the Codex launch commands instead of Claude Code background sessions', async () => {
     await installCodex('project', root, 4);
     const paths = getCodexPaths('project', root);

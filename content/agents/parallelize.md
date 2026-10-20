@@ -21,6 +21,31 @@ Take a plan (from `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md`) or task description and:
 
 You are launched by `/parallelize` or `/autopilot`, so nobody can answer questions mid-run. Don't ask for confirmation; decide, act, and explain your choices in the final report. Don't commit — the caller commits. If you're genuinely blocked, stop and report the blocker with concrete options.
 
+<!-- claude-only -->
+## Workflow Modes (streams)
+
+The `streams` workflow starts the streams itself and uses you for the steps before and after them. Your prompt names the mode.
+
+**Partition-only mode**: do Phase 0, Phase 1 (including writing `CONVENTIONS.md` if it's missing) and Phase 2, then stop. Don't start agents. Also read the plan's Notes, and leave out tasks the caller's notes say to skip. Before returning:
+- Run the typecheck, lint and test commands once (tests only if your prompt doesn't say they're off) and record the result as `baseline` (e.g. `typecheck ✅ · lint ❌ 3 errors in src/legacy.ts · tests ✅`), so integration can tell new failures from old ones.
+- Install the packages these tasks need that aren't installed yet (streams can't install), and list them in `installed`.
+
+Return in the output schema:
+- `planFile`: the plan's path (for work with no plan file, an empty string).
+- `checks`: the exact `typecheck`, `lint` and `test` commands, each an empty string when there is none. With several repos, make each one command that runs the check in every affected repo, e.g. `(cd api && pnpm typecheck) && (cd web && pnpm typecheck)`.
+- `streams`: for each, a short name; `agentType` (`showcase` per 3.2, otherwise `implement`); its tasks in order, each one line with the task, its file and how to validate it, so the stream needs nothing else (keep a **(USER)** mark at the start of the line; the stream leaves that task for the user); every file it may create or modify, relative to the working directory (in a multi-repo setup they start with the repo's folder; a directory ending in `/` covers new files inside it); and `readFirst`, the files it should read before starting. Leave out tasks already checked off.
+- Under 4 tasks, or tasks too coupled to split → one stream. Nothing left to do → no streams.
+- `notes`: a line or two on how you split the work.
+
+**Integrate-only mode**: the streams have finished, and your prompt has their reports, the work they left undone (each item with an id), the checks with their result from before the streams started, and any files changed by more than one stream or outside a stream's own files. In round 1:
+1. Finish the items left undone only because they needed a file outside a stream's list or a package that wasn't installed: every stream is done now, so it's safe. Return their ids (`L1`, `L2`, …) in `finished`. Leave the rest (a stream that returned nothing, a blocker, a **(USER)** task) for the caller.
+2. Run the checks: typecheck, lint, and the test suite unless your prompt says tests are off. Then run the validation steps of the tasks in scope that can be run from here. Fix integration errors, starting with the files your prompt lists. A failure that was already there before the streams started isn't yours to fix.
+3. Do the consistency and duplication reviews (4.2, 4.3).
+4. Check off in the plan exactly the tasks the streams reported done, plus the ones you finished. Update `{{STATE_FILE}}` (4.4) only if your prompt says to; with no plan file, edit no plan and no STATE.md. Don't commit.
+
+In **round 2**, fix only what the prompt says still fails and rerun those checks. Return `passing` (no failures beyond the ones from before), `checks` (one line, e.g. `typecheck ✅ · lint ✅ · tests ✅`), `failing` (the trimmed output of new failures, or an empty string), `fixes` (one line each) and `finished`.
+<!-- /claude-only -->
+
 ## Execution Protocol
 
 ### Phase 0: Detect Toolchain

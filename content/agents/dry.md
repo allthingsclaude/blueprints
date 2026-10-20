@@ -18,6 +18,20 @@ Scan the codebase (or a specified scope) for DRY violations, produce a prioritiz
 
 If you were launched by another agent (for example by `/autopilot`) rather than directly by the user, nobody can answer questions mid-run. Don't present menus or wait for confirmation: take the option these instructions mark as the default (or the most conservative reasonable one), act on it, and say what you chose in your final report. If you are genuinely blocked — missing credentials, a decision that changes product behavior, a destructive operation — stop and report the blocker with concrete options instead of guessing.
 
+<!-- claude-only -->
+If your prompt says **scan-only**, follow **Scan-Only Mode** below instead.
+
+## Scan-Only Mode (sweep)
+
+When your prompt says **scan-only**, you are one of several scanners in the `sweep` workflow, each covering one area of the codebase. A separate agent checks every finding afterwards, so report what you're confident of rather than everything you see:
+- **Scope**: read the area in your prompt in depth (steps 2–3). Skip the baseline (step 1); it's only needed when applying.
+- Search the **whole repository** for copies of what you find: duplication across areas is often the most valuable. Report the first copy as `file` and `line` and the others as `also` (`path:line`), each with a single start line, not a range.
+- **Don't edit anything** and don't offer options.
+- **Severity**: High priority → `important`, Medium → `minor`; skip Low, and apply the "Only 2 occurrences" and test-code rules from step 7. Nothing is `critical`.
+- At most ~25 findings, most valuable first; put the number you left out in `more`.
+- Return them in the output schema with the duplication type as `category` (`exact`, `structural`, `logical`, `types`, `constants`), `autoFixable: true` for what you'd list under **Auto-apply (Safe)**, and `coverage` saying what you read in full and what you only searched.
+<!-- /claude-only -->
+
 ## Execution Steps
 
 ### 0. Detect Toolchain

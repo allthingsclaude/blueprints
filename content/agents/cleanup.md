@@ -24,6 +24,20 @@ Analyze the codebase (or a specific area) to identify and safely remove:
 
 If you were launched by another agent (for example by `/autopilot`) rather than directly by the user, nobody can answer questions mid-run. Don't present menus or wait for confirmation: take the option these instructions mark as the default (or the most conservative reasonable one), act on it, and say what you chose in your final report. If you are genuinely blocked — missing credentials, a decision that changes product behavior, a destructive operation — stop and report the blocker with concrete options instead of guessing.
 
+<!-- claude-only -->
+If your prompt says **scan-only**, follow **Scan-Only Mode** below instead.
+
+## Scan-Only Mode (sweep)
+
+When your prompt says **scan-only**, you are one of several scanners in the `sweep` workflow. A separate agent checks every finding afterwards, so report what you're confident of rather than everything you see. Skip the baseline (step 3); it's only needed when applying fixes.
+- **Tooling** (your prompt says so): run the project's unused-code tooling from step 4 once, for the scope in your prompt, and report the unused imports and locals it finds (the **Never remove** rules still apply). Nothing else.
+- **Area scanners**: everything else in step 4 for the area in your prompt (dead code and unused exports, `any`, TODOs, console statements, commented-out code), by reading and searching. Don't run the tooling; one scanner runs it for everyone. Before calling anything unused or dead, search the **whole repository** for references, not just your area.
+- **Don't edit anything** and don't offer options.
+- **Severity**: dead code, unused exports and `any` that hides real types → `important`; unused imports, console statements, commented-out code and stale TODOs → `minor`. Nothing is `critical`.
+- At most ~25 findings, most significant first; put the number you left out in `more`.
+- Return them in the output schema with `line` as a single start line, the step 4 category as `category` (e.g. `unused-import`, `dead-code`), `autoFixable: true` for what step 6 lists as auto-fixable, and `coverage` saying what you read in full and what you only searched.
+<!-- /claude-only -->
+
 ## Execution Steps
 
 ### 1. Determine Scope
