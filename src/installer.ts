@@ -103,6 +103,18 @@ export function buildTemplateVars(tasksDir: string = DEFAULT_TASKS_DIR, blueprin
 
 export const TEMPLATE_VARS: Record<string, string> = buildTemplateVars();
 
+export type TargetTool = 'claude' | 'codex';
+
+const TOOL_BLOCK = /^[ \t]*<!-- (claude|codex)-only -->[ \t]*\r?\n([\s\S]*?)^[ \t]*<!-- \/\1-only -->[ \t]*(?:\r?\n|$)/gm;
+
+/**
+ * Keep the `<!-- claude-only -->` / `<!-- codex-only -->` blocks meant for this tool
+ * (without their marker lines) and drop the ones meant for the other tool.
+ */
+export function selectToolBlocks(content: string, tool: TargetTool): string {
+  return content.replace(TOOL_BLOCK, (_match, blockTool: string, body: string) => (blockTool === tool ? body : ''));
+}
+
 export function replaceTemplateVars(content: string, tasksDir?: string, blueprintsDir?: string): string {
   const vars = tasksDir || blueprintsDir ? buildTemplateVars(tasksDir, blueprintsDir) : TEMPLATE_VARS;
   let result = content;
@@ -250,7 +262,7 @@ export function copyDirectory(srcDir: string, destDir: string, tasksDir?: string
 
     if (stat.isFile() && file.endsWith('.md')) {
       const content = fs.readFileSync(srcFile, 'utf-8');
-      const updated = replaceTemplateVars(content, tasksDir, blueprintsDir);
+      const updated = selectToolBlocks(replaceTemplateVars(content, tasksDir, blueprintsDir), 'claude');
       fs.writeFileSync(destFile, updated, 'utf-8');
       copiedCount++;
     } else if (stat.isFile()) {
@@ -343,7 +355,7 @@ export function copyAgentsWithPowerLevel(srcDir: string, destDir: string, powerL
       const content = fs.readFileSync(srcFile, 'utf-8');
       const model = getModelForAgent(file, powerLevel);
       let updated = content.replace(/^(model:\s*).+$/m, `$1${model}`);
-      updated = replaceTemplateVars(updated, tasksDir, blueprintsDir);
+      updated = selectToolBlocks(replaceTemplateVars(updated, tasksDir, blueprintsDir), 'claude');
       fs.writeFileSync(destFile, updated, 'utf-8');
       copiedCount++;
     } else if (stat.isFile()) {

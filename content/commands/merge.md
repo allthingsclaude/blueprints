@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 I'll detect which branch the current branch was created from, then merge into it.
 
-> **When to use**: You're done working on a feature branch and want to merge it back into the parent branch. This detects the parent automatically so you don't have to remember or type it.
+> **When to use**: You're done working on a feature branch and want to merge it back into the parent branch. This detects the parent automatically so you don't have to remember or type it. For branches that `/dispatch` created, use `/integrate` instead — it merges every finished run and tests them together.
 
 ## Current State
 

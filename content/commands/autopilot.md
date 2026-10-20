@@ -17,6 +17,9 @@ Full autonomous development loop. I'll take it from idea to committed code on a 
 
 **Branch**: !`git branch --show-current 2>/dev/null || echo "(not a repo — will scan children)"`
 
+**Git Dirs** (git dir, then common dir — they differ in a linked worktree):
+!`git rev-parse --path-format=absolute --git-dir --git-common-dir 2>/dev/null || echo "(not a repo)"`
+
 **Git Status**:
 !`git status --short 2>/dev/null | head -40 | grep . || echo "(clean, or not a repo)"`
 
@@ -51,8 +54,21 @@ You are the orchestrator: delegate the work to the specialist agents below and k
 Parse `$ARGUMENTS` for (in order):
 - **`--full`** flag: run the entire loop without stopping for approval prompts. Remove it from the remaining arguments.
 - **`--repos a,b,c`** flag: overrides auto-detection for multi-repo mode (comma-separated child directory names). Remove it and its value; store as `REPOS_OVERRIDE`.
-- **Plan name**: if the first remaining word matches an existing plan `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md` (case-insensitive, by the `{NAME}` part), execute that plan.
+- **Plan name**: if the first remaining word matches an existing plan `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md` (case-insensitive, as `{NAME}`, `{NN}_{NAME}`, `PLAN_{NN}_{NAME}`, or just `{NN}`), execute that plan. A named plan always wins over resuming a different active plan.
 - **Feature description**: otherwise, treat the remaining arguments as a feature description to brainstorm.
+
+### Worktree Mode (dispatched runs)
+
+This is a run that `/dispatch` started when both hold: the two **Git Dirs** paths above differ (this is a linked git worktree), and the STATE.md header has a `**Target**` line and a `**Branch**` matching the current branch. Other plans may be running in sibling worktrees at the same time. In any other worktree (for example one opened with `claude -w`), ignore this section and follow the normal steps.
+
+Differences from the normal steps:
+
+- **Plan required**: run the named plan, or the active plan in this worktree's STATE.md. If there's neither, stop: "This worktree needs an existing plan. Create plans in the main checkout, then run `/dispatch`." Don't brainstorm, write plans, or bootstrap here.
+- **Single repo**: skip multi-repo detection.
+- **Branch**: `/dispatch` already checked it out. In Step 3, skip 3a and branch creation: use the current branch and the `**Base**` from STATE.md.
+- **Dependencies**: a fresh worktree has none installed. Before Step 4 or Step 5, whichever comes first, install them once with the lockfile-respecting command for the detected toolchain (e.g. `pnpm install --frozen-lockfile`, `npm ci`, `yarn install --immutable`, `bun install --frozen-lockfile`, `uv sync --locked`, `poetry install`), unless they're already present.
+- **STATE.md is local**: `/dispatch` marks it `skip-worktree`, so git ignores your edits. Keep updating it as usual (it's how this run resumes), but never stage or commit it, and tell the commit agent not to. If `git add` warns that it's outside the sparse-checkout definition, that's this setting working. Whenever you update the header, change only the fields you're updating and keep `**Branch**`, `**Base**` and `**Target**`.
+- **Step 6**: don't launch the update agent — `/integrate` syncs CLAUDE.md and the main checkout's STATE.md once, after merging. Keep `**Active**` and `**File**` on this plan (don't reset them to None) and set `**Status**` to `✅ Complete` or `⏸️ Paused`, so `/integrate` knows which plan this run built and whether it finished. Replace the PR steps in the report with: "Run `/integrate` from the main checkout ({main checkout path}) once the other dispatched plans finish."
 
 ---
 
@@ -62,22 +78,26 @@ Parse `$ARGUMENTS` for (in order):
 
 Look for `{{STATE_FILE}}` in `./` first, then `../` (useful when run from inside a child repo of a multi-repo setup). If found in the parent, say: "Found {{TASKS_DIR}}/ in the parent directory — treating it as the working root. Run `/autopilot` from `{parent_abspath}` next time." and change the working directory to the parent before continuing.
 
-If the STATE.md header shows an active plan (`🚧 In Progress` or `⏸️ Paused`):
+If a plan name was given and it isn't the active plan, skip to **1b**. Otherwise, if the STATE.md header shows an active plan (`🚧 In Progress` or `⏸️ Paused`):
 - Locate the plan's phases with `grep -n -E '^#{1,4} ' {plan file}` and find the first phase with unchecked tasks (`grep -n -E '^[[:space:]]*([0-9]+\.|[-*]) \[ \]' {plan file}` shows where they are)
 - **If tasks remain** → report "Resuming active plan: {NAME}, Phase {N}" and go to **Step 3**, then **Step 4**
 - **If all phases are done but the plan isn't marked complete** → go to **Step 3**, then **Step 5**
 
 #### 1b. Run a Named Plan
 
-If a plan name was given, load that plan and activate it in `{{STATE_FILE}}`: set the header to
+Outside worktree mode, check the `**Dispatched**` and `**Queued**` header lines first:
+- **Dispatched** → stop: "{NAME} is running in its own worktree (`.claude/worktrees/{name}`). Attach to its session there, or run `/integrate` once it's done."
+- **Queued** → `/dispatch` planned it to run after other plans are merged. Say so and ask before running it here (with `--full`, stop).
+
+If a plan name was given, load that plan and activate it in `{{STATE_FILE}}`. Update these header fields, and keep the `**Dispatched**`/`**Queued**` lines (Step 3 rewrites `**Branch**`/`**Base**`):
 ```markdown
 **Active**: {NN}_{NAME}
 **File**: {{PLANS_DIR}}/PLAN_{NN}_{NAME}.md
-**Phase**: 1
+**Phase**: {first phase with unchecked tasks}
 **Status**: 🚧 In Progress
 **Updated**: [ISO timestamp]
 ```
-and set the plan's row in `## Plans` to `🚧 In Progress` (add a row if missing). Then go to **Step 3**, then **Step 4**.
+and set the plan's row in `## Plans` to `🚧 In Progress` (add a row if missing). If the header pointed at a different plan that was `🚧 In Progress`, set that plan's row to `⏸️ Paused`. Then go to **Step 3**, then **Step 4**.
 
 #### 1c. No Active Work — Brainstorm
 
@@ -244,10 +264,10 @@ The workflow runs in the background: `audit`, `secure`, `a11y` (UI changes only)
 
 ### Step 6: Update & Report
 
-**UPDATE CLAUDE.md and STATE.md**: launch the update agent (`subagent_type: "update"`) to sync CLAUDE.md with new patterns, dependencies, or structure from this session and to reconcile STATE.md (it also migrates a legacy-format STATE.md). If it changed CLAUDE.md, commit it (commit agent, "docs: update CLAUDE.md for {NAME}").
+**UPDATE CLAUDE.md and STATE.md** (skip in worktree mode): launch the update agent (`subagent_type: "update"`) to sync CLAUDE.md with new patterns, dependencies, or structure from this session and to reconcile STATE.md (it also migrates a legacy-format STATE.md). If it changed CLAUDE.md, commit it (commit agent, "docs: update CLAUDE.md for {NAME}").
 
 **STATE UPDATE**:
-- All phases and validation passed → `**Active**: None`, `**File**`/`**Phase**`: `—`, `**Status**: ✅ Complete`, and the plan's row `✅ Complete`
+- All phases and validation passed → (worktree mode: see Worktree Mode) `**Active**: None`, `**File**`/`**Phase**`: `—`, `**Status**: ✅ Complete`, and the plan's row `✅ Complete`
 - Partially complete (blockers, user stopped, unresolved findings) → keep `**Active**` on the plan, `**Status**: ⏸️ Paused`, `**Phase**` = last completed phase
 - Update `**Updated**`
 
@@ -309,7 +329,7 @@ Commits are non-destructive, so they happen automatically with or without `--ful
 - Never silently skip failing validation
 
 ### Track State
-`{{STATE_FILE}}` must always reflect progress so `/autopilot` can resume: update it at Step 1b (activate), after the blueprint agent (verify it exists), after each phase commit (4c), and at the end (Step 6). Keep the parseable header fields (`Active`, `File`, `Phase`, `Status`, `Updated`, plus `Branch`/`Base`/`Repos`) at the top, one row per plan under `## Plans`, and nothing else.
+`{{STATE_FILE}}` must always reflect progress so `/autopilot` can resume: update it at Step 1b (activate), after the blueprint agent (verify it exists), after each phase commit (4c), and at the end (Step 6). Keep the parseable header fields (`Active`, `File`, `Phase`, `Status`, `Updated`, plus `Branch`/`Base`/`Repos`, and `Target`/`Dispatched`/`Queued` from `/dispatch`) at the top, one row per plan under `## Plans`, and nothing else.
 
 ### Keep the User Informed
 - Brief status updates between major steps

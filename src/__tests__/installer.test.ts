@@ -22,7 +22,8 @@ import {
   LIGHTWEIGHT_AGENTS,
   HEAVYWEIGHT_AGENTS,
   TEMPLATE_VARS,
-  replaceTemplateVars
+  replaceTemplateVars,
+  selectToolBlocks
 } from '../installer.js';
 
 describe('getDefaultClaudeDir', () => {
@@ -548,6 +549,21 @@ describe('installBlueprints: workflows, hooks and template vars', () => {
     }
   });
 
+  it('keeps only the Claude Code variant of tool-specific blocks', async () => {
+    await installBlueprints(testDir, 4);
+    const claudeDir = path.join(testDir, '.claude');
+
+    for (const dir of ['commands', 'agents']) {
+      for (const rel of listFiles(path.join(claudeDir, dir))) {
+        const content = fs.readFileSync(path.join(claudeDir, dir, rel), 'utf-8');
+        expect(content, `${dir}/${rel}`).not.toMatch(/<!-- \/?(claude|codex)-only -->/);
+        expect(content, `${dir}/${rel}`).not.toContain('codex -C');
+      }
+    }
+    const dispatch = fs.readFileSync(path.join(claudeDir, 'commands', 'dispatch.md'), 'utf-8');
+    expect(dispatch).toContain('claude --bg');
+  });
+
   it('writes a manifest listing installed files', async () => {
     await installBlueprints(testDir, 4);
     const manifest = readManifest(path.join(testDir, '.claude'));
@@ -660,5 +676,33 @@ describe('hidden files', () => {
     expect(copyDirectory(srcDir, destDir)).toBe(1);
     expect(fs.readdirSync(destDir)).toEqual(['real.md']);
     expect(listFiles(srcDir)).toEqual(['real.md']);
+  });
+});
+
+describe('selectToolBlocks', () => {
+  const text = 'a\n<!-- claude-only -->\nfor claude\n<!-- /claude-only -->\nb\n  <!-- codex-only -->\nfor codex\n  <!-- /codex-only -->\nc\n';
+
+  it('keeps Claude Code blocks without their markers and drops Codex blocks', () => {
+    expect(selectToolBlocks(text, 'claude')).toBe('a\nfor claude\nb\nc\n');
+  });
+
+  it('keeps Codex blocks without their markers and drops Claude Code blocks', () => {
+    expect(selectToolBlocks(text, 'codex')).toBe('a\nb\nfor codex\nc\n');
+  });
+
+  it('leaves text without blocks unchanged', () => {
+    expect(selectToolBlocks('plain <!-- comment -->\n', 'claude')).toBe('plain <!-- comment -->\n');
+  });
+
+  it('every block in the shipped content is closed', () => {
+    const sources = getSourcePaths();
+    for (const dir of [sources.commands, sources.agents]) {
+      for (const rel of listFiles(dir)) {
+        const content = fs.readFileSync(path.join(dir, rel), 'utf-8');
+        for (const tool of ['claude', 'codex'] as const) {
+          expect(selectToolBlocks(content, tool), rel).not.toMatch(/<!-- \/?(claude|codex)-only -->/);
+        }
+      }
+    }
   });
 });

@@ -10,6 +10,7 @@ import {
   getSourcePaths,
   listFiles,
   replaceTemplateVars,
+  selectToolBlocks,
 } from './installer.js';
 
 /**
@@ -139,6 +140,8 @@ const TOOL_REPLACEMENTS: Array<[RegExp, string]> = [
   [/`Agent` tool/g, '`spawn_agent` tool'],
   [/`Agent`/g, '`spawn_agent`'],
   [/\bAgent\(\{/g, 'spawn_agent({'],
+  // Codex's built-in roles are default, worker and explorer; worker is the one for fixes
+  [/\bsubagent_type(\s*[=:]\s*)"general-purpose"/g, 'agent_type$1"worker"'],
   [/\bsubagent_type(\s*[=:]\s*)/g, 'agent_type$1'],
   // Backticked tool names
   [/`Read`/g, 'a file read (`sed -n` / `cat`)'],
@@ -176,7 +179,7 @@ export interface ConvertedText {
  * Template variables must already be rendered.
  */
 export function convertTextForCodex(text: string, commandNames: string[]): ConvertedText {
-  let out = text;
+  let out = selectToolBlocks(text, 'codex');
 
   // `!`cmd`` injections run before Claude sees the prompt; Codex has no equivalent,
   // so they become steps the model runs itself.

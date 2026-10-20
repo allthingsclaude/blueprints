@@ -269,13 +269,13 @@ Write `{{STATE_FILE}}` in this exact format:
 [... one row per plan found on disk, sorted by number ...]
 ```
 
-Keep any **Branch** / **Repos** header lines that already exist. Never add per-task tables or multi-line notes.
+Keep any **Branch** / **Base** / **Repos** / **Target** / **Dispatched** / **Queued** header lines that already exist (`/autopilot` and `/dispatch` set them), unless your prompt says to change them. Never add per-task tables or multi-line notes.
 
 **Reconciliation rules**:
 - **Plans on disk but not in STATE.md** → add a row
 - **Plans in STATE.md but not on disk** → remove the row (plan file was deleted)
 - **Progress mismatch** → the plan file's checkboxes are the source of truth
-- **Active plan detection** → if the current Active plan still has incomplete tasks, keep it. Otherwise, if any plan has incomplete tasks, set the highest-numbered one as Active; if all plans are complete, set Active to `None`
+- **Active plan detection** → if the current Active plan still has incomplete tasks, keep it. Otherwise, if any plan has incomplete tasks, set the highest-numbered one as Active; if all plans are complete, set Active to `None`. Never make a plan listed on the `**Dispatched**` or `**Queued**` line Active — it runs (or will run) in its own worktree — and keep those plans' rows as they are
 - **Phase detection** → for the active plan, set Phase to the first phase that has incomplete tasks
 
 #### 5d. Migrate a Legacy STATE.md

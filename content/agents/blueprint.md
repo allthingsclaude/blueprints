@@ -74,6 +74,7 @@ Generate `{{PLANS_DIR}}/PLAN_{NN}_{NAME}.md` with this exact structure:
 
 **Created**: [Current date and time]
 **Status**: 📝 Draft / 🎯 Ready / 🚀 In Progress / ✅ Complete
+**Depends on**: — [or the unfinished plans this one builds on, e.g. `02_PAYMENTS` — `/dispatch` won't run it in parallel with them]
 
 [2-3 sentence executive summary of what this plan addresses]
 
@@ -315,7 +316,7 @@ Write `{{STATE_FILE}}` using this **exact format** — other agents parse the he
 - **Phase** — current phase number of the active plan, or `—` if none active
 - **Status** — one of: `🚧 In Progress`, `⏸️ Paused`, `✅ Complete`
 - **Updated** — ISO timestamp of last update (e.g., `2025-01-15T14:30:00Z`)
-- Optional lines set by `/autopilot`: **Branch**, **Repos**
+- Optional lines set by `/autopilot`: **Branch**, **Base**, **Repos**; by `/dispatch`: **Target**, **Dispatched**, **Queued**
 
 ## Final Step
 

@@ -46,6 +46,11 @@ describe('convertTextForCodex', () => {
     expect(out).not.toMatch(/`(Agent|Grep|Edit|Write|TodoWrite)`|subagent_type|Grep tool/);
   });
 
+  it('maps the general-purpose agent to Codex\'s worker role', () => {
+    const { text } = convertTextForCodex('launch one fixer (`subagent_type: "general-purpose"`), then the commit agent (`subagent_type: "commit"`)', COMMANDS);
+    expect(text).toBe('launch one fixer (`agent_type: "worker"`), then the commit agent (`agent_type: "commit"`)');
+  });
+
   it('renames instruction files and the product', () => {
     expect(convertTextForCodex('Update CLAUDE.md in Claude Code', COMMANDS).text).toBe('Update AGENTS.md in Codex');
   });
@@ -170,7 +175,19 @@ describe('installCodex', () => {
       expect(content, file).not.toContain('$ARGUMENTS');
       expect(content, file).not.toMatch(/!`[^`]+`/);
       expect(content, file).not.toMatch(/subagent_type|`(Agent|Read|Grep|Glob|Edit|Write|Bash|TodoWrite|WebSearch|WebFetch|AskUserQuestion)`|Claude Code|CLAUDE\.md/);
+      expect(content, file).not.toMatch(/claude --bg|claude agents|<!-- \/?(claude|codex)-only -->/);
     }
+  });
+
+  it('gives dispatch the Codex launch commands instead of Claude Code background sessions', async () => {
+    await installCodex('project', root, 4);
+    const paths = getCodexPaths('project', root);
+    const dispatch = fs.readFileSync(path.join(paths.skills, 'dispatch', 'SKILL.md'), 'utf-8');
+
+    expect(dispatch).toContain("codex -C \"{WT}\" --add-dir \"{COMMON}\" '$autopilot {NN}_{NAME} --full'");
+    expect(dispatch).toContain('`codex agents`');
+    expect(dispatch).toContain('`$integrate`');
+    expect(dispatch).not.toContain('--permission-mode');
   });
 
   it('never overwrites a skill or agent the user wrote', async () => {

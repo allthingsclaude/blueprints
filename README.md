@@ -65,7 +65,7 @@ Control which models power your agents:
 
 ---
 
-## Commands (40+)
+## Commands (45+)
 
 ### Planning & Execution
 
@@ -76,6 +76,8 @@ Control which models power your agents:
 | `/implement` | Execute a plan autonomously (hands-off) |
 | `/parallelize` | Execute independent plan tasks across multiple agents simultaneously |
 | `/autopilot` | Full autonomous development loop — from idea to committed code |
+| `/dispatch` | Run several plans at once, each in its own git worktree and background session |
+| `/integrate` | Merge finished `/dispatch` runs back one at a time, testing after each merge |
 | `/finalize` | Complete a work phase - update plans, commit changes, document decisions |
 
 ### Project Setup
@@ -116,7 +118,7 @@ Control which models power your agents:
 | `/changelog` | Generate a changelog from git history |
 | `/docs` | Generate or update project documentation |
 | `/migrate` | Upgrade dependencies or migrate between framework versions |
-| `/merge` | Detect parent branch and merge the current branch into it |
+| `/merge` | Detect parent branch and merge the current branch into it (for `/dispatch` runs, use `/integrate`) |
 | `/release` | Create a release — version bump, changelog, tag, and publish |
 | `/i18n` | Audit and set up internationalization for your project |
 
@@ -409,6 +411,7 @@ When you have a plan, choose how to execute it:
 | **Autonomous** | `/implement` | Well-defined tasks you trust to run hands-off |
 | **Parallel** | `/parallelize` | Plans with independent tasks that can run simultaneously |
 | **Full Auto** | `/autopilot` | End-to-end: idea → plan → implement → test → commit |
+| **Several plans at once** | `/dispatch` → `/integrate` | Independent plans built side by side, each by its own autopilot in its own worktree |
 
 ---
 
@@ -424,6 +427,22 @@ brainstorm → /blueprint → branch → phase 1 → commit → phase 2 → comm
 - **Preflight** reviews the whole branch at the end. `audit`, `secure`, `a11y` (only when UI files changed) and `test` run in parallel without editing anything; every finding is checked by an independent verifier; one fixer applies the confirmed ones and runs typecheck, lint and tests; each fix is rechecked, with at most two rounds. It runs as the `preflight` workflow when [dynamic workflows](https://code.claude.com/docs/en/workflows) are available, and as parallel subagents otherwise. You can also run `/preflight` on any branch yourself.
 - **Typecheck gate**: when an `implement` agent tries to finish, a stop hook runs the project's typecheck script and hands any errors back to it once. Set `BLUEPRINTS_PHASE_GATE=0` to turn it off.
 - **Resuming**: progress lives in the plan's checkboxes and `tasks/STATE.md`, so running `/autopilot` again picks up where it stopped.
+
+### Several plans at once
+
+When plans don't depend on each other, `/dispatch` runs them side by side:
+
+```
+/dispatch 02 03 04 --full     # check overlaps → worktrees → one background autopilot each
+claude agents                 # watch them; attach to answer anything marked "Needs input"
+/integrate                    # merge finished runs one at a time, test after each, clean up
+```
+
+- **Waves**: `/dispatch` compares the plans' **Files Involved** sections and `**Depends on**` lines. Plans that edit the same files, both change the database schema, or depend on each other go into later waves, which you dispatch once `/integrate` has merged what they need.
+- **Isolation**: each plan gets `.claude/worktrees/{name}` on `feat/{name}`, branched from your current branch (no push needed). Gitignored files listed in `.worktreeinclude` (e.g. `.env`) are copied in, and autopilot installs dependencies there before the first phase.
+- **No STATE.md conflicts**: each run keeps its progress in its own worktree's STATE.md, which git is told to ignore there, and skips the CLAUDE.md update. `/integrate` syncs both once, after merging.
+- **Integration**: runs are merged in dependency order, smallest first. Lockfiles, `CONVENTIONS.md` and add-only lists are resolved automatically; any other conflict stops and asks. Typecheck, lint and tests run after every merge, and failures that only appear in the combination get one fixer (at most two rounds). Nothing is pushed, and the undo point is printed.
+- **Cost**: each run uses as much as a normal `/autopilot` run, so three at once use your quota three times as fast. `--max N` limits how many start together (default 3).
 
 ### Keeping token use down
 
@@ -447,7 +466,7 @@ The same commands and agents install into [Codex](https://learn.chatgpt.com/docs
 
 Things that work differently in Codex:
 
-- **Invoke skills with `$`**: `$autopilot`, `$blueprint`, `$kickoff`. `$autopilot`, `$release`, `$merge` and `$flush` only run when you invoke them; the rest Codex can also pick up from your request.
+- **Invoke skills with `$`**: `$autopilot`, `$blueprint`, `$kickoff`. `$autopilot`, `$dispatch`, `$integrate`, `$release`, `$merge` and `$flush` only run when you invoke them; the rest Codex can also pick up from your request.
 - **Context commands**: Claude Code runs a command's `!` lines before the prompt; in Codex they become the first steps the skill runs.
 - **Power level** sets each agent's reasoning effort (low / medium / high) instead of a model, since available models depend on your plan. Agents use your session's model.
 - **Review step**: there are no workflows in Codex, so `$autopilot` runs its review with parallel agents (the same fallback Claude Code uses without workflows).
@@ -457,6 +476,7 @@ Things that work differently in Codex:
   max_depth = 2
   ```
 - **Typecheck gate**: run `/hooks` in Codex once to review and trust it. The installer appends it to your existing `hooks.json` (your hooks are kept, and the original is saved as `hooks.json.before-blueprints`).
+- **`$dispatch`** prepares the worktrees the same way, then prints one `codex -C <worktree> …` command per plan for you to run in separate terminals, since it can't start background sessions itself. Watch them with `codex agents`.
 - **Per-agent compaction and turn limits** have no Codex equivalent; Codex uses its global compaction setting.
 
 The installer never overwrites a skill or agent you wrote yourself — if one already uses a blueprints name, it's skipped and listed. Reinstalling updates only the files blueprints installed.
@@ -541,7 +561,7 @@ After installation, your `.claude` directory will contain:
 
 ```
 .claude/
-├── commands/          # 46 command files
+├── commands/          # 48 command files
 │   ├── audit.md
 │   ├── autopilot.md
 │   ├── bootstrap.md
@@ -581,7 +601,7 @@ tasks/                         # Runtime artifacts (created during use)
 ## Requirements
 
 - Node.js 20.0.0 or higher
-- Claude Code CLI — v2.1.296 or later for the per-agent compaction settings (older versions ignore them)
+- Claude Code CLI — v2.1.296 or later for the per-agent compaction settings (older versions ignore them). `/dispatch` launches runs with `claude --bg`, which needs background agents (`claude agents`); without it, it prints the commands for you to run.
 - Or Codex — tested with Codex CLI 0.163 (skills in `.agents/skills`, TOML custom agents, hooks)
 - Optional: [dynamic workflows](https://code.claude.com/docs/en/workflows) for `/preflight` as a workflow (on paid plans; Pro users enable them in `/config`). Without them, autopilot runs the same review with parallel subagents.
 - The typecheck gate needs `sh` (macOS, Linux, or Git Bash on Windows); without it the gate is skipped.
