@@ -4,8 +4,11 @@ import { program } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
-import { installBlueprints, getDefaultClaudeDir, getInstallPaths, getSourcePaths, claudeSettingsFile, glanceModel, hasHook, readJsonFile, GLANCE_HOOK, LEAN_COMMITS_HOOK, LEAN_COMMITS_HOOK_CODEX, POWER_LEVEL_LABELS, POWER_LEVEL_MODELS, DEFAULT_TASKS_DIR } from './installer.js';
-import type { AgentPowerLevel, HookChoice, HookResult } from './installer.js';
+import {
+  installBlueprints, getDefaultClaudeDir, getInstallPaths, getSourcePaths, claudeSettingsFile, glanceModel, hasAnyHook, readJsonFile,
+  GLANCE_HOOK, GLANCE_MOD, userModsDir, LEAN_COMMITS_HOOK, LEAN_COMMITS_HOOK_CODEX, POWER_LEVEL_LABELS, POWER_LEVEL_MODELS, DEFAULT_TASKS_DIR,
+} from './installer.js';
+import type { AgentPowerLevel, HookChoice, HookResult, InstallOptions, OwnHook } from './installer.js';
 import { getCodexPaths, installCodex, POWER_LEVEL_EFFORTS } from './codex.js';
 import type { CodexScope } from './codex.js';
 import fs from 'fs';
@@ -55,6 +58,14 @@ function codexRootFor(targetPath: string): string {
   const base = path.basename(resolved);
   return base === '.claude' || base === '.codex' ? path.dirname(resolved) : resolved;
 }
+
+type HookKey = keyof InstallOptions & keyof CLIOptions;
+
+/** The optional hooks, in the order the installer lists them (each a checkbox, off until ticked) */
+const HOOK_OPTIONS: { key: HookKey; flag: string; name: string; description: string; claude: OwnHook[]; codex: OwnHook[] }[] = [
+  { key: 'glance', flag: 'glance', name: 'Glance pages', description: 'turn long replies into visual pages, and show when one is being made', claude: [GLANCE_HOOK], codex: [GLANCE_HOOK] },
+  { key: 'leanCommits', flag: 'lean-commits', name: 'Lean commits', description: 'one-line `type: description` commits, no agent trailers', claude: [LEAN_COMMITS_HOOK], codex: [LEAN_COMMITS_HOOK_CODEX] },
+];
 
 function reportHook(name: string, result: HookResult, file: string): void {
   const messages: Partial<Record<HookResult, string>> = {
@@ -237,47 +248,69 @@ async function main(): Promise<void> {
     tasksDir = tasksDirAnswer.tasksDir;
   }
 
-  // Optional hooks, in the Claude Code settings / Codex hooks.json, only when asked for
+  // Optional hooks, in the Claude Code settings / Codex hooks.json, only when asked for.
+  // A project install also sees the ones on in the user's own settings: their hooks apply here too.
   const claudeSettings = forClaude ? readJsonFile(claudeSettingsFile(getInstallPaths(targetPath).base)) : null;
   const codexHooks = forCodex ? readJsonFile(getCodexPaths(codexScope, codexRoot).hooksFile) : null;
-  // A project install also sees lean commits that's on in the user's own settings
   const userClaude = forClaude && installType !== 'global' ? readJsonFile(path.join(getDefaultClaudeDir(), 'settings.json')) : null;
   const userCodex = forCodex && installType !== 'global' ? readJsonFile(getCodexPaths('global', codexRoot).hooksFile) : null;
-  const glanceIn = { claude: hasHook(claudeSettings, GLANCE_HOOK), codex: hasHook(codexHooks, GLANCE_HOOK) };
-  const leanIn = {
-    claude: hasHook(claudeSettings, LEAN_COMMITS_HOOK) || hasHook(userClaude, LEAN_COMMITS_HOOK),
-    codex: hasHook(codexHooks, LEAN_COMMITS_HOOK_CODEX) || hasHook(userCodex, LEAN_COMMITS_HOOK_CODEX),
-  };
-  const leanGlobal = hasHook(userClaude, LEAN_COMMITS_HOOK) || hasHook(userCodex, LEAN_COMMITS_HOOK_CODEX);
-  const glanceInstalled = glanceIn.claude || glanceIn.codex;
-  const leanInstalled = leanIn.claude || leanIn.codex;
+  type Where = { claude: boolean; codex: boolean };
+  const here = {} as Record<HookKey, Where>;
+  const fromUser = {} as Record<HookKey, Where>;
+  for (const option of HOOK_OPTIONS) {
+    here[option.key] = { claude: hasAnyHook(claudeSettings, option.claude), codex: hasAnyHook(codexHooks, option.codex) };
+    fromUser[option.key] = { claude: hasAnyHook(userClaude, option.claude), codex: hasAnyHook(userCodex, option.codex) };
+  }
+  const isOn = (key: HookKey) => [here[key], fromUser[key]].some(w => (forClaude && w.claude) || (forCodex && w.codex));
 
-  const chooseHook = async (flag: string | undefined, name: string, message: string, installed: boolean): Promise<HookChoice> => {
-    if (flag) {
-      const requested = flag.toLowerCase();
-      if (requested !== 'on' && requested !== 'off') {
-        console.error(chalk.red(`Error: --${name} must be on or off`));
-        process.exit(1);
-      }
-      return requested;
+  // Each hook: a flag decides it, --yes keeps it as it is, otherwise one checklist asks about the rest
+  const wanted = {} as Record<HookKey, boolean | 'keep'>;
+  for (const option of HOOK_OPTIONS) {
+    const flag = options[option.key];
+    if (!flag) continue;
+    const requested = flag.toLowerCase();
+    if (requested !== 'on' && requested !== 'off') {
+      console.error(chalk.red(`Error: --${option.flag} must be on or off`));
+      process.exit(1);
     }
-    if (options.yes) return 'keep';
-    const answer = await inquirer.prompt<{ on: boolean }>([{ type: 'confirm', name: 'on', message, default: installed }]);
-    return answer.on ? 'on' : 'off';
+    wanted[option.key] = requested === 'on';
+  }
+  const unasked = HOOK_OPTIONS.filter(option => wanted[option.key] === undefined);
+  if (options.yes) {
+    for (const option of unasked) wanted[option.key] = 'keep';
+  } else if (unasked.length) {
+    const answer = await inquirer.prompt<{ hooks: HookKey[] }>([{
+      type: 'checkbox',
+      name: 'hooks',
+      message: 'Optional hooks (space to turn on or off, enter to confirm):',
+      choices: unasked.map(option => ({ name: `${option.name} ${chalk.dim(`— ${option.description}`)}`, short: option.name, value: option.key, checked: isOn(option.key) })),
+    }]);
+    for (const option of unasked) wanted[option.key] = answer.hooks.includes(option.key);
+  }
+  // On only in the user's settings: 'keep' leaves it there, rather than adding a second copy to the project
+  const choiceFor = (key: HookKey, tool: keyof Where): HookChoice => {
+    const want = wanted[key];
+    if (want === 'keep') return 'keep';
+    if (!want) return 'off';
+    return fromUser[key][tool] && !here[key][tool] ? 'keep' : 'on';
   };
-  const glance = await chooseHook(options.glance, 'glance', 'Glance pages: open /glance pages by themselves, and turn long replies into a visual page in the background (adds a Stop hook)?', glanceInstalled);
-  const leanCommits = await chooseHook(options.leanCommits, 'lean-commits', 'Lean commits: one-line `type: description` messages with no co-author or session trailers (adds a hook that turns down other commits)?', leanInstalled);
-  // With 'keep', each tool keeps its own setting: say where it's on
-  const label = (choice: HookChoice, where: { claude: boolean; codex: boolean }) => {
-    if (choice !== 'keep') return choice;
-    const on = [forClaude && where.claude ? 'Claude Code' : '', forCodex && where.codex ? 'Codex' : ''].filter(Boolean);
-    return on.length ? `on (kept${forClaude && forCodex ? ` in ${on.join(' and ')}` : ''})` : 'off';
+  const claudeOptions = Object.fromEntries(HOOK_OPTIONS.map(o => [o.key, choiceFor(o.key, 'claude')])) as InstallOptions;
+  const codexOptions = Object.fromEntries(HOOK_OPTIONS.map(o => [o.key, choiceFor(o.key, 'codex')])) as InstallOptions;
+  const status = (key: HookKey): string => {
+    const tools = [
+      forClaude ? { name: 'Claude Code', choice: claudeOptions[key], here: here[key].claude, user: fromUser[key].claude } : null,
+      forCodex ? { name: 'Codex', choice: codexOptions[key], here: here[key].codex, user: fromUser[key].codex } : null,
+    ].filter(t => t !== null);
+    const on = tools.filter(t => t.choice === 'on' || (t.choice === 'keep' && (t.here || t.user)));
+    if (!on.length) return 'off';
+    const where = on.length < tools.length ? ` in ${on.map(t => t.name).join(' and ')}` : '';
+    return `on${where}${on.every(t => t.choice === 'keep' && !t.here) ? ' (from your user settings)' : ''}`;
   };
-  const glanceLabel = label(glance, glanceIn);
-  const leanLabel = label(leanCommits, leanIn);
-  if (leanCommits === 'off' && leanGlobal) {
-    console.log(chalk.yellow('  Lean commits is on in your user settings, and its hook still applies to this project.'));
-    console.log(chalk.yellow('  Run the installer with --global --lean-commits off to turn it off everywhere.'));
+  for (const option of HOOK_OPTIONS) {
+    if (wanted[option.key] === false && ((forClaude && fromUser[option.key].claude) || (forCodex && fromUser[option.key].codex))) {
+      console.log(chalk.yellow(`  ${option.name} is on in your user settings, and its hook still applies to this project.`));
+      console.log(chalk.yellow(`  Run the installer with --global --${option.flag} off to turn it off everywhere.`));
+    }
   }
 
   // Show what will be installed
@@ -307,8 +340,11 @@ async function main(): Promise<void> {
   }
   console.log(`  ${chalk.bold('Power Level:')} ${chalk.magenta(`${powerLevel} - ${POWER_LEVEL_LABELS[powerLevel]}`)} ${chalk.dim(`(${describe(powerLevel)})`)}`);
   console.log(`  ${chalk.bold('Tasks Dir:')}   ${chalk.cyan(`${tasksDir}/`)}`);
-  console.log(`  ${chalk.bold('Glance hook:')} ${glanceLabel}${glanceLabel.startsWith('on') && forClaude ? chalk.dim(` (Claude Code pages with ${glanceModel(powerLevel)})`) : ''}`);
-  console.log(`  ${chalk.bold('Lean commits:')} ${leanLabel}`);
+  for (const option of HOOK_OPTIONS) {
+    const label = status(option.key);
+    const note = option.key === 'glance' && label.startsWith('on') && forClaude ? chalk.dim(` (Claude Code pages with ${glanceModel(powerLevel)})`) : '';
+    console.log(`  ${chalk.bold(`${option.name}:`)} ${label}${note}`);
+  }
   console.log(chalk.dim('─'.repeat(50)));
   console.log();
 
@@ -333,8 +369,12 @@ async function main(): Promise<void> {
   const spinner = ora('Installing blueprints...').start();
 
   try {
-    const claudeResult = forClaude ? await installBlueprints(targetPath, powerLevel, tasksDir, { glance, leanCommits }) : null;
-    const codexResult = forCodex ? await installCodex(codexScope, codexRoot, powerLevel, tasksDir, undefined, { glance, leanCommits }) : null;
+    const claudeResult = forClaude ? await installBlueprints(targetPath, powerLevel, tasksDir, claudeOptions) : null;
+    const codexResult = forCodex ? await installCodex(codexScope, codexRoot, powerLevel, tasksDir, undefined, codexOptions) : null;
+    const hookResults = (result: Record<'glanceHook' | 'leanCommits', HookResult>) => HOOK_OPTIONS.map(option => ({
+      name: `${option.name.toLowerCase().replace(/ pages$/, '')} hook`,
+      result: result[option.key === 'glance' ? 'glanceHook' : option.key],
+    }));
     spinner.succeed(chalk.green('Installation complete!'));
 
     console.log();
@@ -347,8 +387,12 @@ async function main(): Promise<void> {
       if (claudeResult.removed > 0) {
         console.log(`  ${chalk.green('✓')} ${claudeResult.removed} outdated blueprints files removed (your own files are never touched)`);
       }
-      reportHook('glance hook', claudeResult.glanceHook, claudeResult.settingsFile);
-      reportHook('lean commits hook', claudeResult.leanCommits, claudeResult.settingsFile);
+      for (const hook of hookResults(claudeResult)) reportHook(hook.name, hook.result, claudeResult.settingsFile);
+      const addItYourself = `To add it yourself: claude plugin marketplace add "${userModsDir()}" && claude plugin install ${GLANCE_MOD}`;
+      if (claudeResult.glanceMod === 'added') console.log(`  ${chalk.green('✓')} glance mod added for your user: it shows above the prompt while a page is being made (new sessions, or /reload-plugins)`);
+      if (claudeResult.glanceMod === 'removed') console.log(`  ${chalk.green('✓')} glance mod removed`);
+      if (claudeResult.glanceMod === 'failed') console.log(`  ${chalk.yellow('!')} couldn't add the glance mod (${claudeResult.glanceModError}). ${addItYourself}`);
+      if (claudeResult.glanceMod === 'no-cli') console.log(`  ${chalk.yellow('!')} the glance mod wasn't added: claude isn't on your PATH. ${addItYourself}`);
       if (claudeResult.attribution === 'set') console.log(`  ${chalk.green('✓')} Claude Code's commit attribution turned off (attribution.commit, attribution.sessionUrl)`);
       if (claudeResult.attribution === 'restored') console.log(`  ${chalk.green('✓')} Claude Code's attribution setting put back as it was`);
       if (claudeResult.attribution === 'left') console.log(`  ${chalk.yellow('!')} Claude Code's attribution setting was changed after lean commits set it, so it was left as it is`);
@@ -366,8 +410,7 @@ async function main(): Promise<void> {
       if (codexResult.skipped.length > 0) {
         console.log(`  ${chalk.yellow('!')} Skipped (you already have your own): ${codexResult.skipped.join(', ')}`);
       }
-      reportHook('glance hook', codexResult.glanceHook, codexResult.paths.hooksFile);
-      reportHook('lean commits hook', codexResult.leanCommits, codexResult.paths.hooksFile);
+      for (const hook of hookResults(codexResult)) reportHook(hook.name, hook.result, codexResult.paths.hooksFile);
     }
     console.log(chalk.dim('─'.repeat(50)));
     console.log();
@@ -384,12 +427,10 @@ async function main(): Promise<void> {
       const where = installType === 'global' ? 'in any project' : `in ${chalk.cyan(codexRoot)}`;
       console.log(`  ${chalk.cyan('Codex:')}       open Codex ${where} and type ${chalk.yellow('$autopilot')} or ${chalk.yellow('$blueprint')} (skills start with $)`);
       const changed = (result: HookResult) => result === 'added' || result === 'updated';
-      if (codexResult.hookRegistered || changed(codexResult.glanceHook) || changed(codexResult.leanCommits)) {
-        const which = [
-          codexResult.hookRegistered ? 'typecheck gate' : '',
-          changed(codexResult.glanceHook) ? 'glance hook' : '',
-          changed(codexResult.leanCommits) ? 'lean commits hook' : '',
-        ].filter(Boolean).join(', ').replace(/, ([^,]+)$/, ' and $1');
+      const changedHooks = hookResults(codexResult).filter(hook => changed(hook.result)).map(hook => hook.name);
+      if (codexResult.hookRegistered || changedHooks.length) {
+        const which = [codexResult.hookRegistered ? 'typecheck gate' : '', ...changedHooks]
+          .filter(Boolean).join(', ').replace(/, ([^,]+)$/, ' and $1');
         console.log(`               run ${chalk.yellow('/hooks')} in Codex once to review and trust the blueprints ${which}`);
       }
       console.log(chalk.dim(`               Optional: for parallel streams in $parallelize, add "[agents]" with "max_depth = 2" to ${path.join(codexResult.paths.codexHome, 'config.toml')}`));

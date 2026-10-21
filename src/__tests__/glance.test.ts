@@ -11,7 +11,7 @@ import {
   excludeFromGit,
   getDefaultClaudeDir,
   getSourcePaths,
-  glanceHookCommand,
+  hookCommand,
   glanceModel,
   nodeForHooks,
   hasGlanceHook,
@@ -37,6 +37,7 @@ type GlanceModule = {
   writerPrompt: (project: string, guide: string, message: string) => string;
   freshPages: (dir: string, now?: number) => string[];
   claim: (dir: string, key: string) => boolean;
+  pageTitle: (html: string) => string;
 };
 let glance: GlanceModule;
 
@@ -66,6 +67,12 @@ const longReply = [
 ].join('\n');
 
 describe('glance hook helpers', () => {
+  it('reads a page\'s title the way the page shows it', () => {
+    expect(glance.pageTitle('<title>Fixes &amp; next steps</title>')).toBe('Fixes & next steps');
+    expect(glance.pageTitle('<title>Escaping &amp;lt;div&amp;gt; in JSX</title>')).toBe('Escaping &lt;div&gt; in JSX');
+    expect(glance.pageTitle('<p>no title</p>')).toBe('');
+  });
+
   it('makes a page only for long replies made of several points', () => {
     expect(glance.worthAPage(longReply)).toBe(true);
     expect(glance.worthAPage('1. short\n2. reply\n3. here\n4. ok')).toBe(false);
@@ -160,6 +167,13 @@ describe('glance hook', () => {
 
   const pages = () => path.join(project, 'tasks', 'pages');
   const pageFiles = () => (fs.existsSync(pages()) ? fs.readdirSync(pages()).filter(f => f.endsWith('.html')) : []);
+  const recordsDir = () => path.join(bin, 'config', 'blueprints', 'glance-jobs');
+  const records = (session: string) => {
+    const dir = recordsDir();
+    return (fs.existsSync(dir) ? fs.readdirSync(dir) : [])
+      .filter(f => f.startsWith(`${session}.`) && f.endsWith('.json'))
+      .map(f => JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8')));
+  };
   const hookEnv = (env: Record<string, string>) => {
     const base: Record<string, string | undefined> = {
       ...process.env,
@@ -171,6 +185,8 @@ describe('glance hook', () => {
       CLAUDE_CODE_SESSION_ATTENDED: '1',
       CLAUDECODE: '1',
       DISPLAY: ':0',
+      // Records for the mod go under Claude Code's config folder: a scratch one, never the real ~/.claude
+      CLAUDE_CONFIG_DIR: path.join(bin, 'config'),
       ...env,
     };
     for (const key of ['BLUEPRINTS_GLANCE', 'BLUEPRINTS_GLANCE_CHILD', 'BLUEPRINTS_GLANCE_MIN', 'BLUEPRINTS_GLANCE_MODEL', 'CLAUDE_PROJECT_DIR', 'SSH_CONNECTION', 'SSH_TTY']) {
@@ -248,18 +264,49 @@ describe('glance hook', () => {
   });
 
   it('works the same way in Codex, reading the page from the file it asks for', { timeout: 20_000 }, async () => {
-    runHook('codex', longReply);
+    runHook('codex', longReply, {}, { session_id: 'codex-1' });
     expect(await waitFor(() => pageFiles().length > 0)).toBe(true);
+    expect(records('codex-1')).toEqual([]); // Codex has no mods: nothing is recorded
     expect(fs.readFileSync(writerArgs, 'utf-8')).toContain('read-only');
     expect(fs.readFileSync(writerStdin, 'utf-8')).toContain('<reply>');
   });
 
   it('logs and cleans up when the writer can\'t be found', { timeout: 20_000 }, async () => {
-    runHook('claude', longReply, { BLUEPRINTS_GLANCE_WRITER: path.join(bin, 'missing-claude') });
+    runHook('claude', longReply, { BLUEPRINTS_GLANCE_WRITER: path.join(bin, 'missing-claude') }, { session_id: 'sess-b' });
     expect(await waitFor(() => fs.existsSync(path.join(pages(), '.glance.log')))).toBe(true);
     expect(fs.readFileSync(path.join(pages(), '.glance.log'), 'utf-8')).toMatch(/no page from claude: .*ENOENT/);
     expect(pageFiles()).toEqual([]);
     expect(fs.existsSync(opened)).toBe(false);
+    expect(await waitFor(() => records('sess-b')[0]?.state === 'failed')).toBe(true);
+    expect(records('sess-b')[0]).toMatchObject({ state: 'failed', reason: expect.stringContaining('.glance.log') });
+  });
+
+  it('records a failure when the writer can\'t even start, so the mod doesn\'t wait on it', { timeout: 20_000 }, async () => {
+    // Its private working folder is a symlink (someone else's): it refuses to use it
+    const tmp = path.join(bin, 'tmp');
+    fs.mkdirSync(tmp);
+    fs.symlinkSync(bin, path.join(tmp, `blueprints-glance-${process.getuid?.() ?? 'user'}`));
+    runHook('claude', longReply, { TMPDIR: tmp }, { session_id: 'sess-c' });
+    expect(await waitFor(() => records('sess-c')[0]?.state === 'failed')).toBe(true);
+    expect(records('sess-c')[0].reason).toMatch(/not a private folder/);
+    expect(fs.readFileSync(path.join(pages(), '.glance.log'), 'utf-8')).toMatch(/no page: refusing to use/);
+  });
+
+  it('records each page for the session\'s mod: making, then ready with the page and its title', { timeout: 20_000 }, async () => {
+    // A writer that takes a moment, so the record can be seen while the page is being made
+    const page = '<!doctype html><html><head><title>Fixes &amp; next steps</title></head><body>ok</body></html>';
+    fs.writeFileSync(path.join(bin, 'slow-claude'), `#!/bin/sh\ncat > /dev/null\nsleep 1\necho '${page}'\n`, { mode: 0o755 });
+    runHook('claude', longReply, { BLUEPRINTS_GLANCE_WRITER: path.join(bin, 'slow-claude') }, { session_id: 'sess-a' });
+    const [making] = records('sess-a');
+    expect(making).toMatchObject({ state: 'making', startedAt: expect.any(Number) });
+    expect(await waitFor(() => records('sess-a')[0]?.state === 'ready')).toBe(true);
+    const [ready] = records('sess-a');
+    expect(ready).toMatchObject({ state: 'ready', title: 'Fixes & next steps', startedAt: making.startedAt, finishedAt: expect.any(Number) });
+    expect(ready.page).toBe(path.join(pages(), pageFiles()[0]));
+    expect(fs.readdirSync(recordsDir()).filter(f => f.endsWith('.tmp'))).toEqual([]);
+    // A session id that isn't one is not used as a file name
+    runHook('claude', `${longReply}\nmore`, { BLUEPRINTS_GLANCE_WRITER: path.join(bin, 'slow-claude') }, { session_id: '../../x' });
+    expect(fs.readdirSync(recordsDir()).some(f => f.startsWith('session.'))).toBe(true);
   });
 
   it('opens a page /glance saved even with automatic pages off, and after another Stop hook blocked once', { timeout: 20_000 }, async () => {
@@ -294,13 +341,21 @@ describe('glance hook', () => {
 
 describe('glance hook registration', () => {
   let root: string;
+  let home: string;
+  const realHome = { HOME: process.env.HOME, USERPROFILE: process.env.USERPROFILE };
 
   beforeEach(() => {
     root = fs.mkdtempSync(path.join(os.tmpdir(), 'blueprints-test-glance-install-'));
+    home = fs.mkdtempSync(path.join(os.tmpdir(), 'blueprints-test-home-'));
+    process.env.HOME = home; // never the real ~/.claude
+    process.env.USERPROFILE = home;
   });
 
   afterEach(() => {
+    process.env.HOME = realHome.HOME;
+    process.env.USERPROFILE = realHome.USERPROFILE;
     fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(home, { recursive: true, force: true });
   });
 
   it('adds, replaces and removes only its own Stop entry', () => {
@@ -332,8 +387,8 @@ describe('glance hook registration', () => {
     const node = nodeForHooks();
     expect(path.isAbsolute(node)).toBe(true);
     expect(fs.realpathSync(node)).toBe(fs.realpathSync(process.execPath));
-    expect(glanceHookCommand('/x/blueprints/hooks/glance.mjs', 'claude --model sonnet', '/b/claude')).toBe(`"${node.replace(/\\/g, '/')}" "/x/blueprints/hooks/glance.mjs" claude --model sonnet --writer "/b/claude"`);
-    expect(glanceHookCommand('/x/glance.mjs', 'codex')).toBe(`"${node.replace(/\\/g, '/')}" "/x/glance.mjs" codex`);
+    expect(hookCommand('/x/blueprints/hooks/glance.mjs', 'claude --model sonnet', '/b/claude')).toBe(`"${node.replace(/\\/g, '/')}" "/x/blueprints/hooks/glance.mjs" claude --model sonnet --writer "/b/claude"`);
+    expect(hookCommand('/x/glance.mjs', 'codex')).toBe(`"${node.replace(/\\/g, '/')}" "/x/glance.mjs" codex`);
     expect(claudeSettingsFile(getDefaultClaudeDir())).toBe(path.join(getDefaultClaudeDir(), 'settings.json'));
     expect(claudeSettingsFile(path.join(root, '.claude'))).toBe(path.join(root, '.claude', 'settings.local.json'));
   });
@@ -346,7 +401,8 @@ describe('glance hook registration', () => {
     fs.writeFileSync(settings, JSON.stringify({ permissions: { allow: ['Bash(ls)'] } }));
 
     expect((await installBlueprints(claudeDir, 4, 'tasks')).glanceHook).toBe('none');
-    expect((await installBlueprints(claudeDir, 5, 'tasks', { glance: 'on' })).glanceHook).toBe('added');
+    // claude: null, so a test never runs the real `claude plugin` (the mod has tests of its own below)
+    expect((await installBlueprints(claudeDir, 5, 'tasks', { glance: 'on', claude: null })).glanceHook).toBe('added');
     const written = JSON.parse(fs.readFileSync(settings, 'utf-8'));
     expect(written.permissions).toEqual({ allow: ['Bash(ls)'] });
     expect(written.hooks.Stop[0].hooks[0].command).toMatch(/^".+" ".*blueprints\/hooks\/glance\.mjs" claude --model opus( --writer ".+")?$/);
@@ -409,5 +465,103 @@ describe('glance hook registration', () => {
 
   it('writes pages with Opus only at power level 5', () => {
     expect([1, 2, 3, 4, 5].map(level => glanceModel(level as 1 | 2 | 3 | 4 | 5))).toEqual(['sonnet', 'sonnet', 'sonnet', 'sonnet', 'opus']);
+  });
+});
+
+describe('glance mod', () => {
+  let root: string;
+  let home: string;
+  let fake: string;
+  let calls: string;
+  const realHome = { HOME: process.env.HOME, USERPROFILE: process.env.USERPROFILE };
+  const ran = () => (fs.existsSync(calls) ? fs.readFileSync(calls, 'utf-8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line) as { cwd: string; args: string[] }) : []);
+
+  beforeEach(() => {
+    root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'blueprints-test-mod-')));
+    home = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'blueprints-test-home-')));
+    process.env.HOME = home; // never the real ~/.claude
+    process.env.USERPROFILE = home;
+    // A stand-in for `claude plugin`: it records each call and edits the settings the way the real one does
+    calls = path.join(root, 'calls.log');
+    const impl = path.join(root, 'fake-claude.mjs');
+    fs.writeFileSync(impl, `
+import fs from 'node:fs'; import path from 'node:path'; import os from 'node:os';
+const args = process.argv.slice(2);
+fs.appendFileSync(${JSON.stringify(calls)}, JSON.stringify({ cwd: process.cwd(), args }) + '\\n');
+if (process.env.FAKE_CLAUDE_FAIL) { console.error('boom: no marketplace'); process.exit(1); }
+const [, verb, ...rest] = args;
+const scope = rest[rest.indexOf('--scope') + 1];
+const file = scope === 'local' ? path.join(process.cwd(), '.claude', 'settings.local.json') : path.join(os.homedir(), '.claude', 'settings.json');
+const s = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf-8')) : {};
+if (verb === 'marketplace' && rest[0] === 'add') s.extraKnownMarketplaces = { ...s.extraKnownMarketplaces, blueprints: { source: { source: 'directory', path: rest[1] } } };
+if (verb === 'marketplace' && rest[0] === 'remove') delete s.extraKnownMarketplaces?.[rest[1]];
+if (verb === 'install') s.enabledPlugins = { ...s.enabledPlugins, [rest[0]]: true };
+if (verb === 'uninstall') delete s.enabledPlugins?.[rest[0]];
+fs.mkdirSync(path.dirname(file), { recursive: true });
+fs.writeFileSync(file, JSON.stringify(s, null, 2));
+`);
+    fake = path.join(root, 'claude');
+    fs.writeFileSync(fake, `#!/bin/sh\nexec "${process.execPath}" "${impl}" "$@"\n`, { mode: 0o755 });
+  });
+
+  afterEach(() => {
+    process.env.HOME = realHome.HOME;
+    process.env.USERPROFILE = realHome.USERPROFILE;
+    delete process.env.FAKE_CLAUDE_FAIL;
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(home, { recursive: true, force: true });
+  });
+
+  it('adds the mod for the user from a project install when it\'s missing, and never takes it away', { timeout: 20_000 }, async () => {
+    const project = path.join(root, 'app');
+    const claudeDir = path.join(project, '.claude');
+    const userMods = path.join(home, '.claude', 'blueprints', 'mods');
+    const userSettings = () => JSON.parse(fs.readFileSync(path.join(home, '.claude', 'settings.json'), 'utf-8'));
+
+    expect((await installBlueprints(claudeDir, 4, 'tasks', { glance: 'on', claude: fake })).glanceMod).toBe('added');
+    expect(ran()).toEqual([
+      { cwd: home, args: ['plugin', 'marketplace', 'add', userMods, '--scope', 'user'] },
+      { cwd: home, args: ['plugin', 'install', 'blueprints-glance@blueprints', '--scope', 'user'] },
+    ]);
+    expect(userSettings().enabledPlugins).toEqual({ 'blueprints-glance@blueprints': true });
+    expect(fs.existsSync(path.join(userMods, '.claude-plugin', 'marketplace.json'))).toBe(true);
+    expect(fs.existsSync(path.join(userMods, 'glance', '.claude-plugin', 'plugin.json'))).toBe(true);
+    expect(fs.readdirSync(path.join(userMods, 'glance')).some(f => f.includes('.test.'))).toBe(false);
+    expect(fs.existsSync(path.join(claudeDir, 'blueprints', 'mods'))).toBe(false); // nothing per project
+
+    // Already there: nothing to do. A second project: nothing either. Glance off in a project: the user keeps it.
+    expect((await installBlueprints(claudeDir, 4, 'tasks', { claude: fake })).glanceMod).toBe('none');
+    expect((await installBlueprints(path.join(root, 'other', '.claude'), 4, 'tasks', { glance: 'on', claude: fake })).glanceMod).toBe('none');
+    expect((await installBlueprints(claudeDir, 4, 'tasks', { glance: 'off', claude: fake })).glanceMod).toBe('none');
+    expect(ran()).toHaveLength(2);
+    expect(userSettings().enabledPlugins).toEqual({ 'blueprints-glance@blueprints': true });
+  });
+
+  it('adds and removes it with a global install, and leaves a mod the user switched off', { timeout: 20_000 }, async () => {
+    const userDir = path.join(home, '.claude');
+    const userSettings = () => JSON.parse(fs.readFileSync(path.join(userDir, 'settings.json'), 'utf-8'));
+    expect((await installBlueprints(userDir, 4, 'tasks', { glance: 'on', claude: fake })).glanceMod).toBe('added');
+    expect(ran().map(c => c.args.slice(1, 3))).toEqual([['marketplace', 'add'], ['install', 'blueprints-glance@blueprints']]);
+
+    const off = userSettings();
+    off.enabledPlugins['blueprints-glance@blueprints'] = false;
+    fs.writeFileSync(path.join(userDir, 'settings.json'), JSON.stringify(off));
+    expect((await installBlueprints(userDir, 4, 'tasks', { claude: fake })).glanceMod).toBe('none');
+    expect(ran()).toHaveLength(2);
+
+    expect((await installBlueprints(userDir, 4, 'tasks', { glance: 'off', claude: fake })).glanceMod).toBe('removed');
+    expect(ran().slice(2).map(c => c.args.slice(1, 3))).toEqual([['uninstall', 'blueprints-glance@blueprints'], ['marketplace', 'remove']]);
+    expect(userSettings().enabledPlugins).toBeUndefined(); // the empty lists `claude plugin` leaves are tidied away
+    expect(userSettings().extraKnownMarketplaces).toBeUndefined();
+  });
+
+  it('says what to run when it can\'t add the mod, and the glance hook works anyway', { timeout: 20_000 }, async () => {
+    const project = path.join(root, 'other', '.claude');
+    expect((await installBlueprints(project, 4, 'tasks', { glance: 'on', claude: null })).glanceMod).toBe('no-cli');
+    process.env.FAKE_CLAUDE_FAIL = '1';
+    const failed = await installBlueprints(project, 4, 'tasks', { glance: 'on', claude: fake });
+    expect(failed.glanceMod).toBe('failed');
+    expect(failed.glanceModError).toMatch(/claude plugin marketplace add: boom: no marketplace/);
+    expect(hasGlanceHook(JSON.parse(fs.readFileSync(path.join(project, 'settings.local.json'), 'utf-8')))).toBe(true);
   });
 });

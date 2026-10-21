@@ -23,6 +23,8 @@ export interface SourcePaths {
   hooks: string;
   /** Step-by-step procedures shared by several commands (e.g. dispatch, used by /dispatch and /autopilot) */
   procedures: string;
+  /** Claude Code mods, as a local plugin marketplace (the glance mod) */
+  mods: string;
 }
 
 export interface InstallResult {
@@ -33,9 +35,13 @@ export interface InstallResult {
   removed: number;
   paths: InstallPaths;
   powerLevel: AgentPowerLevel;
-  /** What happened to the glance and lean commits hooks, and the settings file they live in */
+  /** What happened to each optional hook, and the settings file they live in */
   glanceHook: HookResult;
   leanCommits: HookResult;
+  /** The glance mod (shows a page being made), installed with Claude Code's plugin commands */
+  glanceMod: ModResult;
+  /** Why the glance mod couldn't be installed or removed */
+  glanceModError?: string;
   /** Lean commits and Claude Code's `attribution` setting: set, put back, or left (the user changed it since) */
   attribution?: 'set' | 'restored' | 'left';
   /** Lean commits is on in the user's settings, so it applies to this project install too */
@@ -47,6 +53,8 @@ export interface InstallResult {
 export interface InstallOptions {
   glance?: HookChoice;
   leanCommits?: HookChoice;
+  /** The claude CLI that installs the glance mod (default: BLUEPRINTS_CLAUDE_CLI, else the one on PATH; null: none) */
+  claude?: string | null;
 }
 
 export type AgentPowerLevel = 1 | 2 | 3 | 4 | 5;
@@ -171,7 +179,7 @@ export interface OwnHook {
 export const GLANCE_HOOK: OwnHook = { event: 'Stop', marker: GLANCE_SCRIPT_MARKER, timeout: 30 };
 /** Claude Code runs shell commands with Bash (PowerShell on Windows, when switched on) */
 export const LEAN_COMMITS_HOOK: OwnHook = { event: 'PreToolUse', marker: LEAN_COMMITS_SCRIPT_MARKER, matcher: 'Bash|PowerShell', timeout: 10 };
-/** Codex runs shell commands with exec_command (older versions: shell) */
+/** Codex calls its shell tool Bash in hooks (older versions: exec_command, shell) */
 export const LEAN_COMMITS_HOOK_CODEX: OwnHook = { ...LEAN_COMMITS_HOOK, matcher: '^(Bash|exec_command|shell|local_shell)$' };
 
 /** Whether to register a hook: add it, remove it, or keep whatever is there (refreshing ours) */
@@ -251,6 +259,8 @@ export function decideHook(existing: unknown, hook: OwnHook, choice: HookChoice,
   }
   return { value: mergeHook(existing, hook, command), result: present ? 'updated' : 'added' };
 }
+
+export const hasAnyHook = (existing: unknown, hooks: OwnHook[]): boolean => hooks.some(hook => hasHook(existing, hook));
 
 /** Register, refresh or remove one of blueprints' hooks in a settings or hooks file */
 export function applyHook(file: string, hook: OwnHook, choice: HookChoice, command: string): HookResult {
@@ -357,9 +367,70 @@ export function nodeForHooks(): string {
 }
 
 /** A Node hook's command; for glance, `writer` is the claude or codex the page writer runs, recorded at install */
-export function glanceHookCommand(script: string, args: string, writer: string | null = null): string {
+export function hookCommand(script: string, args = '', writer: string | null = null): string {
   const slash = (p: string) => p.replace(/\\/g, '/');
   return `"${slash(nodeForHooks())}" "${slash(script)}"${args ? ` ${args}` : ''}${writer ? ` --writer "${slash(writer)}"` : ''}`;
+}
+
+/**
+ * The glance mod: shows, above the prompt, that the glance hook is making a page, and opens it once it's ready.
+ * Claude Code knows a marketplace by its name for the whole user, so there is one mod per user: installed from
+ * the user's own blueprints folder and added for the user, whatever the install. It only ever shows pages the
+ * glance hook recorded for the session, so where no glance hook runs it shows nothing.
+ */
+export const MODS_MARKETPLACE = 'blueprints';
+export const GLANCE_MOD = 'blueprints-glance@blueprints';
+export type ModResult = 'added' | 'removed' | 'none' | 'failed' | 'no-cli';
+
+export function userModsDir(): string {
+  return path.join(getDefaultClaudeDir(), 'blueprints', 'mods');
+}
+
+type ModSettings = { enabledPlugins?: Record<string, unknown>; extraKnownMarketplaces?: Record<string, { source?: { path?: unknown } }> };
+
+/**
+ * Add (want) or remove the glance mod with `claude plugin`, for the user. `canRemove` is false for a project
+ * install, which never takes away what the user has. A mod the user switched off (enabledPlugins false) stays off.
+ */
+export function applyGlanceMod(claude: string | null, want: boolean, canRemove: boolean, modsDir = userModsDir(), prepare?: () => void): { result: ModResult; error?: string } {
+  const settingsFile = path.join(getDefaultClaudeDir(), 'settings.json');
+  const settings = (readJsonFile(settingsFile) ?? {}) as ModSettings;
+  const enabled = isPlainObject(settings.enabledPlugins) ? settings.enabledPlugins[GLANCE_MOD] : undefined;
+  const market = isPlainObject(settings.extraKnownMarketplaces) ? settings.extraKnownMarketplaces[MODS_MARKETPLACE] : undefined;
+  const ours = typeof market?.source?.path === 'string' && path.resolve(market.source.path) === path.resolve(modsDir);
+  if (want ? enabled === false || (enabled === true && ours) : !canRemove || (enabled === undefined && market === undefined)) return { result: 'none' };
+  if (!claude) return { result: 'no-cli' };
+
+  // Windows: npm installs claude as a .cmd shim, which only a shell runs: one command line, every part quoted
+  const win = process.platform === 'win32';
+  const options = { cwd: os.homedir(), encoding: 'utf-8' as const, timeout: 120_000, windowsHide: true };
+  const run = (...args: string[]) => (win
+    ? spawnSync([claude, 'plugin', ...args].map(arg => `"${arg.replace(/"/g, '""')}"`).join(' '), { ...options, shell: true })
+    : spawnSync(claude, ['plugin', ...args], options));
+  if (want) prepare?.(); // the mod's files, in place before Claude Code is pointed at them
+  const steps = want
+    ? [['marketplace', 'add', modsDir, '--scope', 'user'], ['install', GLANCE_MOD, '--scope', 'user']]
+    : [
+      ...(enabled === undefined ? [] : [['uninstall', GLANCE_MOD, '--scope', 'user']]),
+      ...(market === undefined ? [] : [['marketplace', 'remove', MODS_MARKETPLACE, '--scope', 'user']]),
+    ];
+  for (const step of steps) {
+    const ran = run(...step);
+    if (ran.status !== 0) {
+      const said = `${ran.stderr ?? ''}${ran.stdout ?? ''}${ran.error ? String(ran.error) : ''}`.trim().split('\n').pop() ?? '';
+      return { result: 'failed', error: `claude plugin ${step.slice(0, 2).join(' ')}: ${said.slice(0, 300) || `exit ${ran.status}`}` };
+    }
+  }
+  if (!want) {
+    // `claude plugin` leaves the two lists behind empty: take them away again if nothing else is in them
+    const after = readJsonFile(settingsFile);
+    if (isPlainObject(after)) {
+      const tidy = Object.fromEntries(Object.entries(after).filter(([key, value]) =>
+        !(['enabledPlugins', 'extraKnownMarketplaces'].includes(key) && isPlainObject(value) && Object.keys(value).length === 0)));
+      if (Object.keys(tidy).length !== Object.keys(after).length) fs.writeFileSync(settingsFile, `${JSON.stringify(tidy, null, 2)}\n`, 'utf-8');
+    }
+  }
+  return { result: want ? 'added' : 'removed' };
 }
 
 /**
@@ -407,6 +478,7 @@ export interface InstalledFiles {
   workflows: string[];
   hooks: string[];
   procedures?: string[];
+  mods?: string[];
 }
 
 export interface Manifest {
@@ -481,6 +553,7 @@ export function getSourcePaths(): SourcePaths {
     workflows: path.join(packageRoot, 'content', 'workflows'),
     hooks: path.join(packageRoot, 'content', 'hooks'),
     procedures: path.join(packageRoot, 'content', 'procedures'),
+    mods: path.join(packageRoot, 'content', 'mods'),
   };
 }
 
@@ -500,25 +573,44 @@ function isHidden(name: string): boolean {
   return name.startsWith('.');
 }
 
+/** Files that never belong in an install: tests, and what an OS or editor leaves behind */
+const NOT_SHIPPED = /(^|[\\/])(\.DS_Store|[^\\/]*\.test\.[^\\/]+)$/;
+
 /**
  * List files under a directory, recursively, as paths relative to it
  */
-export function listFiles(dir: string, prefix = ''): string[] {
+export function listFiles(dir: string, prefix = '', withHidden = false): string[] {
   if (!fs.existsSync(dir)) return [];
 
   const files: string[] = [];
   for (const entry of fs.readdirSync(dir)) {
-    if (isHidden(entry)) continue;
+    if (isHidden(entry) && !withHidden) continue;
     const full = path.join(dir, entry);
     const rel = prefix ? path.join(prefix, entry) : entry;
     const stat = fs.statSync(full);
     if (stat.isDirectory()) {
-      files.push(...listFiles(full, rel));
-    } else if (stat.isFile()) {
+      files.push(...listFiles(full, rel, withHidden));
+    } else if (stat.isFile() && !NOT_SHIPPED.test(rel)) {
       files.push(rel);
     }
   }
   return files;
+}
+
+/** The mods folder's files: a plugin keeps its manifest in a hidden .claude-plugin folder */
+export function listModFiles(dir: string): string[] {
+  return listFiles(dir, '', true);
+}
+
+/** Copy the mods, with template variables filled in (the glance mod needs the tasks folder's name) */
+export function copyMods(srcDir: string, destDir: string, tasksDir?: string, blueprintsDir?: string): number {
+  const files = listModFiles(srcDir);
+  for (const rel of files) {
+    const destFile = path.join(destDir, rel);
+    ensureDir(path.dirname(destFile));
+    fs.writeFileSync(destFile, replaceTemplateVars(fs.readFileSync(path.join(srcDir, rel), 'utf-8'), tasksDir, blueprintsDir), 'utf-8');
+  }
+  return files.length;
 }
 
 /**
@@ -756,6 +848,10 @@ export async function installBlueprints(
   removed += cleanStaleFiles(sourcePaths.workflows, installPaths.workflows, previous?.workflows ?? []);
   removed += cleanStaleFiles(sourcePaths.hooks, hooksDest, previous?.hooks ?? []);
   removed += cleanStaleFiles(sourcePaths.procedures, proceduresDest, previous?.procedures ?? []);
+  // The glance mod lives in the user's own blueprints folder (see applyGlanceMod): a global install keeps it there
+  const isGlobal = path.resolve(installPaths.base) === path.resolve(getDefaultClaudeDir());
+  const modsDest = userModsDir();
+  if (isGlobal) removed += cleanStaleFiles(sourcePaths.mods, modsDest, previous?.mods ?? []);
 
   const blueprintsDir = installPaths.support;
 
@@ -769,6 +865,7 @@ export async function installBlueprints(
   const workflowsCount = copyTemplatedFiles(sourcePaths.workflows, installPaths.workflows, tasksDir, blueprintsDir, content);
   copyTemplatedFiles(sourcePaths.hooks, hooksDest, tasksDir, blueprintsDir, content);
   copyTemplatedFiles(sourcePaths.procedures, proceduresDest, tasksDir, blueprintsDir, content);
+  if (isGlobal) copyMods(sourcePaths.mods, modsDest, tasksDir, blueprintsDir);
 
   // Optional hooks, both in the one settings file:
   // - glance (Stop): opens /glance pages, makes pages for long replies
@@ -780,11 +877,11 @@ export async function installBlueprints(
   let attribution: InstallResult['attribution'];
   if (isPlainObject(settings)) {
     let next: Record<string, unknown> = settings;
-    const glanceCommand = glanceHookCommand(path.join(hooksDest, 'glance.mjs'), `claude --model ${glanceModel(powerLevel)}`, findOnPath('claude'));
+    const glanceCommand = hookCommand(path.join(hooksDest, 'glance.mjs'), `claude --model ${glanceModel(powerLevel)}`, findOnPath('claude'));
     const g = decideHook(next, GLANCE_HOOK, glance, glanceCommand);
     glanceHook = g.result;
     if (g.value) next = g.value;
-    const l = decideHook(next, LEAN_COMMITS_HOOK, lean, glanceHookCommand(path.join(hooksDest, 'lean-commits.mjs'), ''));
+    const l = decideHook(next, LEAN_COMMITS_HOOK, lean, hookCommand(path.join(hooksDest, 'lean-commits.mjs')));
     leanCommits = l.result;
     if (l.value) next = l.value;
     if (leanOn && hasHook(next, LEAN_COMMITS_HOOK)) {
@@ -808,6 +905,24 @@ export async function installBlueprints(
     }
   }
 
+  // The glance mod goes with the glance hook (after the settings are written: `claude plugin` edits them too).
+  // A project install adds it for the user when it's missing, and never removes it.
+  let glanceMod: ModResult = 'none';
+  let glanceModError: string | undefined;
+  if (glanceHook !== 'unreadable') {
+    const want = hasHook(readJsonFile(settingsFile), GLANCE_HOOK);
+    // BLUEPRINTS_CLAUDE_CLI names the claude to run (empty: none, as in this package's tests)
+    const fromEnv = process.env.BLUEPRINTS_CLAUDE_CLI;
+    const claude = options.claude !== undefined ? options.claude : fromEnv !== undefined ? fromEnv || null : findOnPath('claude');
+    // A project install puts the mod in the user's folder only when that has none yet (a global install keeps it)
+    const prepare = () => {
+      if (!isGlobal && !fs.existsSync(path.join(modsDest, '.claude-plugin', 'marketplace.json'))) {
+        copyMods(sourcePaths.mods, modsDest, tasksDir, path.join(getDefaultClaudeDir(), 'blueprints'));
+      }
+    };
+    ({ result: glanceMod, error: glanceModError } = applyGlanceMod(claude, want, isGlobal, modsDest, prepare));
+  }
+
   // Write version marker and manifest of installed files
   const manifest: Manifest = {
     version: getPackageVersion(),
@@ -820,6 +935,7 @@ export async function installBlueprints(
       workflows: listFiles(sourcePaths.workflows),
       hooks: listFiles(sourcePaths.hooks),
       procedures: listFiles(sourcePaths.procedures),
+      ...(isGlobal ? { mods: listModFiles(sourcePaths.mods) } : {}),
     },
     ...(attributionBefore ? { attributionBefore } : {}),
     leanCommits: leanOn,
@@ -835,6 +951,8 @@ export async function installBlueprints(
     powerLevel,
     glanceHook,
     leanCommits,
+    glanceMod,
+    ...(glanceModError ? { glanceModError } : {}),
     attribution,
     leanCommitsGlobal,
     settingsFile,

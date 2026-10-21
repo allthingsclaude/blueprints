@@ -50,7 +50,7 @@ npx @allthingsclaude/blueprints --power 5
 # Customize tasks directory name (default: tasks)
 npx @allthingsclaude/blueprints --tasks-dir my-tasks
 
-# Optional hooks, on or off (the installer asks; with --yes it keeps what you have)
+# Optional hooks, on or off (the installer asks in one checklist; with --yes it keeps what you have)
 npx @allthingsclaude/blueprints --glance on --lean-commits on
 ```
 
@@ -468,7 +468,7 @@ claude agents                 # watch the runs; attach to any marked "Needs inpu
 
 ## Lean commits
 
-Say yes during install (or pass `--lean-commits on`) for one-line commit messages everywhere: `type: description`, such as `fix: prevent duplicate form submission`, with no body and no `Co-Authored-By` or session trailers. Three things change:
+Tick it in the installer's list of optional hooks (or pass `--lean-commits on`) for one-line commit messages everywhere: `type: description`, such as `fix: prevent duplicate form submission`, with no body and no `Co-Authored-By` or session trailers. What changes:
 - A hook checks every `git commit` an agent runs, in Claude Code and Codex. One with a body, trailers or no `feat:`/`fix:`-style type is turned down, with the reason, so the agent commits again with one line. Other commands pass untouched.
 - Claude Code's own commit attribution is switched off (`attribution.commit` and `attribution.sessionUrl`; the latter also drops the session link from PR descriptions), so it stops adding those lines at all. Turning lean commits off puts back what you had.
 - A project install follows lean commits that's on globally, since the global hook applies there too.
@@ -484,10 +484,12 @@ Say yes during install (or pass `--lean-commits on`) for one-line commit message
 
 Pages are saved in `tasks/pages/` and never published (ask for that if you want it; Claude Code can publish one as an Artifact). The folder has its own `.gitignore`, so pages are never committed.
 
-**The glance hook** (`--glance on`, or say yes during install) runs when the main session finishes a reply, in Claude Code and Codex alike:
+**The glance hook** (`--glance on`, or tick it during install) runs when the main session finishes a reply, in Claude Code and Codex alike:
 - It opens pages `/glance` saved. A session's sandbox can't open a browser; a hook can.
 - It turns long replies (about 2,500+ characters, made of several points) into a page in the background and opens it behind your terminal, usually within a minute. That's a separate, small model call: Sonnet in Claude Code (Opus at power level 5), your default model at low effort in Codex. It runs outside the project, with read-only access to it, so the project's `CLAUDE.md` isn't loaded into it, and it leaves no saved session behind.
 - It stays out of the way where nobody's watching: `claude -p` and background runs, SSH sessions, and Linux without a display. (Codex has no equivalent signal, so `codex exec` scripts aren't detected; set `BLUEPRINTS_GLANCE=off` for those.)
+
+In Claude Code, ticking glance also adds a small mod, `blueprints-glance`: while a page of your last reply is being made, a line above the prompt says so (`◐ Making a glance page of the last reply… 24s`), and once it's ready it offers **Open** (the hook opens pages behind the terminal) and **Hide**. The line goes away when you send your next prompt. The mod is one per user: the installer puts it in `~/.claude/blueprints/mods/` and adds it with Claude Code's own plugin commands (`claude plugin marketplace add`, then `claude plugin install blueprints-glance@blueprints`), so reinstalling blueprints updates it, and you can switch it off in `/plugin` like any plugin. A project install adds it when you don't have it yet and never removes it; `--global --glance off` does. It shows only pages the glance hook recorded for that session (in `~/.claude/blueprints/glance-jobs/`), so it stays quiet everywhere else. Codex has no mods, so there the page just opens.
 
 Switches: `/glance auto off` (or `on`) for one project; `BLUEPRINTS_GLANCE=off` (everything) or `=open` (open pages only); `BLUEPRINTS_GLANCE_MODEL`, `BLUEPRINTS_GLANCE_MIN` (characters), `BLUEPRINTS_GLANCE_OPENER` (e.g. `open -a "Google Chrome"`) and `BLUEPRINTS_GLANCE_WRITER` (the `claude` or `codex` to run). The installer records the full paths of Node and of `claude`/`codex`, so sessions started from the Dock work too; run it again after moving to a different Node version or reinstalling the CLI. The installer adds it to `~/.claude/settings.json` (a global install) or `.claude/settings.local.json` (a project install), keeping your other settings and saving the original once as `*.before-blueprints`. `--glance off` removes it.
 
@@ -518,7 +520,7 @@ Things that work differently in Codex:
   [agents]
   max_depth = 2
   ```
-- **Hooks** (the typecheck gate, and the glance and lean commits hooks if you chose them): run `/hooks` in Codex once to review and trust them. The installer appends it to your existing `hooks.json` (your hooks are kept, and the original is saved as `hooks.json.before-blueprints`).
+- **Hooks** (the typecheck gate, and the optional hooks you chose): run `/hooks` in Codex once to review and trust them. The installer appends it to your existing `hooks.json` (your hooks are kept, and the original is saved as `hooks.json.before-blueprints`).
 - **Parallel runs** (`$autopilot`'s offer or `$dispatch`) prepare the worktrees the same way, then print one `codex -C <worktree> …` command per plan for you to run in separate terminals, since Codex can't start background sessions itself. Watch them with `codex agents`.
 - **Per-agent compaction and turn limits** have no Codex equivalent; Codex uses its global compaction setting.
 
@@ -623,7 +625,9 @@ After installation, your `.claude` directory will contain:
 │   ├── hooks/
 │   │   ├── phase-gate.sh   # Typecheck gate used by the implement agent
 │   │   ├── glance.mjs      # Glance hook: opens /glance pages, makes pages for long replies
-│   │   └── lean-commits.mjs # Lean commits hook: one-line commit messages
+│   │   ├── lean-commits.mjs # Lean commits hook: one-line commit messages
+│   │   └── shell.mjs       # Shared by the hooks: reads shell commands without running them
+│   ├── mods/               # The glance mod (blueprints-glance), as a local plugin marketplace
 │   └── procedures/         # Steps shared by commands: dispatch.md, integrate.md, glance.md
 │                           # (followed by /dispatch, /integrate, /autopilot and /glance)
 └── .blueprints-version     # Installed version and the list of installed files

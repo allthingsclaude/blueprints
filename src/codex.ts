@@ -7,7 +7,7 @@ import {
   decideHook,
   ensureDir,
   findOnPath,
-  glanceHookCommand,
+  hookCommand,
   getModelForAgent,
   getPackageVersion,
   getSourcePaths,
@@ -23,8 +23,8 @@ import type { ContentOptions, HookResult, InstallOptions, OwnHook } from './inst
 /**
  * Codex support: converts the Claude Code commands and agents into Codex skills
  * (`.agents/skills/<name>/SKILL.md`) and custom agents (`.codex/agents/<name>.toml`),
- * registers the implement agent's typecheck gate as a Codex SubagentStop hook, and can
- * register the glance hook (Stop) that opens and makes glance pages and the lean commits hook (PreToolUse).
+ * registers the implement agent's typecheck gate as a Codex SubagentStop hook, and can register the optional
+ * hooks: glance (Stop) and lean commits (PreToolUse).
  */
 
 export type CodexScope = 'global' | 'project';
@@ -48,7 +48,7 @@ export interface CodexInstallResult {
   /** Names skipped because a skill or agent the user wrote already uses them */
   skipped: string[];
   hookRegistered: boolean;
-  /** What happened to the glance and lean commits hooks in hooks.json */
+  /** What happened to each optional hook in hooks.json */
   glanceHook: HookResult;
   leanCommits: HookResult;
   /** Lean commits is on in the user's Codex home, so it applies to this project install too */
@@ -456,7 +456,7 @@ export async function installCodex(
   }
 
   // Hooks, the same scripts as Claude Code, registered in hooks.json: the implement agent's typecheck
-  // gate (SubagentStop), the glance hook (Stop) and the lean commits hook (PreToolUse on shell commands)
+  // gate (SubagentStop) and the optional hooks (glance, lean commits)
   const hooksDir = path.join(paths.support, 'hooks');
   const gateSource = path.join(source.hooks, 'phase-gate.sh');
   const gateDest = path.join(hooksDir, 'phase-gate.sh');
@@ -466,9 +466,8 @@ export async function installCodex(
     fs.copyFileSync(gateSource, gateDest);
     fs.chmodSync(gateDest, 0o755);
   }
-  for (const script of ['glance.mjs', 'lean-commits.mjs']) {
+  for (const script of listFiles(source.hooks).filter(f => f.endsWith('.mjs'))) {
     const from = path.join(source.hooks, script);
-    if (!fs.existsSync(from)) continue;
     ensureDir(hooksDir);
     fs.writeFileSync(path.join(hooksDir, script), replaceTemplateVars(fs.readFileSync(from, 'utf-8'), vars.tasksDir, vars.blueprintsDir), 'utf-8');
   }
@@ -483,10 +482,10 @@ export async function installCodex(
       merged = mergeCodexHooks(merged, `sh "${gateDest}"`);
       hookRegistered = true;
     }
-    const g = decideHook(merged, GLANCE_HOOK, glance, glanceHookCommand(path.join(hooksDir, 'glance.mjs'), 'codex', findOnPath('codex')));
+    const g = decideHook(merged, GLANCE_HOOK, glance, hookCommand(path.join(hooksDir, 'glance.mjs'), 'codex', findOnPath('codex')));
     glanceHook = g.result;
     if (g.value) merged = g.value;
-    const l = decideHook(merged, LEAN_COMMITS_HOOK_CODEX, lean, glanceHookCommand(path.join(hooksDir, 'lean-commits.mjs'), ''));
+    const l = decideHook(merged, LEAN_COMMITS_HOOK_CODEX, lean, hookCommand(path.join(hooksDir, 'lean-commits.mjs')));
     leanCommits = l.result;
     if (l.value) merged = l.value;
     if (merged !== existing) writeJsonFile(paths.hooksFile, merged);

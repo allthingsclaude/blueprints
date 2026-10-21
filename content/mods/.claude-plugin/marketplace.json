@@ -1,0 +1,11 @@
+{
+  "name": "blueprints",
+  "owner": { "name": "All Things Claude" },
+  "plugins": [
+    {
+      "name": "blueprints-glance",
+      "source": "./glance",
+      "description": "Shows when the glance hook is making a page of the last reply, and opens it when it's ready"
+    }
+  ]
+}

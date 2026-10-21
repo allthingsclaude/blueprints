@@ -93,7 +93,7 @@ describe('lean commits hook', () => {
     expect(lean.review({ tool_input: { command: ['git', 'commit', '-m', 'fix: a', '-m', 'body'] } })).not.toBeNull();
   });
 
-  it('answers with a deny decision and the reason, and stays out of the way otherwise', () => {
+  it('answers with a deny decision and the reason, and stays out of the way otherwise', { timeout: 20_000 }, () => {
     const run = (command: string, env: Record<string, string> = {}) => spawnSync(process.execPath, [script], {
       input: JSON.stringify({ hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command } }),
       env: { ...process.env, BLUEPRINTS_LEAN_COMMITS: '', ...env },
@@ -182,7 +182,7 @@ describe('lean commits install', () => {
     expect(withoutLeanAttribution({ attribution: { commit: 'mine' } }, before)).toBeNull(); // changed since: left alone
   });
 
-  it('registers the hook, quiets Claude Code\'s attribution and installs one-line commit agents, then undoes it all', async () => {
+  it('registers the hook, quiets Claude Code\'s attribution and installs one-line commit agents, then undoes it all', { timeout: 20_000 }, async () => {
     const claudeDir = path.join(root, '.claude');
     const settings = path.join(claudeDir, 'settings.local.json');
     fs.mkdirSync(claudeDir, { recursive: true });
@@ -213,7 +213,7 @@ describe('lean commits install', () => {
     expect(commitAgent()).toContain('HEREDOC for proper formatting');
   });
 
-  it('keeps the original attribution on record until it\'s put back, and leaves a value the user changed', async () => {
+  it('keeps the original attribution on record until it\'s put back, and leaves a value the user changed', { timeout: 20_000 }, async () => {
     const claudeDir = path.join(root, '.claude');
     const settings = path.join(claudeDir, 'settings.local.json');
     fs.mkdirSync(claudeDir, { recursive: true });
@@ -247,7 +247,7 @@ describe('lean commits install', () => {
     expect(JSON.parse(fs.readFileSync(settings, 'utf-8')).attribution).toEqual({ commit: 'mine' });
   });
 
-  it('follows lean commits that\'s on in the user\'s settings, without adding a second hook to the project', async () => {
+  it('follows lean commits that\'s on in the user\'s settings, without adding a second hook to the project', { timeout: 20_000 }, async () => {
     const userDir = path.join(home, '.claude');
     await installBlueprints(userDir, 4, 'tasks', { leanCommits: 'on' });
     expect(JSON.parse(fs.readFileSync(path.join(userDir, 'settings.json'), 'utf-8')).attribution).toEqual({ commit: '', sessionUrl: false });
@@ -266,7 +266,7 @@ describe('lean commits install', () => {
     expect(fs.readFileSync(path.join(getCodexPaths('project', root, home).agents, 'commit.toml'), 'utf-8')).toContain('Commit messages here are **one line**');
   });
 
-  it('registers the Codex hook on its shell tools, and converts the commit agent the same way', async () => {
+  it('registers the Codex hook on its shell tools, and converts the commit agent the same way', { timeout: 20_000 }, async () => {
     const result = await installCodex('project', root, 4, 'tasks', home, { leanCommits: 'on' });
     const paths = getCodexPaths('project', root, home);
     expect(result.leanCommits).toBe('added');

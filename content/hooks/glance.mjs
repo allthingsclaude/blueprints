@@ -12,6 +12,8 @@
 // BLUEPRINTS_GLANCE_OPENER the command that opens a page (e.g. `open -a "Google Chrome"`),
 // and BLUEPRINTS_GLANCE_WRITER the claude or codex to run.
 // A project switches automatic pages off with {{TASKS_DIR}}/pages/.auto-off (`/glance auto off`).
+// In Claude Code each page it makes is recorded in ~/.claude/blueprints/glance-jobs/<session>.<hash>.json
+// (making, then ready or failed), which the blueprints-glance mod reads to show it above the prompt.
 // Unattended sessions (`claude -p`, background runs), SSH sessions and Linux without a display are skipped.
 // Anything unexpected exits 0: the hook never gets in the session's way.
 
@@ -58,16 +60,45 @@ export function claimed(dir, key) {
   return fs.existsSync(path.join(dir, '.claims', key));
 }
 
-function pruneClaims(dir, now = Date.now()) {
-  const claims = path.join(dir, '.claims');
-  if (!fs.existsSync(claims)) return;
-  for (const name of fs.readdirSync(claims)) {
+// Claims (and records) older than two days are done with
+function pruneOld(folder, now = Date.now()) {
+  if (!fs.existsSync(folder)) return;
+  for (const name of fs.readdirSync(folder)) {
     try {
-      if (now - fs.statSync(path.join(claims, name)).mtimeMs > CLAIM_TTL_MS) fs.rmSync(path.join(claims, name));
+      if (now - fs.statSync(path.join(folder, name)).mtimeMs > CLAIM_TTL_MS) fs.rmSync(path.join(folder, name));
     } catch {
       // gone already
     }
   }
+}
+
+// Where Claude Code pages being made are recorded for the blueprints-glance mod: a folder of the user's own,
+// so nothing in a project can pass for a record, keyed by the session that asked for the page
+export function recordsDir(env = process.env) {
+  return path.join(env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'), 'blueprints', 'glance-jobs');
+}
+
+export function jobRecord(sessionId, hash, dir = recordsDir()) {
+  const session = typeof sessionId === 'string' && /^[\w-]{1,100}$/.test(sessionId) ? sessionId : 'session';
+  return path.join(dir, `${session}.${hash}.json`);
+}
+
+// Written whole (a reader never sees half a record); a failure to record never stops the page
+export function writeRecord(file, record) {
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(`${file}.tmp`, JSON.stringify(record));
+    fs.renameSync(`${file}.tmp`, file);
+  } catch {
+    // the page is still made
+  }
+}
+
+export function pageTitle(html) {
+  const raw = html.match(/<title>([^<]*)<\/title>/i)?.[1] ?? '';
+  // &amp; last, so `&amp;lt;` stays `&lt;` as the page shows it
+  const text = raw.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+  return text.length > 80 ? `${text.slice(0, 79)}…` : text;
 }
 
 // Pages saved in the last half hour that nothing has opened yet, newest first.
@@ -229,20 +260,32 @@ async function hook({ tool, model: defaultModel, writer }) {
   if (!worthAPage(message)) return;
 
   ensurePagesDir(dir);
-  pruneClaims(dir);
+  pruneOld(path.join(dir, '.claims'));
   const hash = crypto.createHash('sha1').update(message).digest('hex').slice(0, 12);
   if (!claim(dir, `make-${hash}`)) return;
+  // Codex has no mods, so only Claude Code's pages are recorded
+  const record = tool === 'claude' ? jobRecord(input.session_id, hash) : null;
+  const startedAt = Date.now();
+  if (record) {
+    pruneOld(path.dirname(record));
+    writeRecord(record, { state: 'making', startedAt });
+  }
 
-  // The job holds the reply, so it goes in a private folder of its own.
-  const jobDir = fs.mkdtempSync(path.join(os.tmpdir(), 'blueprints-glance-job-'));
-  const job = path.join(jobDir, 'job.json');
-  fs.writeFileSync(job, JSON.stringify({ tool, model: process.env.BLUEPRINTS_GLANCE_MODEL || defaultModel, writer, project, dir, message }), { mode: 0o600 });
-  spawn(process.execPath, [SELF, '--generate', job], {
-    detached: true,
-    stdio: 'ignore',
-    windowsHide: true,
-    env: { ...process.env, BLUEPRINTS_GLANCE_CHILD: '1' },
-  }).unref();
+  try {
+    // The job holds the reply, so it goes in a private folder of its own.
+    const jobDir = fs.mkdtempSync(path.join(os.tmpdir(), 'blueprints-glance-job-'));
+    const job = path.join(jobDir, 'job.json');
+    fs.writeFileSync(job, JSON.stringify({ tool, model: process.env.BLUEPRINTS_GLANCE_MODEL || defaultModel, writer, project, dir, message, record, startedAt }), { mode: 0o600 });
+    spawn(process.execPath, [SELF, '--generate', job], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+      env: { ...process.env, BLUEPRINTS_GLANCE_CHILD: '1' },
+    }).unref();
+  } catch (err) {
+    if (record) writeRecord(record, { state: 'failed', startedAt, finishedAt: Date.now(), reason: String(err?.message ?? err).slice(0, 200) });
+    throw err;
+  }
 }
 
 // The writer is a new, separate session, not a child of the one that just ended
@@ -278,13 +321,16 @@ async function generate(jobFile) {
   const job = JSON.parse(fs.readFileSync(jobFile, 'utf-8'));
   fs.rmSync(path.dirname(jobFile), { recursive: true, force: true });
 
-  // One working folder, so the writer's runs don't pile up as separate projects;
-  // each job gets its own output and settings files in it.
-  const workdir = workDir();
-  const id = crypto.randomBytes(6).toString('hex');
-  const outFile = path.join(workdir, `${id}.html`);
-  const settingsFile = path.join(workdir, `${id}.settings.json`);
+  const finish = fields => job.record && writeRecord(job.record, { startedAt: job.startedAt ?? Date.now(), finishedAt: Date.now(), ...fields });
+  let outFile = null;
+  let settingsFile = null;
   try {
+    // One working folder, so the writer's runs don't pile up as separate projects;
+    // each job gets its own output and settings files in it.
+    const workdir = workDir();
+    const id = crypto.randomBytes(6).toString('hex');
+    outFile = path.join(workdir, `${id}.html`);
+    settingsFile = path.join(workdir, `${id}.settings.json`);
     fs.writeFileSync(settingsFile, '{"disableAllHooks": true}\n');
     // BLUEPRINTS_GLANCE_WRITER wins outright; otherwise the path recorded at install, then the usual places
     const writer = process.env.BLUEPRINTS_GLANCE_WRITER
@@ -296,6 +342,7 @@ async function generate(jobFile) {
     const html = extractHtml(text);
     if (!html) {
       log(job.dir, `no page from ${job.tool}: ${(output.err || text).trim().split('\n').slice(-3).join(' | ').slice(0, 400)}`);
+      finish({ state: 'failed', reason: `${job.tool} wrote no page (see ${TASKS_DIR}/pages/.glance.log)` });
       return;
     }
 
@@ -305,10 +352,15 @@ async function generate(jobFile) {
     const tmp = path.join(job.dir, `.${name}.tmp`);
     fs.writeFileSync(tmp, html);
     fs.renameSync(tmp, path.join(job.dir, name));
+    finish({ state: 'ready', page: path.join(job.dir, name), title: pageTitle(html) });
     openFile(path.join(job.dir, name), { background: true });
+  } catch (err) {
+    log(job.dir, `no page: ${String(err?.message ?? err).slice(0, 300)}`);
+    finish({ state: 'failed', reason: String(err?.message ?? err).slice(0, 200) });
+    throw err;
   } finally {
-    fs.rmSync(outFile, { force: true });
-    fs.rmSync(settingsFile, { force: true });
+    if (outFile) fs.rmSync(outFile, { force: true });
+    if (settingsFile) fs.rmSync(settingsFile, { force: true });
   }
 }
 

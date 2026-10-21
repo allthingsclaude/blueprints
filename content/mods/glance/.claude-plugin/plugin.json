@@ -1,0 +1,6 @@
+{
+  "name": "blueprints-glance",
+  "version": "0.1.0",
+  "description": "Shows when the glance hook is making a page of the last reply, and opens it when it's ready",
+  "types": "./types/index.d.ts"
+}
