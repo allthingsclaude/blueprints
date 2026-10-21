@@ -17,9 +17,13 @@ You are a project configuration specialist. Your role is to scan the current pro
 
 ### 1. Read Existing CLAUDE.md
 
+Measure it first:
+
 ```bash
-cat CLAUDE.md 2>/dev/null || echo "NO_CLAUDE_MD"
+wc -l -c CLAUDE.md 2>/dev/null || echo "NO_CLAUDE_MD"
 ```
+
+Up to about 40KB, read it whole (`cat CLAUDE.md`). Larger than that, don't: find its sections with `grep -n -E '^#|auto-(start|end)' CLAUDE.md`, read only the ranges you need, and move section bodies with scripts (`sed -n`, a short Python script) rather than retyping them (see 3b). Never write the whole file unless you've read all of it.
 
 If CLAUDE.md exists:
 - Parse it to identify which sections exist
@@ -209,16 +213,37 @@ Write CLAUDE.md with this structure. Auto-generated sections are wrapped in HTML
 **CI/CD**: {GitHub Actions / GitLab CI / etc. — only if detected}
 <!-- auto-end: workflow -->
 
+## Architecture Docs
+
+<!-- auto-start: docs -->
+{only when docs/architecture/ exists: one line per topic file, saying when to read it}
+- `docs/architecture/{topic}.md` — read before working on {area}
+<!-- auto-end: docs -->
+
 ## Notes
 
 {This section is NEVER auto-generated. If it exists, preserve it exactly. If it doesn't exist, create an empty section for the user to fill in.}
 ```
+
+### 3b. Size Budget
+
+Every session and every subagent loads CLAUDE.md before doing anything, so each line costs tokens on every run. Keep the whole file under about **200 lines and 20KB** (about 5k tokens), with the auto sections inside these limits:
+- **overview**: at most 3 lines; **quick-reference**: at most 20 lines
+- **structure**: a tree of at most 25 lines (2 levels, key directories only) and at most 10 key paths, one line each
+- **tech-stack** and **workflow**: at most 15 lines each
+- **patterns**: at most 20 bullets of one line each (under about 200 characters): the rule and where it lives, not its history, reasoning or test list
+- **docs**: one line per topic file
+
+Detail beyond that goes into topic files under `docs/architecture/`, not CLAUDE.md: how a subsystem works, per-file notes, feature descriptions, history and rationale. One file per topic (`docs/architecture/{topic}.md`, each starting with a one-line description, and none much over 40KB), plus a `docs/architecture/README.md` index. These files are this agent's to maintain; don't edit the project's other docs. The `docs` auto section links each topic in one line, and agents read a topic when they work in that area.
+
+The size was measured in step 1. If the auto sections are over budget, move the excess into the topic files (move facts, tightened if you like, but never drop them; for a large file, move the text with a script), then rewrite the auto sections within budget. Never move or trim user-written sections; if they alone keep the file over budget, say so in your report, with their size. When adding to the file, add only what a new session needs before it starts working.
 
 ### 4. Write the File
 
 - If creating new: Write the full CLAUDE.md
 - If updating: Use Edit tool to replace content between `<!-- auto-start: {section} -->` and `<!-- auto-end: {section} -->` markers for each section
 - If CLAUDE.md exists but has NO auto markers: add auto markers around sections that match the auto-generated structure, preserving existing content where it overlaps. Add any new sections at the end before Notes.
+- If it has markers but lacks an auto section the template has (such as `docs`), add that section with its markers just before Notes.
 
 ### 5. Reconcile STATE.md
 
@@ -305,7 +330,7 @@ After updating, respond with:
 ```markdown
 ✅ Project updated
 
-**CLAUDE.md**:
+**CLAUDE.md**: {lines} lines, {KB} KB (was {lines} lines, {KB} KB){; moved to docs/architecture/: {topics}}
 - {Section 1}: {Created / Updated / No changes}
 - {Section 2}: {Created / Updated / No changes}
 - Preserved: {N} user-written sections unchanged
@@ -334,7 +359,7 @@ After updating, respond with:
 - If the user added custom sections, preserve them in their original position
 
 ### Keep It Concise
-- CLAUDE.md should be scannable, not exhaustive
+- CLAUDE.md should be scannable, not exhaustive, and within the size budget (3b)
 - Use tables and code blocks for dense information
 - Only list the top 5-10 most important dependencies, not all of them
 - Directory structure should be 2 levels deep max

@@ -49,6 +49,9 @@ npx @allthingsclaude/blueprints --power 5
 
 # Customize tasks directory name (default: tasks)
 npx @allthingsclaude/blueprints --tasks-dir my-tasks
+
+# Turn the glance hook on or off (default: ask, or keep the current setting with --yes)
+npx @allthingsclaude/blueprints --glance on
 ```
 
 ### Agent Power Levels
@@ -94,6 +97,7 @@ Control which models power your agents:
 |---------|-------------|
 | `/research` | Smart routing to codebase, documentation, or web research |
 | `/explain` | Generate detailed explanations of code, architecture, or features |
+| `/glance` | Turn your last reply, a plan or a decision into a visual page (see [Glance pages](#glance-pages)) |
 | `/history` | Tell the narrative story of a file or function through its git history |
 
 ### Code Quality
@@ -457,7 +461,23 @@ claude agents                 # watch the runs; attach to any marked "Needs inpu
 - Long-running agents (`implement`, `parallelize`, `audit`, `secure`, `a11y`) compact their context at 250k tokens instead of near the 1M limit, which roughly halves what they re-read on every turn.
 - Agents read only the plan sections they need and keep shared codebase conventions in `tasks/CONVENTIONS.md`, so each phase doesn't rediscover them.
 - `tasks/STATE.md` is a short index (a header plus one row per plan). Longer notes belong in the plan file. Run `/update` once to migrate an older, longer STATE.md; notes from it are moved into the plan files, not deleted.
+- `CLAUDE.md` loads into every session and subagent, so `/update` keeps it under about 200 lines and 20KB. Detail goes into `docs/architecture/`, one file per topic, which agents read when they work on that topic.
 - Optional, for your own sessions: autopilot's orchestrator runs in your main session, so a lower main-session compaction window helps too, e.g. `/autocompact 400k`.
+
+---
+
+## Glance pages
+
+`/glance` turns your last reply into one small HTML page you can take in by looking: a row per point, before and after mockups drawn in your app's own style, and the decisions left for you at the end. `/glance plan 03` or `/glance <topic>` does the same for a plan or anything else in the conversation. The session writes the page itself, so it uses your session's model and knows the whole conversation.
+
+Pages are saved in `tasks/pages/` and never published (ask for that if you want it; Claude Code can publish one as an Artifact). The folder has its own `.gitignore`, so pages are never committed.
+
+**The glance hook** (`--glance on`, or say yes during install) runs when the main session finishes a reply, in Claude Code and Codex alike:
+- It opens pages `/glance` saved. A session's sandbox can't open a browser; a hook can.
+- It turns long replies (about 2,500+ characters, made of several points) into a page in the background and opens it behind your terminal, usually within a minute. That's a separate, small model call: Sonnet in Claude Code (Opus at power level 5), your default model at low effort in Codex. It runs outside the project, with read-only access to it, so the project's `CLAUDE.md` isn't loaded into it, and it leaves no saved session behind.
+- It stays out of the way where nobody's watching: `claude -p` and background runs, SSH sessions, and Linux without a display. (Codex has no equivalent signal, so `codex exec` scripts aren't detected; set `BLUEPRINTS_GLANCE=off` for those.)
+
+Switches: `/glance auto off` (or `on`) for one project; `BLUEPRINTS_GLANCE=off` (everything) or `=open` (open pages only); `BLUEPRINTS_GLANCE_MODEL`, `BLUEPRINTS_GLANCE_MIN` (characters), `BLUEPRINTS_GLANCE_OPENER` (e.g. `open -a "Google Chrome"`) and `BLUEPRINTS_GLANCE_WRITER` (the `claude` or `codex` to run). The installer records the full paths of Node and of `claude`/`codex`, so sessions started from the Dock work too; run it again after moving to a different Node version or reinstalling the CLI. The installer adds it to `~/.claude/settings.json` (a global install) or `.claude/settings.local.json` (a project install), keeping your other settings and saving the original once as `*.before-blueprints`. `--glance off` removes it.
 
 ---
 
@@ -470,6 +490,7 @@ The same commands and agents install into [Codex](https://learn.chatgpt.com/docs
 | Commands (`/autopilot`) | Skills (`$autopilot`) | `~/.agents/skills/` / `./.agents/skills/` |
 | Agents | Custom agents (TOML) | `~/.codex/agents/` / `./.codex/agents/` |
 | Typecheck gate (agent hook) | `SubagentStop` hook for `implement` | `~/.codex/hooks.json` / `./.codex/hooks.json` |
+| Glance hook (optional) | `Stop` hook | `~/.codex/hooks.json` / `./.codex/hooks.json` |
 | Shared procedures (dispatch, integrate) | Same, converted | `~/.codex/blueprints/procedures/` / `./.codex/blueprints/procedures/` |
 | `CLAUDE.md` | `AGENTS.md` | — |
 
@@ -484,7 +505,7 @@ Things that work differently in Codex:
   [agents]
   max_depth = 2
   ```
-- **Typecheck gate**: run `/hooks` in Codex once to review and trust it. The installer appends it to your existing `hooks.json` (your hooks are kept, and the original is saved as `hooks.json.before-blueprints`).
+- **Typecheck gate and glance hook**: run `/hooks` in Codex once to review and trust them. The installer appends it to your existing `hooks.json` (your hooks are kept, and the original is saved as `hooks.json.before-blueprints`).
 - **Parallel runs** (`$autopilot`'s offer or `$dispatch`) prepare the worktrees the same way, then print one `codex -C <worktree> …` command per plan for you to run in separate terminals, since Codex can't start background sessions itself. Watch them with `codex agents`.
 - **Per-agent compaction and turn limits** have no Codex equivalent; Codex uses its global compaction setting.
 
@@ -570,7 +591,7 @@ After installation, your `.claude` directory will contain:
 
 ```
 .claude/
-├── commands/          # 48 command files
+├── commands/          # 49 command files
 │   ├── audit.md
 │   ├── autopilot.md
 │   ├── bootstrap.md
@@ -587,9 +608,10 @@ After installation, your `.claude` directory will contain:
 │   └── streams.js         # Parallel streams for plan tasks (used by /parallelize and /autopilot)
 ├── blueprints/
 │   ├── hooks/
-│   │   └── phase-gate.sh   # Typecheck gate used by the implement agent
-│   └── procedures/         # Steps shared by commands: dispatch.md and integrate.md
-│                           # (followed by /dispatch, /integrate and /autopilot)
+│   │   ├── phase-gate.sh   # Typecheck gate used by the implement agent
+│   │   └── glance.mjs      # Glance hook: opens /glance pages, makes pages for long replies
+│   └── procedures/         # Steps shared by commands: dispatch.md, integrate.md, glance.md
+│                           # (followed by /dispatch, /integrate, /autopilot and /glance)
 └── .blueprints-version     # Installed version and the list of installed files
 tasks/                         # Runtime artifacts (created during use)
 ├── plans/
@@ -597,6 +619,7 @@ tasks/                         # Runtime artifacts (created during use)
 ├── sessions/
 │   ├── HANDOFF.md             # Session handoff document
 │   └── PHASE_SUMMARY_*.md    # Phase summaries
+├── pages/                     # Glance pages (never committed)
 ├── CONVENTIONS.md             # Codebase conventions shared by implementation agents
 └── STATE.md                   # Active plan tracker (short index)
 ```
@@ -618,6 +641,7 @@ tasks/                         # Runtime artifacts (created during use)
 - Or Codex — tested with Codex CLI 0.163 (skills in `.agents/skills`, TOML custom agents, hooks)
 - Optional: [dynamic workflows](https://code.claude.com/docs/en/workflows) for `/preflight`, `/sweep` and `streams` (on paid plans; Pro users enable them in `/config`). Without them, autopilot runs the same review with parallel subagents, `/parallelize` uses its orchestrator agent, and the scan commands use a single agent.
 - The typecheck gate needs `sh` (macOS, Linux, or Git Bash on Windows); without it the gate is skipped.
+- The glance hook needs Node and the `claude` (or `codex`) CLI; the installer records where they are.
 
 ## License
 

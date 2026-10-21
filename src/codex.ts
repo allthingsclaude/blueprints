@@ -4,19 +4,26 @@ import os from 'os';
 import {
   AgentPowerLevel,
   DEFAULT_TASKS_DIR,
+  decideGlanceHook,
   ensureDir,
+  findOnPath,
+  glanceHookCommand,
   getModelForAgent,
   getPackageVersion,
   getSourcePaths,
   listFiles,
+  readJsonFile,
   replaceTemplateVars,
   selectToolBlocks,
+  writeJsonFile,
 } from './installer.js';
+import type { GlanceChoice, GlanceHookResult } from './installer.js';
 
 /**
  * Codex support: converts the Claude Code commands and agents into Codex skills
  * (`.agents/skills/<name>/SKILL.md`) and custom agents (`.codex/agents/<name>.toml`),
- * and registers the implement agent's typecheck gate as a Codex SubagentStop hook.
+ * registers the implement agent's typecheck gate as a Codex SubagentStop hook, and can
+ * register the glance hook (Stop) that opens and makes glance pages.
  */
 
 export type CodexScope = 'global' | 'project';
@@ -40,6 +47,8 @@ export interface CodexInstallResult {
   /** Names skipped because a skill or agent the user wrote already uses them */
   skipped: string[];
   hookRegistered: boolean;
+  /** What happened to the glance Stop hook in hooks.json */
+  glanceHook: GlanceHookResult;
   paths: CodexInstallPaths;
 }
 
@@ -346,7 +355,8 @@ export async function installCodex(
   root: string,
   powerLevel: AgentPowerLevel = 4,
   tasksDir: string = DEFAULT_TASKS_DIR,
-  home: string = os.homedir()
+  home: string = os.homedir(),
+  glance: GlanceChoice = 'keep'
 ): Promise<CodexInstallResult> {
   const source = getSourcePaths();
   const paths = getCodexPaths(scope, root, home);
@@ -436,32 +446,37 @@ export async function installCodex(
     fs.writeFileSync(target, `${convertTextForCodex(content, commandNames).text.trim()}\n\n<!-- ${CODEX_MARKER} -->\n`, 'utf-8');
   }
 
-  // Typecheck gate for the implement agent: same script as Claude Code, registered as a Codex hook
-  let hookRegistered = false;
+  // Hooks, the same scripts as Claude Code: the implement agent's typecheck gate (SubagentStop)
+  // and the glance hook (Stop), registered in hooks.json
+  const hooksDir = path.join(paths.support, 'hooks');
   const gateSource = path.join(source.hooks, 'phase-gate.sh');
-  if (fs.existsSync(gateSource) && installedAgents.includes('implement')) {
-    const gateDest = path.join(paths.support, 'hooks', 'phase-gate.sh');
-    ensureDir(path.dirname(gateDest));
+  const gateDest = path.join(hooksDir, 'phase-gate.sh');
+  const withGate = fs.existsSync(gateSource) && installedAgents.includes('implement');
+  if (withGate) {
+    ensureDir(hooksDir);
     fs.copyFileSync(gateSource, gateDest);
     fs.chmodSync(gateDest, 0o755);
+  }
+  const glanceSource = path.join(source.hooks, 'glance.mjs');
+  const glanceDest = path.join(hooksDir, 'glance.mjs');
+  if (fs.existsSync(glanceSource)) {
+    ensureDir(hooksDir);
+    fs.writeFileSync(glanceDest, replaceTemplateVars(fs.readFileSync(glanceSource, 'utf-8'), vars.tasksDir, vars.blueprintsDir), 'utf-8');
+  }
 
-    let existing: unknown = {};
-    if (fs.existsSync(paths.hooksFile)) {
-      try {
-        existing = JSON.parse(fs.readFileSync(paths.hooksFile, 'utf-8'));
-      } catch {
-        existing = null; // unparseable: leave the user's file alone
-      }
-    }
-    if (existing !== null) {
-      const backup = `${paths.hooksFile}.before-blueprints`;
-      if (fs.existsSync(paths.hooksFile) && !fs.existsSync(backup)) {
-        fs.copyFileSync(paths.hooksFile, backup);
-      }
-      const merged = mergeCodexHooks(existing, `sh "${gateDest}"`);
-      fs.writeFileSync(paths.hooksFile, `${JSON.stringify(merged, null, 2)}\n`, 'utf-8');
+  let hookRegistered = false;
+  let glanceHook: GlanceHookResult = 'unreadable';
+  const existing = readJsonFile(paths.hooksFile); // null when unparseable: leave the user's file alone
+  if (existing !== null) {
+    let merged: unknown = existing;
+    if (withGate) {
+      merged = mergeCodexHooks(merged, `sh "${gateDest}"`);
       hookRegistered = true;
     }
+    const decision = decideGlanceHook(merged, glance, glanceHookCommand(glanceDest, 'codex', findOnPath('codex')));
+    glanceHook = decision.result;
+    if (decision.value) merged = decision.value;
+    if (merged !== existing) writeJsonFile(paths.hooksFile, merged);
   }
 
   const manifest: CodexManifest = {
@@ -481,6 +496,7 @@ export async function installCodex(
     removed,
     skipped,
     hookRegistered,
+    glanceHook,
     paths,
   };
 }

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -32,6 +33,9 @@ export interface InstallResult {
   removed: number;
   paths: InstallPaths;
   powerLevel: AgentPowerLevel;
+  /** What happened to the glance Stop hook, and the settings file it lives in */
+  glanceHook: GlanceHookResult;
+  settingsFile: string;
 }
 
 export type AgentPowerLevel = 1 | 2 | 3 | 4 | 5;
@@ -125,6 +129,166 @@ export function replaceTemplateVars(content: string, tasksDir?: string, blueprin
     result = result.replaceAll(key, value);
   }
   return result;
+}
+
+/** Identifies blueprints' glance entry in a Claude Code settings file or a Codex hooks.json */
+export const GLANCE_SCRIPT_MARKER = 'blueprints/hooks/glance.mjs';
+
+/** Whether to register the glance Stop hook: add it, remove it, or keep whatever is there (refreshing ours) */
+export type GlanceChoice = 'on' | 'off' | 'keep';
+
+export type GlanceHookResult = 'added' | 'updated' | 'removed' | 'none' | 'unreadable';
+
+type HookCommand = { type?: string; command?: string; timeout?: number };
+type HookEntry = { matcher?: string; hooks?: HookCommand[] };
+type HooksRoot = { hooks?: Record<string, HookEntry[]> } & Record<string, unknown>;
+
+function isGlanceEntry(entry: HookEntry): boolean {
+  return Array.isArray(entry?.hooks) && entry.hooks.some(h => typeof h?.command === 'string' && h.command.includes(GLANCE_SCRIPT_MARKER));
+}
+
+export function hasGlanceHook(existing: unknown): boolean {
+  const stop = (existing as HooksRoot | null)?.hooks?.Stop;
+  return Array.isArray(stop) && stop.some(isGlanceEntry);
+}
+
+/** A settings or hooks object whose hooks blueprints can safely edit (anything else is left alone) */
+function hooksAreEditable(existing: unknown): boolean {
+  if (!existing || typeof existing !== 'object' || Array.isArray(existing)) return false;
+  const hooks = (existing as HooksRoot).hooks;
+  if (hooks === undefined) return true;
+  if (!hooks || typeof hooks !== 'object' || Array.isArray(hooks)) return false;
+  return hooks.Stop === undefined || Array.isArray(hooks.Stop);
+}
+
+function glanceCommands(existing: unknown): string[] {
+  const stop = (existing as HooksRoot | null)?.hooks?.Stop;
+  if (!Array.isArray(stop)) return [];
+  return stop.filter(isGlanceEntry).flatMap(entry => (entry.hooks ?? []).map(h => h.command ?? ''));
+}
+
+/**
+ * Add (command given) or remove (null) blueprints' glance Stop hook, keeping every other hook.
+ * Claude Code settings and Codex hooks.json share this shape.
+ */
+export function mergeGlanceHook(existing: unknown, command: string | null): HooksRoot {
+  const root: HooksRoot = existing && typeof existing === 'object' && !Array.isArray(existing) ? { ...(existing as HooksRoot) } : {};
+  const hooks = root.hooks && typeof root.hooks === 'object' ? { ...root.hooks } : {};
+  const stop = Array.isArray(hooks.Stop) ? hooks.Stop.filter(entry => !isGlanceEntry(entry)) : [];
+  if (command) stop.push({ hooks: [{ type: 'command', command, timeout: 30 }] });
+  if (stop.length) hooks.Stop = stop;
+  else delete hooks.Stop;
+  if (Object.keys(hooks).length) root.hooks = hooks;
+  else delete root.hooks;
+  return root;
+}
+
+/** The model the glance hook writes pages with in Claude Code: Opus at power level 5, Sonnet otherwise */
+export function glanceModel(powerLevel: AgentPowerLevel): 'sonnet' | 'opus' {
+  return powerLevel === 5 ? 'opus' : 'sonnet';
+}
+
+/** Read a JSON file: {} when it's missing, null when it can't be parsed (so it's left alone) */
+export function readJsonFile(file: string): unknown {
+  if (!fs.existsSync(file)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf-8'));
+  } catch {
+    return null;
+  }
+}
+
+/** Write a settings or hooks file, keeping a one-time backup of the user's original */
+export function writeJsonFile(file: string, value: unknown): void {
+  const backup = `${file}.before-blueprints`;
+  if (fs.existsSync(file) && !fs.existsSync(backup)) fs.copyFileSync(file, backup);
+  ensureDir(path.dirname(file));
+  fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, 'utf-8');
+}
+
+/**
+ * What a glance choice does to a settings or hooks object: the new object to write (null: leave it as it is)
+ * and what happened. 'keep' refreshes an existing entry (its path or model may have changed) and adds nothing.
+ */
+export function decideGlanceHook(existing: unknown, choice: GlanceChoice, command: string): { value: HooksRoot | null; result: GlanceHookResult } {
+  if (!hooksAreEditable(existing)) return { value: null, result: 'unreadable' };
+  const present = hasGlanceHook(existing);
+  const current = glanceCommands(existing);
+  if (choice !== 'off' && current.length === 1 && current[0] === command) return { value: null, result: 'none' };
+  if (choice === 'off' || (choice === 'keep' && !present)) {
+    return present ? { value: mergeGlanceHook(existing, null), result: 'removed' } : { value: null, result: 'none' };
+  }
+  return { value: mergeGlanceHook(existing, command), result: present ? 'updated' : 'added' };
+}
+
+/** Register, refresh or remove the glance hook in a settings or hooks file */
+export function applyGlanceHook(file: string, choice: GlanceChoice, command: string): GlanceHookResult {
+  const existing = readJsonFile(file);
+  if (existing === null) return 'unreadable';
+  const { value, result } = decideGlanceHook(existing, choice, command);
+  if (value) writeJsonFile(file, value);
+  return result;
+}
+
+/** A command's full path on PATH, or null */
+export function findOnPath(name: string): string | null {
+  const result = process.platform === 'win32'
+    ? spawnSync('where', [name], { encoding: 'utf-8', windowsHide: true })
+    : spawnSync('/bin/sh', ['-c', `command -v ${name}`], { encoding: 'utf-8' });
+  const first = result.status === 0 ? (result.stdout ?? '').split(/\r?\n/)[0].trim() : '';
+  return first && path.isAbsolute(first) ? first : null;
+}
+
+/**
+ * Node for hooks, by its full path (a session started from the GUI may not have it on PATH).
+ * Prefers the PATH entry when it is this same Node: `/opt/homebrew/bin/node` survives `brew upgrade node`,
+ * while this process's own path points into a versioned folder.
+ */
+export function nodeForHooks(): string {
+  const onPath = findOnPath('node');
+  try {
+    if (onPath && fs.realpathSync(onPath) === fs.realpathSync(process.execPath)) return onPath;
+  } catch {
+    // fall through
+  }
+  return process.execPath;
+}
+
+/** The hook command; `writer` is the claude or codex the page writer runs, recorded at install */
+export function glanceHookCommand(script: string, args: string, writer: string | null = null): string {
+  const slash = (p: string) => p.replace(/\\/g, '/');
+  return `"${slash(nodeForHooks())}" "${slash(script)}" ${args}${writer ? ` --writer "${slash(writer)}"` : ''}`;
+}
+
+/**
+ * Keep a project's local settings file out of git: Claude Code only ignores settings.local.json when it
+ * creates the file itself. Uses the repo's own info/exclude (worktrees included), so nothing in the repo changes.
+ */
+export function excludeFromGit(file: string): boolean {
+  const dir = path.dirname(path.resolve(file));
+  const git = (...args: string[]) => spawnSync('git', ['-C', dir, ...args], { encoding: 'utf-8', windowsHide: true });
+  const top = git('rev-parse', '--show-toplevel');
+  const excludeOut = git('rev-parse', '--git-path', 'info/exclude');
+  if (top.status !== 0 || excludeOut.status !== 0) return false;
+  const root = top.stdout.trim();
+  const exclude = path.resolve(dir, excludeOut.stdout.trim());
+  const rel = path.relative(fs.realpathSync(root), fs.realpathSync(path.dirname(path.resolve(file)))).split(path.sep).join('/');
+  const entry = `/${rel ? `${rel}/` : ''}${path.basename(file)}`;
+  const lines = fs.existsSync(exclude) ? fs.readFileSync(exclude, 'utf-8').split('\n') : [];
+  if (lines.some(line => line.trim() === entry)) return true;
+  ensureDir(path.dirname(exclude));
+  const prefix = lines.length && lines[lines.length - 1] !== '' ? '\n' : '';
+  fs.appendFileSync(exclude, `${prefix}${entry}\n`, 'utf-8');
+  return true;
+}
+
+/**
+ * Settings file for the Claude Code glance hook: the user's settings for a global install,
+ * the project's local (unshared) settings otherwise
+ */
+export function claudeSettingsFile(claudeDir: string): string {
+  const global = path.resolve(claudeDir) === path.resolve(getDefaultClaudeDir());
+  return path.join(claudeDir, global ? 'settings.json' : 'settings.local.json');
 }
 
 
@@ -443,7 +607,12 @@ export function cleanStaleFiles(srcDir: string, destDir: string, previouslyInsta
 /**
  * Install blueprints to the target path
  */
-export async function installBlueprints(targetPath: string, powerLevel: AgentPowerLevel = 3, tasksDir: string = DEFAULT_TASKS_DIR): Promise<InstallResult> {
+export async function installBlueprints(
+  targetPath: string,
+  powerLevel: AgentPowerLevel = 3,
+  tasksDir: string = DEFAULT_TASKS_DIR,
+  glance: GlanceChoice = 'keep'
+): Promise<InstallResult> {
   const sourcePaths = getSourcePaths();
   const installPaths = getInstallPaths(targetPath);
 
@@ -498,13 +667,23 @@ export async function installBlueprints(targetPath: string, powerLevel: AgentPow
   };
   fs.writeFileSync(path.join(installPaths.base, MANIFEST_FILE), JSON.stringify(manifest, null, 2), 'utf-8');
 
+  // The glance hook runs when the main session finishes a reply: it opens /glance pages and makes pages for long replies
+  const settingsFile = claudeSettingsFile(installPaths.base);
+  const glanceCommand = glanceHookCommand(path.join(hooksDest, 'glance.mjs'), `claude --model ${glanceModel(powerLevel)}`, findOnPath('claude'));
+  const glanceHook = applyGlanceHook(settingsFile, glance, glanceCommand);
+  if ((glanceHook === 'added' || glanceHook === 'updated') && settingsFile.endsWith('settings.local.json')) {
+    excludeFromGit(settingsFile);
+  }
+
   return {
     commands: commandsCount,
     agents: agentsCount,
     workflows: workflowsCount,
     removed,
     paths: installPaths,
-    powerLevel
+    powerLevel,
+    glanceHook,
+    settingsFile,
   };
 }
 

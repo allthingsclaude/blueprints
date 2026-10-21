@@ -350,7 +350,7 @@ The workflow runs in the background: `audit`, `secure`, `a11y` (UI changes only)
 
 ### Step 6: Update & Report
 
-**UPDATE CLAUDE.md and STATE.md** (skip in worktree mode): launch the update agent (`subagent_type: "update"`) to sync CLAUDE.md with new patterns, dependencies, or structure from this session and to reconcile STATE.md (it also migrates a legacy-format STATE.md). If it changed CLAUDE.md (or the AGENTS.md it imports), commit it (commit agent, "docs: update CLAUDE.md for {NAME}").
+**UPDATE CLAUDE.md and STATE.md** (skip in worktree mode): launch the update agent (`subagent_type: "update"`) to sync CLAUDE.md with new patterns, dependencies, or structure from this session and to reconcile STATE.md (it also migrates a legacy-format STATE.md). If it changed CLAUDE.md (or the AGENTS.md it imports) or `docs/architecture/`, commit them (commit agent, "docs: update CLAUDE.md for {NAME}").
 
 **STATE UPDATE**:
 - All phases and validation passed (tasks marked **(USER)** may remain; they're listed under **Left for you**) → (worktree mode: see Worktree Mode) `**Active**: None`, `**File**`/`**Phase**`: `—`, `**Status**: ✅ Complete`, and the plan's row `✅ Complete`

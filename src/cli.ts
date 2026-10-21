@@ -4,8 +4,8 @@ import { program } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
-import { installBlueprints, getDefaultClaudeDir, getInstallPaths, getSourcePaths, POWER_LEVEL_LABELS, POWER_LEVEL_MODELS, DEFAULT_TASKS_DIR } from './installer.js';
-import type { AgentPowerLevel } from './installer.js';
+import { installBlueprints, getDefaultClaudeDir, getInstallPaths, getSourcePaths, claudeSettingsFile, glanceModel, hasGlanceHook, readJsonFile, POWER_LEVEL_LABELS, POWER_LEVEL_MODELS, DEFAULT_TASKS_DIR } from './installer.js';
+import type { AgentPowerLevel, GlanceChoice, GlanceHookResult } from './installer.js';
 import { getCodexPaths, installCodex, POWER_LEVEL_EFFORTS } from './codex.js';
 import type { CodexScope } from './codex.js';
 import fs from 'fs';
@@ -23,6 +23,7 @@ interface CLIOptions {
   power?: string;
   tasksDir?: string;
   target?: string;
+  glance?: string;
 }
 
 type InstallType = 'global' | 'local' | 'custom';
@@ -41,6 +42,7 @@ program
   .option('-y, --yes', 'Skip confirmation prompts')
   .option('--power <level>', 'Agent power level 1-5 (default: 4)')
   .option('--tasks-dir <name>', `Tasks directory name (default: ${DEFAULT_TASKS_DIR})`)
+  .option('--glance <on|off>', 'Glance hook: open /glance pages and make one for long replies (default: keep the current setting)')
   .parse(process.argv);
 
 const options = program.opts<CLIOptions>();
@@ -50,6 +52,16 @@ function codexRootFor(targetPath: string): string {
   const resolved = path.resolve(targetPath);
   const base = path.basename(resolved);
   return base === '.claude' || base === '.codex' ? path.dirname(resolved) : resolved;
+}
+
+function reportGlance(result: GlanceHookResult, file: string): void {
+  const messages: Partial<Record<GlanceHookResult, string>> = {
+    added: `${chalk.green('✓')} glance hook added to ${file}`,
+    updated: `${chalk.green('✓')} glance hook updated in ${file}`,
+    removed: `${chalk.green('✓')} glance hook removed from ${file}`,
+    unreadable: `${chalk.yellow('!')} couldn't safely edit the hooks in ${file} (not valid JSON, or an unexpected shape), so the glance hook wasn't changed there`,
+  };
+  if (messages[result]) console.log(`  ${messages[result]}`);
 }
 
 async function main(): Promise<void> {
@@ -223,6 +235,34 @@ async function main(): Promise<void> {
     tasksDir = tasksDirAnswer.tasksDir;
   }
 
+  // Glance hook: a Stop hook in the Claude Code settings / Codex hooks.json, only when asked for
+  const claudeSettings = forClaude ? claudeSettingsFile(getInstallPaths(targetPath).base) : null;
+  const codexHooks = forCodex ? getCodexPaths(codexScope, codexRoot).hooksFile : null;
+  const glanceInstalled = [claudeSettings, codexHooks].some(file => file !== null && hasGlanceHook(readJsonFile(file)));
+  let glance: GlanceChoice;
+
+  if (options.glance) {
+    const requested = options.glance.toLowerCase();
+    if (requested !== 'on' && requested !== 'off') {
+      console.error(chalk.red('Error: --glance must be on or off'));
+      process.exit(1);
+    }
+    glance = requested;
+  } else if (options.yes) {
+    glance = 'keep';
+  } else {
+    const glanceAnswer = await inquirer.prompt<{ glance: boolean }>([
+      {
+        type: 'confirm',
+        name: 'glance',
+        message: 'Glance pages: open /glance pages by themselves, and turn long replies into a visual page in the background (adds a Stop hook)?',
+        default: glanceInstalled,
+      }
+    ]);
+    glance = glanceAnswer.glance ? 'on' : 'off';
+  }
+  const glanceLabel = glance === 'keep' ? (glanceInstalled ? 'on (kept)' : 'off') : glance;
+
   // Show what will be installed
   const sourcePaths = getSourcePaths();
   const commandCount = fs.readdirSync(sourcePaths.commands).filter(f => f.endsWith('.md')).length;
@@ -250,6 +290,7 @@ async function main(): Promise<void> {
   }
   console.log(`  ${chalk.bold('Power Level:')} ${chalk.magenta(`${powerLevel} - ${POWER_LEVEL_LABELS[powerLevel]}`)} ${chalk.dim(`(${describe(powerLevel)})`)}`);
   console.log(`  ${chalk.bold('Tasks Dir:')}   ${chalk.cyan(`${tasksDir}/`)}`);
+  console.log(`  ${chalk.bold('Glance hook:')} ${glanceLabel}${glanceLabel.startsWith('on') && forClaude ? chalk.dim(` (Claude Code pages with ${glanceModel(powerLevel)})`) : ''}`);
   console.log(chalk.dim('─'.repeat(50)));
   console.log();
 
@@ -274,8 +315,8 @@ async function main(): Promise<void> {
   const spinner = ora('Installing blueprints...').start();
 
   try {
-    const claudeResult = forClaude ? await installBlueprints(targetPath, powerLevel, tasksDir) : null;
-    const codexResult = forCodex ? await installCodex(codexScope, codexRoot, powerLevel, tasksDir) : null;
+    const claudeResult = forClaude ? await installBlueprints(targetPath, powerLevel, tasksDir, glance) : null;
+    const codexResult = forCodex ? await installCodex(codexScope, codexRoot, powerLevel, tasksDir, undefined, glance) : null;
     spinner.succeed(chalk.green('Installation complete!'));
 
     console.log();
@@ -288,6 +329,7 @@ async function main(): Promise<void> {
       if (claudeResult.removed > 0) {
         console.log(`  ${chalk.green('✓')} ${claudeResult.removed} outdated blueprints files removed (your own files are never touched)`);
       }
+      reportGlance(claudeResult.glanceHook, claudeResult.settingsFile);
     }
     if (codexResult) {
       console.log(chalk.bold('  Codex'));
@@ -302,6 +344,7 @@ async function main(): Promise<void> {
       if (codexResult.skipped.length > 0) {
         console.log(`  ${chalk.yellow('!')} Skipped (you already have your own): ${codexResult.skipped.join(', ')}`);
       }
+      reportGlance(codexResult.glanceHook, codexResult.paths.hooksFile);
     }
     console.log(chalk.dim('─'.repeat(50)));
     console.log();
@@ -317,8 +360,10 @@ async function main(): Promise<void> {
     if (codexResult) {
       const where = installType === 'global' ? 'in any project' : `in ${chalk.cyan(codexRoot)}`;
       console.log(`  ${chalk.cyan('Codex:')}       open Codex ${where} and type ${chalk.yellow('$autopilot')} or ${chalk.yellow('$blueprint')} (skills start with $)`);
-      if (codexResult.hookRegistered) {
-        console.log(`               run ${chalk.yellow('/hooks')} in Codex once to review and trust the blueprints typecheck gate`);
+      const glanceChanged = codexResult.glanceHook === 'added' || codexResult.glanceHook === 'updated';
+      if (codexResult.hookRegistered || glanceChanged) {
+        const which = [codexResult.hookRegistered ? 'typecheck gate' : '', glanceChanged ? 'glance hook' : ''].filter(Boolean).join(' and ');
+        console.log(`               run ${chalk.yellow('/hooks')} in Codex once to review and trust the blueprints ${which}`);
       }
       console.log(chalk.dim(`               Optional: for parallel streams in $parallelize, add "[agents]" with "max_depth = 2" to ${path.join(codexResult.paths.codexHome, 'config.toml')}`));
     }
