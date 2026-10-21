@@ -154,6 +154,8 @@ describe('installCodex', () => {
     expect(result.skills).toBe(commandCount);
     expect(result.agents).toBe(agentCount);
     expect(result.hookRegistered).toBe(true);
+    expect(result.gateHook).toBe('added');
+    expect((await installCodex('project', root, 4)).gateHook).toBe('none'); // nothing new to trust on a rerun
     expect(paths.skills).toBe(path.join(root, '.agents', 'skills'));
     expect(fs.existsSync(path.join(paths.skills, 'autopilot', 'SKILL.md'))).toBe(true);
     expect(fs.existsSync(path.join(paths.skills, 'autopilot', 'agents', 'openai.yaml'))).toBe(true);

@@ -12,6 +12,7 @@ import type { AgentPowerLevel, HookChoice, HookResult, InstallOptions, OwnHook }
 import { getCodexPaths, installCodex, POWER_LEVEL_EFFORTS } from './codex.js';
 import type { CodexScope } from './codex.js';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { createRequire } from 'module';
 
@@ -63,18 +64,65 @@ type HookKey = keyof InstallOptions & keyof CLIOptions;
 
 /** The optional hooks, in the order the installer lists them (each a checkbox, off until ticked) */
 const HOOK_OPTIONS: { key: HookKey; flag: string; name: string; description: string; claude: OwnHook[]; codex: OwnHook[] }[] = [
-  { key: 'glance', flag: 'glance', name: 'Glance pages', description: 'turn long replies into visual pages, and show when one is being made', claude: [GLANCE_HOOK], codex: [GLANCE_HOOK] },
-  { key: 'leanCommits', flag: 'lean-commits', name: 'Lean commits', description: 'one-line `type: description` commits, no agent trailers', claude: [LEAN_COMMITS_HOOK], codex: [LEAN_COMMITS_HOOK_CODEX] },
+  { key: 'glance', flag: 'glance', name: 'Glance pages', description: 'visual pages of long replies', claude: [GLANCE_HOOK], codex: [GLANCE_HOOK] },
+  { key: 'leanCommits', flag: 'lean-commits', name: 'Lean commits', description: 'one-line commits, no agent trailers', claude: [LEAN_COMMITS_HOOK], codex: [LEAN_COMMITS_HOOK_CODEX] },
 ];
 
+// The summary and results keep to about 80 columns: one block per tool, a label column, short paths
+const RULE = chalk.dim('─'.repeat(60));
+const LABEL_WIDTH = 16;
+
+/** A path under the home folder as ~/… */
+function tilde(p: string): string {
+  const home = os.homedir();
+  const rel = path.relative(home, path.resolve(p));
+  return rel && !rel.startsWith('..') && !path.isAbsolute(rel) ? `~${path.sep}${rel}` : path.resolve(p);
+}
+
+/** A path as short as it can be shown: ./… inside the current folder, else ~/… */
+function shortPath(p: string): string {
+  const cwd = process.cwd();
+  const rel = path.relative(cwd, path.resolve(p));
+  return cwd !== os.homedir() && rel && !rel.startsWith('..') && !path.isAbsolute(rel) ? `.${path.sep}${rel}` : tilde(p);
+}
+
+/** A path to paste into a shell */
+function shellPath(p: string): string {
+  const short = tilde(p);
+  return process.platform !== 'win32' && /^[\w~./-]+$/.test(short) ? short : `"${path.resolve(p)}"`;
+}
+
+/** A tool's block: its name, then a row per label */
+function block(name: string): void {
+  console.log(`  ${chalk.bold(name)}`);
+}
+function row(label: string, value: string): void {
+  console.log(`    ${chalk.bold(label.padEnd(LABEL_WIDTH))}${value}`);
+}
+function done(text: string): void {
+  console.log(`    ${chalk.green('✓')} ${text}`);
+}
+function warn(text: string, ...more: string[]): void {
+  console.log(`    ${chalk.yellow('!')} ${text}`);
+  for (const line of more) console.log(`      ${line}`);
+}
+
+/** Words joined into lines of at most `width` characters */
+function wrapWords(words: string[], width = 70): string[] {
+  const lines: string[] = [];
+  for (const word of words) {
+    const last = lines.length ? lines[lines.length - 1] : undefined;
+    if (last !== undefined && last.length + word.length + 1 <= width) lines[lines.length - 1] = `${last} ${word}`;
+    else lines.push(word);
+  }
+  return lines;
+}
+
 function reportHook(name: string, result: HookResult, file: string): void {
-  const messages: Partial<Record<HookResult, string>> = {
-    added: `${chalk.green('✓')} ${name} added to ${file}`,
-    updated: `${chalk.green('✓')} ${name} updated in ${file}`,
-    removed: `${chalk.green('✓')} ${name} removed from ${file}`,
-    unreadable: `${chalk.yellow('!')} couldn't safely edit the hooks in ${file} (not valid JSON, or an unexpected shape), so the ${name} wasn't changed there`,
-  };
-  if (messages[result]) console.log(`  ${messages[result]}`);
+  if (result === 'added') done(`${name} added to ${shortPath(file)}`);
+  if (result === 'updated') done(`${name} updated in ${shortPath(file)}`);
+  if (result === 'removed') done(`${name} removed from ${shortPath(file)}`);
+  if (result === 'unreadable') warn(`${name} not changed: couldn't safely edit ${shortPath(file)}`, chalk.dim('(not valid JSON, or an unexpected shape)'));
 }
 
 async function main(): Promise<void> {
@@ -129,8 +177,8 @@ async function main(): Promise<void> {
   } else {
     // Interactive mode
     const globalLabel = [
-      forClaude ? getDefaultClaudeDir() : null,
-      forCodex ? `${getCodexPaths('global', process.cwd()).codexHome} + ${getCodexPaths('global', process.cwd()).skills}` : null,
+      forClaude ? tilde(getDefaultClaudeDir()) : null,
+      forCodex ? `${tilde(getCodexPaths('global', process.cwd()).codexHome)} + ${tilde(getCodexPaths('global', process.cwd()).skills)}` : null,
     ].filter(Boolean).join(', ');
 
     const answer = await inquirer.prompt<{ location: InstallType }>([
@@ -145,7 +193,7 @@ async function main(): Promise<void> {
             short: 'Global'
           },
           {
-            name: `Current project (${process.cwd()})`,
+            name: `Current project (${tilde(process.cwd())})`,
             value: 'local',
             short: 'Local'
           },
@@ -181,13 +229,6 @@ async function main(): Promise<void> {
   const codexRoot = installType === 'global' ? process.cwd() : codexRootFor(targetPath);
 
   // Determine power level: Claude Code agents get a model per tier, Codex agents a reasoning effort
-  const describe = (level: AgentPowerLevel): string => {
-    if (target === 'codex') return POWER_LEVEL_EFFORTS[level];
-    if (target === 'claude') return POWER_LEVEL_MODELS[level];
-    const [models, note] = POWER_LEVEL_MODELS[level].split(' — ');
-    const [efforts] = POWER_LEVEL_EFFORTS[level].split(' — ');
-    return `Claude: ${models} · Codex: ${efforts}${note ? ` — ${note}` : ''}`;
-  };
   let powerLevel: AgentPowerLevel;
 
   if (options.power) {
@@ -201,22 +242,22 @@ async function main(): Promise<void> {
     powerLevel = 4;
   } else {
     const levels: AgentPowerLevel[] = [1, 2, 3, 4, 5];
-    const messages: Record<Target, string> = {
-      claude: 'Select agent power level:',
-      codex: 'Select agent power level (reasoning effort per agent; agents use your session\'s model):',
-      both: 'Select agent power level (Codex gets the same tiers as reasoning effort: haiku → low, sonnet → medium, opus → high):',
-    };
-    // In "both" mode the choices show the Claude tiers and the message gives the Codex mapping, so lines don't wrap
+    // In "both" mode the choices show the Claude tiers and a line under them the Codex mapping, so lines don't wrap
     const choiceText = (level: AgentPowerLevel): string => (target === 'codex' ? POWER_LEVEL_EFFORTS[level] : POWER_LEVEL_MODELS[level]);
+    const codexNote = target === 'both' ? [new inquirer.Separator(chalk.dim('  Codex: haiku → low, sonnet → medium, opus → high reasoning effort'))] : [];
     const powerAnswer = await inquirer.prompt<{ power: AgentPowerLevel }>([
       {
         type: 'list',
         name: 'power',
-        message: messages[target],
-        choices: levels.map(level => ({
-          name: `${level} - ${POWER_LEVEL_LABELS[level].padEnd(9)} (${choiceText(level)})`,
-          value: level,
-        })),
+        message: target === 'codex' ? 'Agent power level (reasoning effort; agents use your session\'s model):' : 'Agent power level:',
+        choices: [
+          ...levels.map(level => ({
+            name: `${level} - ${POWER_LEVEL_LABELS[level].padEnd(9)} (${choiceText(level)})`,
+            short: `${level} - ${POWER_LEVEL_LABELS[level]}`,
+            value: level,
+          })),
+          ...codexNote,
+        ],
         pageSize: 10,
         default: 3 // 0-indexed, so index 3 = value 4
       }
@@ -263,7 +304,8 @@ async function main(): Promise<void> {
   }
   const isOn = (key: HookKey) => [here[key], fromUser[key]].some(w => (forClaude && w.claude) || (forCodex && w.codex));
 
-  // Each hook: a flag decides it, --yes keeps it as it is, otherwise one checklist asks about the rest
+  // Each hook: a flag decides it, --yes keeps it as it is, otherwise one checklist asks about the rest.
+  // Every box starts unticked, except a hook that's on already ("on now"): a plain Enter keeps the setup as it is.
   const wanted = {} as Record<HookKey, boolean | 'keep'>;
   for (const option of HOOK_OPTIONS) {
     const flag = options[option.key];
@@ -282,8 +324,13 @@ async function main(): Promise<void> {
     const answer = await inquirer.prompt<{ hooks: HookKey[] }>([{
       type: 'checkbox',
       name: 'hooks',
-      message: 'Optional hooks (space to turn on or off, enter to confirm):',
-      choices: unasked.map(option => ({ name: `${option.name} ${chalk.dim(`— ${option.description}`)}`, short: option.name, value: option.key, checked: isOn(option.key) })),
+      message: 'Optional hooks:', // inquirer adds how to tick them
+      choices: unasked.map(option => ({
+        name: `${option.name} ${chalk.dim(`— ${option.description}${isOn(option.key) ? ' (on now)' : ''}`)}`,
+        short: option.name,
+        value: option.key,
+        checked: isOn(option.key),
+      })),
     }]);
     for (const option of unasked) wanted[option.key] = answer.hooks.includes(option.key);
   }
@@ -296,20 +343,16 @@ async function main(): Promise<void> {
   };
   const claudeOptions = Object.fromEntries(HOOK_OPTIONS.map(o => [o.key, choiceFor(o.key, 'claude')])) as InstallOptions;
   const codexOptions = Object.fromEntries(HOOK_OPTIONS.map(o => [o.key, choiceFor(o.key, 'codex')])) as InstallOptions;
-  const status = (key: HookKey): string => {
-    const tools = [
-      forClaude ? { name: 'Claude Code', choice: claudeOptions[key], here: here[key].claude, user: fromUser[key].claude } : null,
-      forCodex ? { name: 'Codex', choice: codexOptions[key], here: here[key].codex, user: fromUser[key].codex } : null,
-    ].filter(t => t !== null);
-    const on = tools.filter(t => t.choice === 'on' || (t.choice === 'keep' && (t.here || t.user)));
-    if (!on.length) return 'off';
-    const where = on.length < tools.length ? ` in ${on.map(t => t.name).join(' and ')}` : '';
-    return `on${where}${on.every(t => t.choice === 'keep' && !t.here) ? ' (from your user settings)' : ''}`;
+  const status = (key: HookKey, tool: keyof Where): string => {
+    const choice = (tool === 'claude' ? claudeOptions : codexOptions)[key];
+    if (choice === 'on' || (choice === 'keep' && here[key][tool])) return 'on';
+    if (choice === 'keep' && fromUser[key][tool]) return `on ${chalk.dim('(from your user settings)')}`;
+    return chalk.dim('off');
   };
   for (const option of HOOK_OPTIONS) {
     if (wanted[option.key] === false && ((forClaude && fromUser[option.key].claude) || (forCodex && fromUser[option.key].codex))) {
-      console.log(chalk.yellow(`  ${option.name} is on in your user settings, and its hook still applies to this project.`));
-      console.log(chalk.yellow(`  Run the installer with --global --${option.flag} off to turn it off everywhere.`));
+      console.log(chalk.yellow(`  ${option.name} is on in your user settings, so it still applies here.`));
+      console.log(chalk.yellow(`  To turn it off everywhere, install with --global --${option.flag} off.`));
     }
   }
 
@@ -321,31 +364,39 @@ async function main(): Promise<void> {
     ? fs.readdirSync(sourcePaths.workflows).filter(f => f.endsWith('.js')).length
     : 0;
 
+  // The tiers for each tool, and the level's note ("recommended") once for both
+  const [models, levelNote] = POWER_LEVEL_MODELS[powerLevel].split(' — ');
+  const [efforts, effortNote] = POWER_LEVEL_EFFORTS[powerLevel].split(' — ');
   console.log();
-  console.log(chalk.yellow('Installation Summary:'));
-  console.log(chalk.dim('─'.repeat(50)));
+  console.log(chalk.yellow('Installation summary'));
+  console.log(RULE);
   if (forClaude) {
     const paths = getInstallPaths(targetPath);
-    console.log(chalk.bold('  Claude Code'));
-    console.log(`  ${chalk.bold('Commands:')}    ${commandCount} files → ${chalk.cyan(paths.commands)}`);
-    console.log(`  ${chalk.bold('Agents:')}      ${agentCount} files → ${chalk.cyan(paths.agents)}`);
-    console.log(`  ${chalk.bold('Workflows:')}   ${workflowCount} files → ${chalk.cyan(paths.workflows)}`);
+    block('Claude Code');
+    row('Commands', `${commandCount} → ${chalk.cyan(shortPath(paths.commands))}`);
+    row('Agents', `${agentCount} → ${chalk.cyan(shortPath(paths.agents))}`);
+    row('Workflows', `${workflowCount} → ${chalk.cyan(shortPath(paths.workflows))}`);
+    row('Models', models);
+    for (const option of HOOK_OPTIONS) {
+      const label = status(option.key, 'claude');
+      row(option.name, `${label}${option.key === 'glance' && label.startsWith('on') ? chalk.dim(` (pages made with ${glanceModel(powerLevel)})`) : ''}`);
+    }
+    console.log();
   }
   if (forCodex) {
     const codexPaths = getCodexPaths(codexScope, codexRoot);
-    console.log(chalk.bold('  Codex'));
-    console.log(`  ${chalk.bold('Skills:')}      ${commandCount} skills → ${chalk.cyan(codexPaths.skills)}`);
-    console.log(`  ${chalk.bold('Agents:')}      ${agentCount} files → ${chalk.cyan(codexPaths.agents)}`);
-    console.log(`  ${chalk.bold('Hook:')}        typecheck gate → ${chalk.cyan(codexPaths.hooksFile)}`);
+    block('Codex');
+    row('Skills', `${commandCount} → ${chalk.cyan(shortPath(codexPaths.skills))}`);
+    row('Agents', `${agentCount} → ${chalk.cyan(shortPath(codexPaths.agents))}`);
+    row('Effort', efforts);
+    row('Typecheck gate', `on ${chalk.dim(`(in ${shortPath(codexPaths.hooksFile)})`)}`);
+    for (const option of HOOK_OPTIONS) row(option.name, status(option.key, 'codex'));
+    console.log();
   }
-  console.log(`  ${chalk.bold('Power Level:')} ${chalk.magenta(`${powerLevel} - ${POWER_LEVEL_LABELS[powerLevel]}`)} ${chalk.dim(`(${describe(powerLevel)})`)}`);
-  console.log(`  ${chalk.bold('Tasks Dir:')}   ${chalk.cyan(`${tasksDir}/`)}`);
-  for (const option of HOOK_OPTIONS) {
-    const label = status(option.key);
-    const note = option.key === 'glance' && label.startsWith('on') && forClaude ? chalk.dim(` (Claude Code pages with ${glanceModel(powerLevel)})`) : '';
-    console.log(`  ${chalk.bold(`${option.name}:`)} ${label}${note}`);
-  }
-  console.log(chalk.dim('─'.repeat(50)));
+  const note = forClaude ? levelNote : effortNote;
+  console.log(`  ${chalk.bold('Power level'.padEnd(LABEL_WIDTH + 2))}${chalk.magenta(`${powerLevel} - ${POWER_LEVEL_LABELS[powerLevel]}`)}${note ? chalk.dim(` (${note})`) : ''}`);
+  console.log(`  ${chalk.bold('Tasks folder'.padEnd(LABEL_WIDTH + 2))}${chalk.cyan(`${tasksDir}/`)}`);
+  console.log(RULE);
   console.log();
 
   // Confirm installation unless --yes flag is provided
@@ -378,62 +429,67 @@ async function main(): Promise<void> {
     spinner.succeed(chalk.green('Installation complete!'));
 
     console.log();
-    console.log(chalk.dim('─'.repeat(50)));
+    console.log(RULE);
     if (claudeResult) {
-      console.log(chalk.bold('  Claude Code'));
-      console.log(`  ${chalk.green('✓')} ${claudeResult.commands} commands installed`);
-      console.log(`  ${chalk.green('✓')} ${claudeResult.agents} agents installed`);
-      console.log(`  ${chalk.green('✓')} ${claudeResult.workflows} workflows installed`);
+      block('Claude Code');
+      done(`${claudeResult.commands} commands installed`);
+      done(`${claudeResult.agents} agents installed`);
+      done(`${claudeResult.workflows} workflows installed`);
       if (claudeResult.removed > 0) {
-        console.log(`  ${chalk.green('✓')} ${claudeResult.removed} outdated blueprints files removed (your own files are never touched)`);
+        done(`${claudeResult.removed} outdated blueprints files removed ${chalk.dim('(never your own)')}`);
       }
       for (const hook of hookResults(claudeResult)) reportHook(hook.name, hook.result, claudeResult.settingsFile);
-      const addItYourself = `To add it yourself: claude plugin marketplace add "${userModsDir()}" && claude plugin install ${GLANCE_MOD}`;
-      if (claudeResult.glanceMod === 'added') console.log(`  ${chalk.green('✓')} glance mod added for your user: it shows above the prompt while a page is being made (new sessions, or /reload-plugins)`);
-      if (claudeResult.glanceMod === 'removed') console.log(`  ${chalk.green('✓')} glance mod removed`);
-      if (claudeResult.glanceMod === 'failed') console.log(`  ${chalk.yellow('!')} couldn't add the glance mod (${claudeResult.glanceModError}). ${addItYourself}`);
-      if (claudeResult.glanceMod === 'no-cli') console.log(`  ${chalk.yellow('!')} the glance mod wasn't added: claude isn't on your PATH. ${addItYourself}`);
-      if (claudeResult.attribution === 'set') console.log(`  ${chalk.green('✓')} Claude Code's commit attribution turned off (attribution.commit, attribution.sessionUrl)`);
-      if (claudeResult.attribution === 'restored') console.log(`  ${chalk.green('✓')} Claude Code's attribution setting put back as it was`);
-      if (claudeResult.attribution === 'left') console.log(`  ${chalk.yellow('!')} Claude Code's attribution setting was changed after lean commits set it, so it was left as it is`);
+      const addItYourself = ['To add it yourself:', `claude plugin marketplace add ${shellPath(userModsDir())}`, `claude plugin install ${GLANCE_MOD}`];
+      if (claudeResult.glanceMod === 'added') done(`glance mod added ${chalk.dim('(new sessions, or /reload-plugins)')}`);
+      if (claudeResult.glanceMod === 'removed') done('glance mod removed');
+      if (claudeResult.glanceMod === 'failed') warn('couldn\'t add the glance mod:', chalk.dim(claudeResult.glanceModError ?? ''), ...addItYourself);
+      if (claudeResult.glanceMod === 'no-cli') warn('the glance mod wasn\'t added: claude isn\'t on your PATH', ...addItYourself);
+      if (claudeResult.attribution === 'set') done(`commit attribution turned off ${chalk.dim('(attribution.commit, .sessionUrl)')}`);
+      if (claudeResult.attribution === 'restored') done('commit attribution settings put back as they were');
+      if (claudeResult.attribution === 'left') warn('commit attribution settings left alone: they changed after lean commits set them');
+      if (codexResult) console.log();
     }
     if (codexResult) {
-      console.log(chalk.bold('  Codex'));
-      console.log(`  ${chalk.green('✓')} ${codexResult.skills} skills installed`);
-      console.log(`  ${chalk.green('✓')} ${codexResult.agents} agents installed`);
-      if (codexResult.hookRegistered) {
-        console.log(`  ${chalk.green('✓')} typecheck gate added to ${codexResult.paths.hooksFile}`);
-      }
+      block('Codex');
+      done(`${codexResult.skills} skills installed`);
+      done(`${codexResult.agents} agents installed`);
+      reportHook('typecheck gate', codexResult.gateHook, codexResult.paths.hooksFile);
       if (codexResult.removed > 0) {
-        console.log(`  ${chalk.green('✓')} ${codexResult.removed} outdated blueprints files removed`);
+        done(`${codexResult.removed} outdated blueprints files removed`);
       }
       if (codexResult.skipped.length > 0) {
-        console.log(`  ${chalk.yellow('!')} Skipped (you already have your own): ${codexResult.skipped.join(', ')}`);
+        warn('skipped, as you have your own:', ...wrapWords(codexResult.skipped.map((name, i) => (i < codexResult.skipped.length - 1 ? `${name},` : name))));
       }
       for (const hook of hookResults(codexResult)) reportHook(hook.name, hook.result, codexResult.paths.hooksFile);
     }
-    console.log(chalk.dim('─'.repeat(50)));
+    console.log(RULE);
     console.log();
 
     // Show next steps
-    console.log(chalk.bold('Next steps:'));
+    console.log(chalk.bold('Next steps'));
     console.log();
 
     if (claudeResult) {
-      const where = installType === 'global' ? 'in any project' : `in ${chalk.cyan(targetPath)}`;
-      console.log(`  ${chalk.cyan('Claude Code:')} open Claude Code ${where} and type ${chalk.yellow('/autopilot')} or ${chalk.yellow('/blueprint')}`);
+      const where = { global: 'any project', local: 'this project', custom: chalk.cyan(tilde(targetPath)) }[installType];
+      block('Claude Code');
+      console.log(`    Type ${chalk.yellow('/autopilot')} or ${chalk.yellow('/blueprint')} in ${where}`);
+      if (codexResult) console.log();
     }
     if (codexResult) {
-      const where = installType === 'global' ? 'in any project' : `in ${chalk.cyan(codexRoot)}`;
-      console.log(`  ${chalk.cyan('Codex:')}       open Codex ${where} and type ${chalk.yellow('$autopilot')} or ${chalk.yellow('$blueprint')} (skills start with $)`);
-      const changed = (result: HookResult) => result === 'added' || result === 'updated';
-      const changedHooks = hookResults(codexResult).filter(hook => changed(hook.result)).map(hook => hook.name);
-      if (codexResult.hookRegistered || changedHooks.length) {
-        const which = [codexResult.hookRegistered ? 'typecheck gate' : '', ...changedHooks]
-          .filter(Boolean).join(', ').replace(/, ([^,]+)$/, ' and $1');
-        console.log(`               run ${chalk.yellow('/hooks')} in Codex once to review and trust the blueprints ${which}`);
+      const where = { global: 'any project', local: 'this project', custom: chalk.cyan(tilde(codexRoot)) }[installType];
+      block('Codex');
+      console.log(`    Type ${chalk.yellow('$autopilot')} or ${chalk.yellow('$blueprint')} in ${where} ${chalk.dim('(skills start with $)')}`);
+      // Codex asks to trust a hook that is new or changed
+      const changed = [{ name: 'typecheck gate', result: codexResult.gateHook }, ...hookResults(codexResult)]
+        .filter(hook => hook.result === 'added' || hook.result === 'updated')
+        .map(hook => hook.name.replace(/ hook$/, ''));
+      if (changed.length) {
+        console.log(`    Run ${chalk.yellow('/hooks')} once to trust the new hooks:`);
+        console.log(`      ${changed.join(', ')}`);
       }
-      console.log(chalk.dim(`               Optional: for parallel streams in $parallelize, add "[agents]" with "max_depth = 2" to ${path.join(codexResult.paths.codexHome, 'config.toml')}`));
+      console.log(chalk.dim(`    Optional: to run $parallelize streams, add to ${shortPath(path.join(codexResult.paths.codexHome, 'config.toml'))}:`));
+      console.log(chalk.dim('      [agents]'));
+      console.log(chalk.dim('      max_depth = 2'));
     }
 
     console.log();

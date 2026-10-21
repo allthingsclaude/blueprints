@@ -48,6 +48,8 @@ export interface CodexInstallResult {
   /** Names skipped because a skill or agent the user wrote already uses them */
   skipped: string[];
   hookRegistered: boolean;
+  /** What happened to the typecheck gate in hooks.json ('none': already there as it is) */
+  gateHook: HookResult;
   /** What happened to each optional hook in hooks.json */
   glanceHook: HookResult;
   leanCommits: HookResult;
@@ -84,11 +86,11 @@ const CODEX_EFFORTS = new Set(['minimal', 'low', 'medium', 'high', 'xhigh', 'max
 
 /** What each power level means for Codex (reasoning effort per agent tier; agents use the session's model) */
 export const POWER_LEVEL_EFFORTS: Record<AgentPowerLevel, string> = {
-  1: 'low effort, medium for heavyweight — fastest, lowest cost',
-  2: 'low effort light + research, medium everything else',
-  3: 'all medium effort',
-  4: 'medium effort light + research, high everything else — recommended',
-  5: 'all high effort — most thorough, highest cost',
+  1: 'low, medium for heavyweight — fastest, lowest cost',
+  2: 'low light + research, medium everything else',
+  3: 'all medium',
+  4: 'medium light + research, high everything else — recommended',
+  5: 'all high — most thorough, highest cost',
 };
 
 /**
@@ -473,12 +475,14 @@ export async function installCodex(
   }
 
   let hookRegistered = false;
+  let gateHook: HookResult = withGate ? 'unreadable' : 'none';
   let glanceHook: HookResult = 'unreadable';
   let leanCommits: HookResult = 'unreadable';
   const existing = hooksBefore; // null when unparseable: leave the user's file alone
   if (existing !== null) {
     let merged: unknown = existing;
     if (withGate) {
+      gateHook = decideHook(merged, GATE_HOOK, 'on', `sh "${gateDest}"`).result;
       merged = mergeCodexHooks(merged, `sh "${gateDest}"`);
       hookRegistered = true;
     }
@@ -509,6 +513,7 @@ export async function installCodex(
     removed,
     skipped,
     hookRegistered,
+    gateHook,
     glanceHook,
     leanCommits,
     leanCommitsGlobal,
