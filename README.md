@@ -50,8 +50,8 @@ npx @allthingsclaude/blueprints --power 5
 # Customize tasks directory name (default: tasks)
 npx @allthingsclaude/blueprints --tasks-dir my-tasks
 
-# Turn the glance hook on or off (default: ask, or keep the current setting with --yes)
-npx @allthingsclaude/blueprints --glance on
+# Optional hooks, on or off (the installer asks; with --yes it keeps what you have)
+npx @allthingsclaude/blueprints --glance on --lean-commits on
 ```
 
 ### Agent Power Levels
@@ -466,6 +466,18 @@ claude agents                 # watch the runs; attach to any marked "Needs inpu
 
 ---
 
+## Lean commits
+
+Say yes during install (or pass `--lean-commits on`) for one-line commit messages everywhere: `type: description`, such as `fix: prevent duplicate form submission`, with no body and no `Co-Authored-By` or session trailers. Three things change:
+- A hook checks every `git commit` an agent runs, in Claude Code and Codex. One with a body, trailers or no `feat:`/`fix:`-style type is turned down, with the reason, so the agent commits again with one line. Other commands pass untouched.
+- Claude Code's own commit attribution is switched off (`attribution.commit` and `attribution.sessionUrl`; the latter also drops the session link from PR descriptions), so it stops adding those lines at all. Turning lean commits off puts back what you had.
+- A project install follows lean commits that's on globally, since the global hook applies there too.
+- The `commit` and `finalize` agents are installed with one-line instructions, so they get it right the first time.
+
+`BLUEPRINTS_LEAN_COMMITS=off` turns the hook off for a session; `--lean-commits off` removes it.
+
+---
+
 ## Glance pages
 
 `/glance` turns your last reply into one small HTML page you can take in by looking: a row per point, before and after mockups drawn in your app's own style, and the decisions left for you at the end. `/glance plan 03` or `/glance <topic>` does the same for a plan or anything else in the conversation. The session writes the page itself, so it uses your session's model and knows the whole conversation.
@@ -491,6 +503,7 @@ The same commands and agents install into [Codex](https://learn.chatgpt.com/docs
 | Agents | Custom agents (TOML) | `~/.codex/agents/` / `./.codex/agents/` |
 | Typecheck gate (agent hook) | `SubagentStop` hook for `implement` | `~/.codex/hooks.json` / `./.codex/hooks.json` |
 | Glance hook (optional) | `Stop` hook | `~/.codex/hooks.json` / `./.codex/hooks.json` |
+| Lean commits hook (optional) | `PreToolUse` hook on shell commands | `~/.codex/hooks.json` / `./.codex/hooks.json` |
 | Shared procedures (dispatch, integrate) | Same, converted | `~/.codex/blueprints/procedures/` / `./.codex/blueprints/procedures/` |
 | `CLAUDE.md` | `AGENTS.md` | — |
 
@@ -505,7 +518,7 @@ Things that work differently in Codex:
   [agents]
   max_depth = 2
   ```
-- **Typecheck gate and glance hook**: run `/hooks` in Codex once to review and trust them. The installer appends it to your existing `hooks.json` (your hooks are kept, and the original is saved as `hooks.json.before-blueprints`).
+- **Hooks** (the typecheck gate, and the glance and lean commits hooks if you chose them): run `/hooks` in Codex once to review and trust them. The installer appends it to your existing `hooks.json` (your hooks are kept, and the original is saved as `hooks.json.before-blueprints`).
 - **Parallel runs** (`$autopilot`'s offer or `$dispatch`) prepare the worktrees the same way, then print one `codex -C <worktree> …` command per plan for you to run in separate terminals, since Codex can't start background sessions itself. Watch them with `codex agents`.
 - **Per-agent compaction and turn limits** have no Codex equivalent; Codex uses its global compaction setting.
 
@@ -609,7 +622,8 @@ After installation, your `.claude` directory will contain:
 ├── blueprints/
 │   ├── hooks/
 │   │   ├── phase-gate.sh   # Typecheck gate used by the implement agent
-│   │   └── glance.mjs      # Glance hook: opens /glance pages, makes pages for long replies
+│   │   ├── glance.mjs      # Glance hook: opens /glance pages, makes pages for long replies
+│   │   └── lean-commits.mjs # Lean commits hook: one-line commit messages
 │   └── procedures/         # Steps shared by commands: dispatch.md, integrate.md, glance.md
 │                           # (followed by /dispatch, /integrate, /autopilot and /glance)
 └── .blueprints-version     # Installed version and the list of installed files

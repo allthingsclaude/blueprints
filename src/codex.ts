@@ -4,7 +4,7 @@ import os from 'os';
 import {
   AgentPowerLevel,
   DEFAULT_TASKS_DIR,
-  decideGlanceHook,
+  decideHook,
   ensureDir,
   findOnPath,
   glanceHookCommand,
@@ -17,13 +17,14 @@ import {
   selectToolBlocks,
   writeJsonFile,
 } from './installer.js';
-import type { GlanceChoice, GlanceHookResult } from './installer.js';
+import { GLANCE_HOOK, LEAN_COMMITS_HOOK_CODEX, hasHook, mergeHook } from './installer.js';
+import type { ContentOptions, HookResult, InstallOptions, OwnHook } from './installer.js';
 
 /**
  * Codex support: converts the Claude Code commands and agents into Codex skills
  * (`.agents/skills/<name>/SKILL.md`) and custom agents (`.codex/agents/<name>.toml`),
  * registers the implement agent's typecheck gate as a Codex SubagentStop hook, and can
- * register the glance hook (Stop) that opens and makes glance pages.
+ * register the glance hook (Stop) that opens and makes glance pages and the lean commits hook (PreToolUse).
  */
 
 export type CodexScope = 'global' | 'project';
@@ -47,8 +48,11 @@ export interface CodexInstallResult {
   /** Names skipped because a skill or agent the user wrote already uses them */
   skipped: string[];
   hookRegistered: boolean;
-  /** What happened to the glance Stop hook in hooks.json */
-  glanceHook: GlanceHookResult;
+  /** What happened to the glance and lean commits hooks in hooks.json */
+  glanceHook: HookResult;
+  leanCommits: HookResult;
+  /** Lean commits is on in the user's Codex home, so it applies to this project install too */
+  leanCommitsGlobal: boolean;
   paths: CodexInstallPaths;
 }
 
@@ -60,6 +64,8 @@ export interface CodexManifest {
   skills: string[];
   agents: string[];
   procedures?: string[];
+  /** Lean commits was on in this install (used when hooks.json can't be read) */
+  leanCommits?: boolean;
 }
 
 /** Marker written into every file blueprints installs for Codex */
@@ -316,21 +322,14 @@ export function agentToToml(filename: string, content: string, powerLevel: Agent
 type HookEntry = { matcher?: string; hooks?: Array<{ type?: string; command?: string; timeout?: number }> };
 type HooksFile = { hooks?: Record<string, HookEntry[]> } & Record<string, unknown>;
 
-function isGateEntry(entry: HookEntry): boolean {
-  return Array.isArray(entry?.hooks) && entry.hooks.some(h => typeof h?.command === 'string' && h.command.includes(GATE_SCRIPT_MARKER));
-}
+/** The implement agent's typecheck gate, as a Codex SubagentStop hook */
+export const GATE_HOOK: OwnHook = { event: 'SubagentStop', marker: GATE_SCRIPT_MARKER, matcher: '^implement$', timeout: 600 };
 
 /**
  * Add (or replace) blueprints' SubagentStop gate for the implement agent, keeping every other hook
  */
 export function mergeCodexHooks(existing: unknown, command: string): HooksFile {
-  const root: HooksFile = existing && typeof existing === 'object' && !Array.isArray(existing) ? { ...(existing as HooksFile) } : {};
-  const hooks = root.hooks && typeof root.hooks === 'object' ? { ...root.hooks } : {};
-  const subagentStop = Array.isArray(hooks.SubagentStop) ? hooks.SubagentStop.filter(entry => !isGateEntry(entry)) : [];
-  subagentStop.push({ matcher: '^implement$', hooks: [{ type: 'command', command, timeout: 600 }] });
-  hooks.SubagentStop = subagentStop;
-  root.hooks = hooks;
-  return root;
+  return mergeHook(existing, GATE_HOOK, command) as HooksFile;
 }
 
 function hasMarker(file: string): boolean {
@@ -356,11 +355,21 @@ export async function installCodex(
   powerLevel: AgentPowerLevel = 4,
   tasksDir: string = DEFAULT_TASKS_DIR,
   home: string = os.homedir(),
-  glance: GlanceChoice = 'keep'
+  options: InstallOptions = {}
 ): Promise<CodexInstallResult> {
+  const glance = options.glance ?? 'keep';
+  const lean = options.leanCommits ?? 'keep';
   const source = getSourcePaths();
   const paths = getCodexPaths(scope, root, home);
   const vars = { tasksDir, blueprintsDir: paths.support };
+  // Lean commits changes what the commit agents are told, so settle it before converting them
+  // A project install also follows lean commits that's on in the user's Codex home: its hook applies here too
+  const hooksBefore = readJsonFile(paths.hooksFile);
+  const userHooks = getCodexPaths('global', root, home).hooksFile;
+  const leanCommitsGlobal = path.resolve(userHooks) !== path.resolve(paths.hooksFile) && hasHook(readJsonFile(userHooks), LEAN_COMMITS_HOOK_CODEX);
+  const leanHere = hooksBefore === null ? Boolean(readCodexManifest(paths.manifest)?.leanCommits) : hasHook(hooksBefore, LEAN_COMMITS_HOOK_CODEX);
+  const leanOn = lean === 'on' || (lean === 'keep' && (leanHere || leanCommitsGlobal));
+  const contentOptions: ContentOptions = { leanCommits: leanOn };
 
   const commandFiles = listFiles(source.commands).filter(f => f.endsWith('.md'));
   const agentFiles = listFiles(source.agents).filter(f => f.endsWith('.md'));
@@ -405,7 +414,7 @@ export async function installCodex(
   const skipped: string[] = [];
   const installedSkills: string[] = [];
   for (const file of commandFiles) {
-    const content = replaceTemplateVars(fs.readFileSync(path.join(source.commands, file), 'utf-8'), vars.tasksDir, vars.blueprintsDir);
+    const content = replaceTemplateVars(fs.readFileSync(path.join(source.commands, file), 'utf-8'), vars.tasksDir, vars.blueprintsDir, contentOptions);
     const skill = commandToSkill(file, content, commandNames);
     const dir = path.join(paths.skills, skill.name);
     const skillFile = path.join(dir, 'SKILL.md');
@@ -433,21 +442,21 @@ export async function installCodex(
       skipped.push(`agent ${name}`);
       continue;
     }
-    const content = replaceTemplateVars(fs.readFileSync(path.join(source.agents, file), 'utf-8'), vars.tasksDir, vars.blueprintsDir);
+    const content = replaceTemplateVars(fs.readFileSync(path.join(source.agents, file), 'utf-8'), vars.tasksDir, vars.blueprintsDir, contentOptions);
     fs.writeFileSync(target, agentToToml(file, content, powerLevel, commandNames), 'utf-8');
     installedAgents.push(name);
   }
 
   // Procedures shared by several skills (e.g. dispatch, followed by $dispatch and $autopilot)
   for (const rel of procedureFiles) {
-    const content = replaceTemplateVars(fs.readFileSync(path.join(source.procedures, rel), 'utf-8'), vars.tasksDir, vars.blueprintsDir);
+    const content = replaceTemplateVars(fs.readFileSync(path.join(source.procedures, rel), 'utf-8'), vars.tasksDir, vars.blueprintsDir, contentOptions);
     const target = path.join(proceduresDir, rel);
     ensureDir(path.dirname(target));
     fs.writeFileSync(target, `${convertTextForCodex(content, commandNames).text.trim()}\n\n<!-- ${CODEX_MARKER} -->\n`, 'utf-8');
   }
 
-  // Hooks, the same scripts as Claude Code: the implement agent's typecheck gate (SubagentStop)
-  // and the glance hook (Stop), registered in hooks.json
+  // Hooks, the same scripts as Claude Code, registered in hooks.json: the implement agent's typecheck
+  // gate (SubagentStop), the glance hook (Stop) and the lean commits hook (PreToolUse on shell commands)
   const hooksDir = path.join(paths.support, 'hooks');
   const gateSource = path.join(source.hooks, 'phase-gate.sh');
   const gateDest = path.join(hooksDir, 'phase-gate.sh');
@@ -457,25 +466,29 @@ export async function installCodex(
     fs.copyFileSync(gateSource, gateDest);
     fs.chmodSync(gateDest, 0o755);
   }
-  const glanceSource = path.join(source.hooks, 'glance.mjs');
-  const glanceDest = path.join(hooksDir, 'glance.mjs');
-  if (fs.existsSync(glanceSource)) {
+  for (const script of ['glance.mjs', 'lean-commits.mjs']) {
+    const from = path.join(source.hooks, script);
+    if (!fs.existsSync(from)) continue;
     ensureDir(hooksDir);
-    fs.writeFileSync(glanceDest, replaceTemplateVars(fs.readFileSync(glanceSource, 'utf-8'), vars.tasksDir, vars.blueprintsDir), 'utf-8');
+    fs.writeFileSync(path.join(hooksDir, script), replaceTemplateVars(fs.readFileSync(from, 'utf-8'), vars.tasksDir, vars.blueprintsDir), 'utf-8');
   }
 
   let hookRegistered = false;
-  let glanceHook: GlanceHookResult = 'unreadable';
-  const existing = readJsonFile(paths.hooksFile); // null when unparseable: leave the user's file alone
+  let glanceHook: HookResult = 'unreadable';
+  let leanCommits: HookResult = 'unreadable';
+  const existing = hooksBefore; // null when unparseable: leave the user's file alone
   if (existing !== null) {
     let merged: unknown = existing;
     if (withGate) {
       merged = mergeCodexHooks(merged, `sh "${gateDest}"`);
       hookRegistered = true;
     }
-    const decision = decideGlanceHook(merged, glance, glanceHookCommand(glanceDest, 'codex', findOnPath('codex')));
-    glanceHook = decision.result;
-    if (decision.value) merged = decision.value;
+    const g = decideHook(merged, GLANCE_HOOK, glance, glanceHookCommand(path.join(hooksDir, 'glance.mjs'), 'codex', findOnPath('codex')));
+    glanceHook = g.result;
+    if (g.value) merged = g.value;
+    const l = decideHook(merged, LEAN_COMMITS_HOOK_CODEX, lean, glanceHookCommand(path.join(hooksDir, 'lean-commits.mjs'), ''));
+    leanCommits = l.result;
+    if (l.value) merged = l.value;
     if (merged !== existing) writeJsonFile(paths.hooksFile, merged);
   }
 
@@ -487,6 +500,7 @@ export async function installCodex(
     skills: installedSkills,
     agents: installedAgents,
     procedures: procedureFiles,
+    leanCommits: leanOn,
   };
   fs.writeFileSync(paths.manifest, `${JSON.stringify(manifest, null, 2)}\n`, 'utf-8');
 
@@ -497,6 +511,8 @@ export async function installCodex(
     skipped,
     hookRegistered,
     glanceHook,
+    leanCommits,
+    leanCommitsGlobal,
     paths,
   };
 }

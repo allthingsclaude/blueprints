@@ -80,6 +80,7 @@ Identify the area of the codebase affected:
 
 Omit scope if changes span the entire project or no single scope fits.
 
+<!-- full-commits -->
 ### 5. Draft Commit Message
 
 Follow this format:
@@ -138,6 +139,16 @@ refactor: refactor components        # Says nothing
 feat(auth): add authentication...    # Redundant scope + description
 chore: misc changes and updates      # Meaningless
 ```
+<!-- /full-commits -->
+<!-- lean-commits -->
+### 5. Draft Commit Message
+
+Commit messages here are **one line**: `type: description`, for example `fix: prevent duplicate form submission on slow networks`. No body, no bullets, and no trailers (no `Co-Authored-By`, no session links). A hook turns down any other commit.
+
+- Imperative mood ("add X", not "added X"), specific ("fix null check in user validation", not "fix bug")
+- A scope is allowed when it helps (`fix(auth): …`), but most messages don't need one
+- If the change spans several things, name the main one; don't list them
+<!-- /lean-commits -->
 
 ### 6. Stage and Commit
 
@@ -145,6 +156,7 @@ chore: misc changes and updates      # Meaningless
 # Stage files (prefer specific files over git add .)
 git add path/to/file1.ts path/to/file2.ts
 
+<!-- full-commits -->
 # Create commit with HEREDOC for proper formatting
 git commit -m "$(cat <<'EOF'
 type(scope): description
@@ -155,6 +167,11 @@ type(scope): description
 
 EOF
 )"
+<!-- /full-commits -->
+<!-- lean-commits -->
+# One line, nothing else
+git commit -m "type: description"
+<!-- /lean-commits -->
 ```
 
 **Staging rules**:

@@ -224,7 +224,7 @@ init_git() {
     info "Initializing git repository..."
     git init
     git add .
-    git commit -m "Initial commit - project bootstrap"
+    git commit -m "chore: initial commit"
     success "Git repository initialized"
   else
     warn "Git repository already exists"

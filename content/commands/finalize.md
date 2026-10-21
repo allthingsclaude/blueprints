@@ -6,7 +6,7 @@ author: "@markoradak"
 
 # Finalize Work Session
 
-I'll finalize your work session by updating plans, creating a comprehensive git commit, and documenting any bottlenecks or key decisions.
+I'll finalize your work session by updating plans, creating a git commit, and documenting any bottlenecks or key decisions.
 
 ## Current Session State
 
@@ -38,7 +38,7 @@ The finalize agent will systematically:
 - ✅ Review all changes made in this session
 - ✅ Update PLAN files by checking off completed tasks
 - ✅ Analyze commit history to understand what was accomplished
-- ✅ Generate a comprehensive commit message with the appropriate conventional prefix
+- ✅ Generate a commit message with the appropriate conventional prefix
 - ✅ Identify and document any bottlenecks or key decisions
 - ✅ Create optional phase summary file for important findings
 - ✅ Stage the session's changes (never secrets or build artifacts) and commit them

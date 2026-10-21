@@ -346,7 +346,7 @@ describe('glance hook registration', () => {
     fs.writeFileSync(settings, JSON.stringify({ permissions: { allow: ['Bash(ls)'] } }));
 
     expect((await installBlueprints(claudeDir, 4, 'tasks')).glanceHook).toBe('none');
-    expect((await installBlueprints(claudeDir, 5, 'tasks', 'on')).glanceHook).toBe('added');
+    expect((await installBlueprints(claudeDir, 5, 'tasks', { glance: 'on' })).glanceHook).toBe('added');
     const written = JSON.parse(fs.readFileSync(settings, 'utf-8'));
     expect(written.permissions).toEqual({ allow: ['Bash(ls)'] });
     expect(written.hooks.Stop[0].hooks[0].command).toMatch(/^".+" ".*blueprints\/hooks\/glance\.mjs" claude --model opus( --writer ".+")?$/);
@@ -361,7 +361,7 @@ describe('glance hook registration', () => {
     expect((await installBlueprints(claudeDir, 5, 'tasks')).glanceHook).toBe('none');
     expect((await installBlueprints(claudeDir, 4, 'tasks')).glanceHook).toBe('updated');
     expect(JSON.parse(fs.readFileSync(settings, 'utf-8')).hooks.Stop[0].hooks[0].command).toMatch(/ claude --model sonnet( |$)/);
-    expect((await installBlueprints(claudeDir, 4, 'tasks', 'off')).glanceHook).toBe('removed');
+    expect((await installBlueprints(claudeDir, 4, 'tasks', { glance: 'off' })).glanceHook).toBe('removed');
     expect(JSON.parse(fs.readFileSync(settings, 'utf-8'))).toEqual({ permissions: { allow: ['Bash(ls)'] } });
   });
 
@@ -391,7 +391,7 @@ describe('glance hook registration', () => {
     fs.mkdirSync(path.dirname(paths.hooksFile), { recursive: true });
     fs.writeFileSync(paths.hooksFile, JSON.stringify({ hooks: { Stop: [{ hooks: [{ type: 'command', command: 'my-stop.sh' }] }] } }));
 
-    const result = await installCodex('project', root, 4, 'work', undefined, 'on');
+    const result = await installCodex('project', root, 4, 'work', undefined, { glance: 'on' });
     expect(result.glanceHook).toBe('added');
     const hooks = JSON.parse(fs.readFileSync(paths.hooksFile, 'utf-8')).hooks;
     expect(hooks.SubagentStop[0].matcher).toBe('^implement$');
@@ -402,8 +402,8 @@ describe('glance hook registration', () => {
     expect(installed).not.toContain('{{');
     expect(fs.existsSync(path.join(paths.support, 'procedures', 'glance.md'))).toBe(true);
 
-    expect((await installCodex('project', root, 4, 'work', undefined, 'keep')).glanceHook).toBe('none');
-    expect((await installCodex('project', root, 4, 'work', undefined, 'off')).glanceHook).toBe('removed');
+    expect((await installCodex('project', root, 4, 'work', undefined, { glance: 'keep' })).glanceHook).toBe('none');
+    expect((await installCodex('project', root, 4, 'work', undefined, { glance: 'off' })).glanceHook).toBe('removed');
     expect(JSON.parse(fs.readFileSync(paths.hooksFile, 'utf-8')).hooks.Stop).toEqual([{ hooks: [{ type: 'command', command: 'my-stop.sh' }] }]);
   });
 

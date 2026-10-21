@@ -33,9 +33,20 @@ export interface InstallResult {
   removed: number;
   paths: InstallPaths;
   powerLevel: AgentPowerLevel;
-  /** What happened to the glance Stop hook, and the settings file it lives in */
-  glanceHook: GlanceHookResult;
+  /** What happened to the glance and lean commits hooks, and the settings file they live in */
+  glanceHook: HookResult;
+  leanCommits: HookResult;
+  /** Lean commits and Claude Code's `attribution` setting: set, put back, or left (the user changed it since) */
+  attribution?: 'set' | 'restored' | 'left';
+  /** Lean commits is on in the user's settings, so it applies to this project install too */
+  leanCommitsGlobal: boolean;
   settingsFile: string;
+}
+
+/** Install choices for the optional hooks ('keep' when not given) */
+export interface InstallOptions {
+  glance?: HookChoice;
+  leanCommits?: HookChoice;
 }
 
 export type AgentPowerLevel = 1 | 2 | 3 | 4 | 5;
@@ -122,70 +133,185 @@ export function selectToolBlocks(content: string, tool: TargetTool): string {
   return content.replace(TOOL_BLOCK, (_match, blockTool: string, body: string) => (blockTool === tool ? body : ''));
 }
 
-export function replaceTemplateVars(content: string, tasksDir?: string, blueprintsDir?: string): string {
+/** Install-time choices that change what the prompts say */
+export interface ContentOptions {
+  /** One-line commit messages: keeps `<!-- lean-commits -->` blocks, drops `<!-- full-commits -->` ones */
+  leanCommits?: boolean;
+}
+
+const OPTION_BLOCK = /^[ \t]*<!-- (lean-commits|full-commits) -->[ \t]*\r?\n([\s\S]*?)^[ \t]*<!-- \/\1 -->[ \t]*(?:\r?\n|$)/gm;
+
+/** Keep the blocks for the chosen options (without their marker lines) and drop the others */
+export function selectOptionBlocks(content: string, options: ContentOptions = {}): string {
+  return content.replace(OPTION_BLOCK, (_match, block: string, body: string) =>
+    (block === 'lean-commits') === Boolean(options.leanCommits) ? body : '');
+}
+
+export function replaceTemplateVars(content: string, tasksDir?: string, blueprintsDir?: string, options: ContentOptions = {}): string {
   const vars = tasksDir || blueprintsDir ? buildTemplateVars(tasksDir, blueprintsDir) : TEMPLATE_VARS;
-  let result = content;
+  let result = selectOptionBlocks(content, options);
   for (const [key, value] of Object.entries(vars)) {
     result = result.replaceAll(key, value);
   }
   return result;
 }
 
-/** Identifies blueprints' glance entry in a Claude Code settings file or a Codex hooks.json */
+/** Identify blueprints' own entries in a Claude Code settings file or a Codex hooks.json */
 export const GLANCE_SCRIPT_MARKER = 'blueprints/hooks/glance.mjs';
+export const LEAN_COMMITS_SCRIPT_MARKER = 'blueprints/hooks/lean-commits.mjs';
 
-/** Whether to register the glance Stop hook: add it, remove it, or keep whatever is there (refreshing ours) */
-export type GlanceChoice = 'on' | 'off' | 'keep';
+/** A hook blueprints registers: the event, the script that identifies its entry, and its matcher */
+export interface OwnHook {
+  event: string;
+  marker: string;
+  matcher?: string;
+  timeout: number;
+}
 
-export type GlanceHookResult = 'added' | 'updated' | 'removed' | 'none' | 'unreadable';
+export const GLANCE_HOOK: OwnHook = { event: 'Stop', marker: GLANCE_SCRIPT_MARKER, timeout: 30 };
+/** Claude Code runs shell commands with Bash (PowerShell on Windows, when switched on) */
+export const LEAN_COMMITS_HOOK: OwnHook = { event: 'PreToolUse', marker: LEAN_COMMITS_SCRIPT_MARKER, matcher: 'Bash|PowerShell', timeout: 10 };
+/** Codex runs shell commands with exec_command (older versions: shell) */
+export const LEAN_COMMITS_HOOK_CODEX: OwnHook = { ...LEAN_COMMITS_HOOK, matcher: '^(Bash|exec_command|shell|local_shell)$' };
+
+/** Whether to register a hook: add it, remove it, or keep whatever is there (refreshing ours) */
+export type HookChoice = 'on' | 'off' | 'keep';
+export type GlanceChoice = HookChoice;
+
+export type HookResult = 'added' | 'updated' | 'removed' | 'none' | 'unreadable';
+export type GlanceHookResult = HookResult;
 
 type HookCommand = { type?: string; command?: string; timeout?: number };
 type HookEntry = { matcher?: string; hooks?: HookCommand[] };
 type HooksRoot = { hooks?: Record<string, HookEntry[]> } & Record<string, unknown>;
 
-function isGlanceEntry(entry: HookEntry): boolean {
-  return Array.isArray(entry?.hooks) && entry.hooks.some(h => typeof h?.command === 'string' && h.command.includes(GLANCE_SCRIPT_MARKER));
+const isOwnCommand = (h: HookCommand, hook: OwnHook): boolean => typeof h?.command === 'string' && h.command.includes(hook.marker);
+
+/** Blueprints' own commands for a hook, with the matcher of the entry each sits in */
+function ownCommands(existing: unknown, hook: OwnHook): { matcher?: string; command: HookCommand }[] {
+  const list = (existing as HooksRoot | null)?.hooks?.[hook.event];
+  if (!Array.isArray(list)) return [];
+  return list.flatMap(entry => (Array.isArray(entry?.hooks) ? entry.hooks : [])
+    .filter(h => isOwnCommand(h, hook))
+    .map(command => ({ matcher: entry.matcher, command })));
 }
 
-export function hasGlanceHook(existing: unknown): boolean {
-  const stop = (existing as HooksRoot | null)?.hooks?.Stop;
-  return Array.isArray(stop) && stop.some(isGlanceEntry);
+export function hasHook(existing: unknown, hook: OwnHook): boolean {
+  return ownCommands(existing, hook).length > 0;
 }
 
 /** A settings or hooks object whose hooks blueprints can safely edit (anything else is left alone) */
-function hooksAreEditable(existing: unknown): boolean {
+function hooksAreEditable(existing: unknown, event: string): boolean {
   if (!existing || typeof existing !== 'object' || Array.isArray(existing)) return false;
   const hooks = (existing as HooksRoot).hooks;
   if (hooks === undefined) return true;
   if (!hooks || typeof hooks !== 'object' || Array.isArray(hooks)) return false;
-  return hooks.Stop === undefined || Array.isArray(hooks.Stop);
+  return hooks[event] === undefined || Array.isArray(hooks[event]);
 }
 
-function glanceCommands(existing: unknown): string[] {
-  const stop = (existing as HooksRoot | null)?.hooks?.Stop;
-  if (!Array.isArray(stop)) return [];
-  return stop.filter(isGlanceEntry).flatMap(entry => (entry.hooks ?? []).map(h => h.command ?? ''));
+function hookEntry(hook: OwnHook, command: string, timeout = hook.timeout): HookEntry {
+  return { ...(hook.matcher ? { matcher: hook.matcher } : {}), hooks: [{ type: 'command', command, timeout }] };
 }
 
 /**
- * Add (command given) or remove (null) blueprints' glance Stop hook, keeping every other hook.
+ * Add (command given) or remove (null) one of blueprints' hooks, keeping every other hook, including any
+ * the user put in the same entry, and keeping a timeout the user changed on ours.
  * Claude Code settings and Codex hooks.json share this shape.
  */
-export function mergeGlanceHook(existing: unknown, command: string | null): HooksRoot {
+export function mergeHook(existing: unknown, hook: OwnHook, command: string | null): HooksRoot {
   const root: HooksRoot = existing && typeof existing === 'object' && !Array.isArray(existing) ? { ...(existing as HooksRoot) } : {};
   const hooks = root.hooks && typeof root.hooks === 'object' ? { ...root.hooks } : {};
-  const stop = Array.isArray(hooks.Stop) ? hooks.Stop.filter(entry => !isGlanceEntry(entry)) : [];
-  if (command) stop.push({ hooks: [{ type: 'command', command, timeout: 30 }] });
-  if (stop.length) hooks.Stop = stop;
-  else delete hooks.Stop;
+  const timeout = ownCommands(existing, hook)[0]?.command.timeout;
+  const list = (Array.isArray(hooks[hook.event]) ? hooks[hook.event] : []).flatMap(entry => {
+    if (!Array.isArray(entry?.hooks) || !entry.hooks.some(h => isOwnCommand(h, hook))) return [entry];
+    const rest = entry.hooks.filter(h => !isOwnCommand(h, hook));
+    return rest.length ? [{ ...entry, hooks: rest }] : [];
+  });
+  if (command) list.push(hookEntry(hook, command, typeof timeout === 'number' ? timeout : hook.timeout));
+  if (list.length) hooks[hook.event] = list;
+  else delete hooks[hook.event];
   if (Object.keys(hooks).length) root.hooks = hooks;
   else delete root.hooks;
   return root;
 }
 
+/**
+ * What a choice does to a settings or hooks object: the new object to write (null: leave it as it is)
+ * and what happened. 'keep' refreshes an existing entry (its path or model may have changed) and adds nothing.
+ */
+export function decideHook(existing: unknown, hook: OwnHook, choice: HookChoice, command: string): { value: HooksRoot | null; result: HookResult } {
+  if (!hooksAreEditable(existing, hook.event)) return { value: null, result: 'unreadable' };
+  const own = ownCommands(existing, hook);
+  const present = own.length > 0;
+  if (choice !== 'off' && own.length === 1 && own[0].command.command === command && own[0].matcher === hook.matcher) {
+    return { value: null, result: 'none' };
+  }
+  if (choice === 'off' || (choice === 'keep' && !present)) {
+    return present ? { value: mergeHook(existing, hook, null), result: 'removed' } : { value: null, result: 'none' };
+  }
+  return { value: mergeHook(existing, hook, command), result: present ? 'updated' : 'added' };
+}
+
+/** Register, refresh or remove one of blueprints' hooks in a settings or hooks file */
+export function applyHook(file: string, hook: OwnHook, choice: HookChoice, command: string): HookResult {
+  const existing = readJsonFile(file);
+  if (existing === null) return 'unreadable';
+  const { value, result } = decideHook(existing, hook, choice, command);
+  if (value) writeJsonFile(file, value);
+  return result;
+}
+
+export const hasGlanceHook = (existing: unknown): boolean => hasHook(existing, GLANCE_HOOK);
+export const mergeGlanceHook = (existing: unknown, command: string | null): HooksRoot => mergeHook(existing, GLANCE_HOOK, command);
+export const decideGlanceHook = (existing: unknown, choice: HookChoice, command: string) => decideHook(existing, GLANCE_HOOK, choice, command);
+export const applyGlanceHook = (file: string, choice: HookChoice, command: string): HookResult => applyHook(file, GLANCE_HOOK, choice, command);
+
 /** The model the glance hook writes pages with in Claude Code: Opus at power level 5, Sonnet otherwise */
 export function glanceModel(powerLevel: AgentPowerLevel): 'sonnet' | 'opus' {
   return powerLevel === 5 ? 'opus' : 'sonnet';
+}
+
+/** What lean commits sets in Claude Code's settings: no attribution trailer or session link on commits */
+export const LEAN_ATTRIBUTION = { commit: '', sessionUrl: false };
+
+/** What `attribution` was before lean commits changed it, so turning lean commits off can put it back */
+export interface AttributionBefore {
+  had: boolean;
+  value?: unknown;
+}
+
+const isPlainObject = (v: unknown): v is Record<string, unknown> => Boolean(v) && typeof v === 'object' && !Array.isArray(v);
+
+function sameJson(a: unknown, b: unknown): boolean {
+  const canon = (v: unknown): unknown => (isPlainObject(v)
+    ? Object.fromEntries(Object.keys(v).sort().map(k => [k, canon(v[k])]))
+    : Array.isArray(v) ? v.map(canon) : v);
+  return JSON.stringify(canon(a)) === JSON.stringify(canon(b));
+}
+
+/** Already what lean commits sets (so it can't be the user's own "before" value) */
+export function isLeanAttribution(value: unknown): boolean {
+  return value === false || (isPlainObject(value) && value.commit === '' && value.sessionUrl === false);
+}
+
+function leanAttributionOver(before: unknown): unknown {
+  return { ...(isPlainObject(before) ? before : {}), ...LEAN_ATTRIBUTION };
+}
+
+/** Settings with lean attribution (null: already so). `attribution: false` already hides everything. */
+export function withLeanAttribution(settings: Record<string, unknown>): Record<string, unknown> | null {
+  if (settings.attribution === false) return null;
+  const next = leanAttributionOver(settings.attribution);
+  return sameJson(settings.attribution, next) ? null : { ...settings, attribution: next };
+}
+
+/** Settings with `attribution` put back as it was (null: the user changed it since, so it's left alone) */
+export function withoutLeanAttribution(settings: Record<string, unknown>, before: AttributionBefore | undefined): Record<string, unknown> | null {
+  if (!before || !sameJson(settings.attribution, leanAttributionOver(before.value))) return null;
+  const next = { ...settings };
+  if (before.had) next.attribution = before.value;
+  else delete next.attribution;
+  return next;
 }
 
 /** Read a JSON file: {} when it's missing, null when it can't be parsed (so it's left alone) */
@@ -204,30 +330,6 @@ export function writeJsonFile(file: string, value: unknown): void {
   if (fs.existsSync(file) && !fs.existsSync(backup)) fs.copyFileSync(file, backup);
   ensureDir(path.dirname(file));
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, 'utf-8');
-}
-
-/**
- * What a glance choice does to a settings or hooks object: the new object to write (null: leave it as it is)
- * and what happened. 'keep' refreshes an existing entry (its path or model may have changed) and adds nothing.
- */
-export function decideGlanceHook(existing: unknown, choice: GlanceChoice, command: string): { value: HooksRoot | null; result: GlanceHookResult } {
-  if (!hooksAreEditable(existing)) return { value: null, result: 'unreadable' };
-  const present = hasGlanceHook(existing);
-  const current = glanceCommands(existing);
-  if (choice !== 'off' && current.length === 1 && current[0] === command) return { value: null, result: 'none' };
-  if (choice === 'off' || (choice === 'keep' && !present)) {
-    return present ? { value: mergeGlanceHook(existing, null), result: 'removed' } : { value: null, result: 'none' };
-  }
-  return { value: mergeGlanceHook(existing, command), result: present ? 'updated' : 'added' };
-}
-
-/** Register, refresh or remove the glance hook in a settings or hooks file */
-export function applyGlanceHook(file: string, choice: GlanceChoice, command: string): GlanceHookResult {
-  const existing = readJsonFile(file);
-  if (existing === null) return 'unreadable';
-  const { value, result } = decideGlanceHook(existing, choice, command);
-  if (value) writeJsonFile(file, value);
-  return result;
 }
 
 /** A command's full path on PATH, or null */
@@ -254,10 +356,10 @@ export function nodeForHooks(): string {
   return process.execPath;
 }
 
-/** The hook command; `writer` is the claude or codex the page writer runs, recorded at install */
+/** A Node hook's command; for glance, `writer` is the claude or codex the page writer runs, recorded at install */
 export function glanceHookCommand(script: string, args: string, writer: string | null = null): string {
   const slash = (p: string) => p.replace(/\\/g, '/');
-  return `"${slash(nodeForHooks())}" "${slash(script)}" ${args}${writer ? ` --writer "${slash(writer)}"` : ''}`;
+  return `"${slash(nodeForHooks())}" "${slash(script)}"${args ? ` ${args}` : ''}${writer ? ` --writer "${slash(writer)}"` : ''}`;
 }
 
 /**
@@ -313,6 +415,10 @@ export interface Manifest {
   powerLevel: AgentPowerLevel;
   tasksDir?: string;
   files?: InstalledFiles;
+  /** Lean commits is on: what Claude Code's `attribution` setting was before it */
+  attributionBefore?: AttributionBefore;
+  /** Lean commits was on in this install (used when the settings file can't be read) */
+  leanCommits?: boolean;
 }
 
 /**
@@ -418,7 +524,7 @@ export function listFiles(dir: string, prefix = ''): string[] {
 /**
  * Copy all files from source to destination directory
  */
-export function copyDirectory(srcDir: string, destDir: string, tasksDir?: string, blueprintsDir?: string): number {
+export function copyDirectory(srcDir: string, destDir: string, tasksDir?: string, blueprintsDir?: string, options: ContentOptions = {}): number {
   ensureDir(destDir);
 
   const files = fs.readdirSync(srcDir);
@@ -433,7 +539,7 @@ export function copyDirectory(srcDir: string, destDir: string, tasksDir?: string
 
     if (stat.isFile() && file.endsWith('.md')) {
       const content = fs.readFileSync(srcFile, 'utf-8');
-      const updated = selectToolBlocks(replaceTemplateVars(content, tasksDir, blueprintsDir), 'claude');
+      const updated = selectToolBlocks(replaceTemplateVars(content, tasksDir, blueprintsDir, options), 'claude');
       fs.writeFileSync(destFile, updated, 'utf-8');
       copiedCount++;
     } else if (stat.isFile()) {
@@ -441,7 +547,7 @@ export function copyDirectory(srcDir: string, destDir: string, tasksDir?: string
       copiedCount++;
     } else if (stat.isDirectory()) {
       // Recursively copy subdirectories
-      copiedCount += copyDirectory(srcFile, path.join(destDir, file), tasksDir, blueprintsDir);
+      copiedCount += copyDirectory(srcFile, path.join(destDir, file), tasksDir, blueprintsDir, options);
     }
   }
 
@@ -452,7 +558,7 @@ export function copyDirectory(srcDir: string, destDir: string, tasksDir?: string
  * Copy support files (workflows, hooks, procedures) with template variables replaced.
  * Markdown keeps only its Claude Code blocks; shell scripts are made executable.
  */
-export function copyTemplatedFiles(srcDir: string, destDir: string, tasksDir?: string, blueprintsDir?: string): number {
+export function copyTemplatedFiles(srcDir: string, destDir: string, tasksDir?: string, blueprintsDir?: string, options: ContentOptions = {}): number {
   if (!fs.existsSync(srcDir)) return 0;
   ensureDir(destDir);
 
@@ -462,7 +568,7 @@ export function copyTemplatedFiles(srcDir: string, destDir: string, tasksDir?: s
     const destFile = path.join(destDir, rel);
     ensureDir(path.dirname(destFile));
 
-    let content = replaceTemplateVars(fs.readFileSync(srcFile, 'utf-8'), tasksDir, blueprintsDir);
+    let content = replaceTemplateVars(fs.readFileSync(srcFile, 'utf-8'), tasksDir, blueprintsDir, options);
     if (rel.endsWith('.md')) {
       content = selectToolBlocks(content, 'claude');
     }
@@ -511,7 +617,7 @@ export function getModelForAgent(filename: string, powerLevel: AgentPowerLevel):
 /**
  * Copy agent files with model rewritten based on power level
  */
-export function copyAgentsWithPowerLevel(srcDir: string, destDir: string, powerLevel: AgentPowerLevel, tasksDir?: string, blueprintsDir?: string): number {
+export function copyAgentsWithPowerLevel(srcDir: string, destDir: string, powerLevel: AgentPowerLevel, tasksDir?: string, blueprintsDir?: string, options: ContentOptions = {}): number {
   ensureDir(destDir);
 
   const files = fs.readdirSync(srcDir);
@@ -524,12 +630,12 @@ export function copyAgentsWithPowerLevel(srcDir: string, destDir: string, powerL
     const stat = fs.statSync(srcFile);
 
     if (stat.isDirectory()) {
-      copiedCount += copyAgentsWithPowerLevel(srcFile, path.join(destDir, file), powerLevel, tasksDir, blueprintsDir);
+      copiedCount += copyAgentsWithPowerLevel(srcFile, path.join(destDir, file), powerLevel, tasksDir, blueprintsDir, options);
     } else if (stat.isFile() && file.endsWith('.md')) {
       const content = fs.readFileSync(srcFile, 'utf-8');
       const model = getModelForAgent(file, powerLevel);
       let updated = content.replace(/^(model:\s*).+$/m, `$1${model}`);
-      updated = selectToolBlocks(replaceTemplateVars(updated, tasksDir, blueprintsDir), 'claude');
+      updated = selectToolBlocks(replaceTemplateVars(updated, tasksDir, blueprintsDir, options), 'claude');
       fs.writeFileSync(destFile, updated, 'utf-8');
       copiedCount++;
     } else if (stat.isFile()) {
@@ -611,8 +717,10 @@ export async function installBlueprints(
   targetPath: string,
   powerLevel: AgentPowerLevel = 3,
   tasksDir: string = DEFAULT_TASKS_DIR,
-  glance: GlanceChoice = 'keep'
+  options: InstallOptions = {}
 ): Promise<InstallResult> {
+  const glance = options.glance ?? 'keep';
+  const lean = options.leanCommits ?? 'keep';
   const sourcePaths = getSourcePaths();
   const installPaths = getInstallPaths(targetPath);
 
@@ -628,7 +736,18 @@ export async function installBlueprints(
   ensureDir(installPaths.base);
 
   // Remove files a previous install put here that are no longer shipped (never the user's own files)
-  const previous = readManifest(installPaths.base)?.files ?? null;
+  const previousManifest = readManifest(installPaths.base);
+  const previous = previousManifest?.files ?? null;
+
+  // Lean commits changes what the commit agents are told, so settle it before copying them.
+  // A project install also follows lean commits that's on in the user's settings: its hook applies here too.
+  const settingsFile = claudeSettingsFile(installPaths.base);
+  const settings = readJsonFile(settingsFile);
+  const userSettings = path.join(getDefaultClaudeDir(), 'settings.json');
+  const leanCommitsGlobal = path.resolve(settingsFile) !== path.resolve(userSettings) && hasHook(readJsonFile(userSettings), LEAN_COMMITS_HOOK);
+  const leanHere = settings === null ? Boolean(previousManifest?.leanCommits) : hasHook(settings, LEAN_COMMITS_HOOK);
+  const leanOn = lean === 'on' || (lean === 'keep' && (leanHere || leanCommitsGlobal));
+  const content: ContentOptions = { leanCommits: leanOn };
   const hooksDest = path.join(installPaths.support, 'hooks');
   const proceduresDest = path.join(installPaths.support, 'procedures');
   let removed = 0;
@@ -641,15 +760,53 @@ export async function installBlueprints(
   const blueprintsDir = installPaths.support;
 
   // Copy commands
-  const commandsCount = copyDirectory(sourcePaths.commands, installPaths.commands, tasksDir, blueprintsDir);
+  const commandsCount = copyDirectory(sourcePaths.commands, installPaths.commands, tasksDir, blueprintsDir, content);
 
   // Copy agents with power level model overrides
-  const agentsCount = copyAgentsWithPowerLevel(sourcePaths.agents, installPaths.agents, powerLevel, tasksDir, blueprintsDir);
+  const agentsCount = copyAgentsWithPowerLevel(sourcePaths.agents, installPaths.agents, powerLevel, tasksDir, blueprintsDir, content);
 
   // Copy workflows and hook scripts
-  const workflowsCount = copyTemplatedFiles(sourcePaths.workflows, installPaths.workflows, tasksDir, blueprintsDir);
-  copyTemplatedFiles(sourcePaths.hooks, hooksDest, tasksDir, blueprintsDir);
-  copyTemplatedFiles(sourcePaths.procedures, proceduresDest, tasksDir, blueprintsDir);
+  const workflowsCount = copyTemplatedFiles(sourcePaths.workflows, installPaths.workflows, tasksDir, blueprintsDir, content);
+  copyTemplatedFiles(sourcePaths.hooks, hooksDest, tasksDir, blueprintsDir, content);
+  copyTemplatedFiles(sourcePaths.procedures, proceduresDest, tasksDir, blueprintsDir, content);
+
+  // Optional hooks, both in the one settings file:
+  // - glance (Stop): opens /glance pages, makes pages for long replies
+  // - lean commits (PreToolUse on Bash): turns down commits that aren't one `type: description` line,
+  //   and switches off Claude Code's own commit attribution (put back as it was when turned off)
+  let glanceHook: HookResult = 'unreadable';
+  let leanCommits: HookResult = 'unreadable';
+  let attributionBefore = previousManifest?.attributionBefore;
+  let attribution: InstallResult['attribution'];
+  if (isPlainObject(settings)) {
+    let next: Record<string, unknown> = settings;
+    const glanceCommand = glanceHookCommand(path.join(hooksDest, 'glance.mjs'), `claude --model ${glanceModel(powerLevel)}`, findOnPath('claude'));
+    const g = decideHook(next, GLANCE_HOOK, glance, glanceCommand);
+    glanceHook = g.result;
+    if (g.value) next = g.value;
+    const l = decideHook(next, LEAN_COMMITS_HOOK, lean, glanceHookCommand(path.join(hooksDest, 'lean-commits.mjs'), ''));
+    leanCommits = l.result;
+    if (l.value) next = l.value;
+    if (leanOn && hasHook(next, LEAN_COMMITS_HOOK)) {
+      // Record the user's own value once (never one lean commits set), then switch attribution off
+      if (!attributionBefore && !isLeanAttribution(next.attribution)) attributionBefore = { had: 'attribution' in next, value: next.attribution };
+      const withLean = withLeanAttribution(next);
+      if (withLean) {
+        next = withLean;
+        attribution = 'set';
+      }
+    } else if (lean === 'off' && attributionBefore) {
+      // Put back what was there, unless the user has changed it since
+      const restored = withoutLeanAttribution(next, attributionBefore);
+      if (restored) next = restored;
+      attribution = restored ? 'restored' : 'left';
+      attributionBefore = undefined;
+    }
+    if (next !== settings) {
+      writeJsonFile(settingsFile, next);
+      if (settingsFile.endsWith('settings.local.json')) excludeFromGit(settingsFile);
+    }
+  }
 
   // Write version marker and manifest of installed files
   const manifest: Manifest = {
@@ -664,16 +821,10 @@ export async function installBlueprints(
       hooks: listFiles(sourcePaths.hooks),
       procedures: listFiles(sourcePaths.procedures),
     },
+    ...(attributionBefore ? { attributionBefore } : {}),
+    leanCommits: leanOn,
   };
   fs.writeFileSync(path.join(installPaths.base, MANIFEST_FILE), JSON.stringify(manifest, null, 2), 'utf-8');
-
-  // The glance hook runs when the main session finishes a reply: it opens /glance pages and makes pages for long replies
-  const settingsFile = claudeSettingsFile(installPaths.base);
-  const glanceCommand = glanceHookCommand(path.join(hooksDest, 'glance.mjs'), `claude --model ${glanceModel(powerLevel)}`, findOnPath('claude'));
-  const glanceHook = applyGlanceHook(settingsFile, glance, glanceCommand);
-  if ((glanceHook === 'added' || glanceHook === 'updated') && settingsFile.endsWith('settings.local.json')) {
-    excludeFromGit(settingsFile);
-  }
 
   return {
     commands: commandsCount,
@@ -683,6 +834,9 @@ export async function installBlueprints(
     paths: installPaths,
     powerLevel,
     glanceHook,
+    leanCommits,
+    attribution,
+    leanCommitsGlobal,
     settingsFile,
   };
 }

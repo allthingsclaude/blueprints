@@ -379,6 +379,7 @@ For other ecosystems, use Edit to update the version string in the manifest file
 git add CHANGELOG.md package.json package-lock.json [other-files]
 
 # Create commit
+<!-- full-commits -->
 git commit -m "$(cat <<'EOF'
 chore: release v[version]
 
@@ -386,6 +387,10 @@ chore: release v[version]
 - Bump version to [version]
 EOF
 )"
+<!-- /full-commits -->
+<!-- lean-commits -->
+git commit -m "chore: release v[version]"
+<!-- /lean-commits -->
 ```
 
 **Step 5: Create git tag**

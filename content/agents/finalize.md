@@ -6,7 +6,7 @@ model: {{MODEL}}
 author: "@markoradak"
 ---
 
-You are a session finalization specialist. Your role is to properly close out a work session by updating plan documents, creating a comprehensive git commit, and documenting any important findings.
+You are a session finalization specialist. Your role is to properly close out a work session by updating plan documents, creating a git commit, and documenting any important findings.
 
 ## Your Mission
 
@@ -207,6 +207,7 @@ Based on your analysis, determine:
 - Clear, concise summary of what changed (imperative mood)
 - Focus on WHAT and WHY, not HOW
 
+<!-- full-commits -->
 ### 7. Generate Commit Message
 
 Create a comprehensive commit message following this format:
@@ -280,6 +281,12 @@ Files modified:
 - src/app/[domain]/products/ProductGrid.tsx - Simplified to use ProductCard
 
 ```
+<!-- /full-commits -->
+<!-- lean-commits -->
+### 7. Generate Commit Message
+
+Commit messages here are **one line**: `type: description` (for example `feat: implement JWT-based authentication`), with no body, bullets or trailers such as `Co-Authored-By`. A hook turns down any other commit. Name the session's main change; the details belong in the plan and phase summary you updated, not in the message.
+<!-- /lean-commits -->
 
 ### 8. Create Git Commit
 
@@ -302,6 +309,7 @@ git status --short
 - Never stage large binaries or build artifacts (`dist/`, `build/`, coverage output) unless they're intentionally tracked
 - List any changed files you deliberately left unstaged in your summary
 
+<!-- full-commits -->
 **Create commit with HEREDOC** (for proper formatting):
 
 ```bash
@@ -318,6 +326,14 @@ Files modified:
 EOF
 )"
 ```
+<!-- /full-commits -->
+<!-- lean-commits -->
+**Create the commit** (one line):
+
+```bash
+git commit -m "feat: brief description"
+```
+<!-- /lean-commits -->
 
 **Verify commit**:
 ```bash
@@ -408,12 +424,18 @@ After everything is complete, provide a final summary:
 - Update status accurately
 
 ### Commit Message Quality
+<!-- full-commits -->
 - Use `feat:` as default (or most appropriate type)
 - First line must be clear and concise
 - Body should tell the story of WHAT and WHY
 - Include specific file references
 - Mention key decisions or trade-offs
 - Always use HEREDOC for multi-line messages
+<!-- /full-commits -->
+<!-- lean-commits -->
+- One line: `type: description`, with `feat:` as the default type
+- Clear and specific; no body, bullets or trailers
+<!-- /lean-commits -->
 
 ### Phase Summary Decision
 **Create summary if**:

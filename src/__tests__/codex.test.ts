@@ -176,7 +176,7 @@ describe('installCodex', () => {
       expect(content, file).not.toContain('$ARGUMENTS');
       expect(content, file).not.toMatch(/!`[^`]+`/);
       expect(content, file).not.toMatch(/subagent_type|`(Agent|Read|Grep|Glob|Edit|Write|Bash|TodoWrite|WebSearch|WebFetch|AskUserQuestion)`|Claude Code|CLAUDE\.md/);
-      expect(content, file).not.toMatch(/claude --bg|claude agents|<!-- \/?(claude|codex)-only -->/);
+      expect(content, file).not.toMatch(/claude --bg|claude agents|<!-- \/?(claude|codex)-only -->|<!-- \/?(lean|full)-commits -->/);
     }
   });
 

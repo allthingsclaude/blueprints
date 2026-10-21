@@ -4,8 +4,8 @@ import { program } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import ora from 'ora';
-import { installBlueprints, getDefaultClaudeDir, getInstallPaths, getSourcePaths, claudeSettingsFile, glanceModel, hasGlanceHook, readJsonFile, POWER_LEVEL_LABELS, POWER_LEVEL_MODELS, DEFAULT_TASKS_DIR } from './installer.js';
-import type { AgentPowerLevel, GlanceChoice, GlanceHookResult } from './installer.js';
+import { installBlueprints, getDefaultClaudeDir, getInstallPaths, getSourcePaths, claudeSettingsFile, glanceModel, hasHook, readJsonFile, GLANCE_HOOK, LEAN_COMMITS_HOOK, LEAN_COMMITS_HOOK_CODEX, POWER_LEVEL_LABELS, POWER_LEVEL_MODELS, DEFAULT_TASKS_DIR } from './installer.js';
+import type { AgentPowerLevel, HookChoice, HookResult } from './installer.js';
 import { getCodexPaths, installCodex, POWER_LEVEL_EFFORTS } from './codex.js';
 import type { CodexScope } from './codex.js';
 import fs from 'fs';
@@ -24,6 +24,7 @@ interface CLIOptions {
   tasksDir?: string;
   target?: string;
   glance?: string;
+  leanCommits?: string;
 }
 
 type InstallType = 'global' | 'local' | 'custom';
@@ -42,7 +43,8 @@ program
   .option('-y, --yes', 'Skip confirmation prompts')
   .option('--power <level>', 'Agent power level 1-5 (default: 4)')
   .option('--tasks-dir <name>', `Tasks directory name (default: ${DEFAULT_TASKS_DIR})`)
-  .option('--glance <on|off>', 'Glance hook: open /glance pages and make one for long replies (default: keep the current setting)')
+  .option('--glance <on|off>', 'Glance hook: open /glance pages and make one for long replies (default: ask, or keep the current setting with --yes)')
+  .option('--lean-commits <on|off>', 'One-line `type: description` commits with no co-author or session trailers (default: ask, or keep the current setting with --yes)')
   .parse(process.argv);
 
 const options = program.opts<CLIOptions>();
@@ -54,12 +56,12 @@ function codexRootFor(targetPath: string): string {
   return base === '.claude' || base === '.codex' ? path.dirname(resolved) : resolved;
 }
 
-function reportGlance(result: GlanceHookResult, file: string): void {
-  const messages: Partial<Record<GlanceHookResult, string>> = {
-    added: `${chalk.green('✓')} glance hook added to ${file}`,
-    updated: `${chalk.green('✓')} glance hook updated in ${file}`,
-    removed: `${chalk.green('✓')} glance hook removed from ${file}`,
-    unreadable: `${chalk.yellow('!')} couldn't safely edit the hooks in ${file} (not valid JSON, or an unexpected shape), so the glance hook wasn't changed there`,
+function reportHook(name: string, result: HookResult, file: string): void {
+  const messages: Partial<Record<HookResult, string>> = {
+    added: `${chalk.green('✓')} ${name} added to ${file}`,
+    updated: `${chalk.green('✓')} ${name} updated in ${file}`,
+    removed: `${chalk.green('✓')} ${name} removed from ${file}`,
+    unreadable: `${chalk.yellow('!')} couldn't safely edit the hooks in ${file} (not valid JSON, or an unexpected shape), so the ${name} wasn't changed there`,
   };
   if (messages[result]) console.log(`  ${messages[result]}`);
 }
@@ -235,33 +237,48 @@ async function main(): Promise<void> {
     tasksDir = tasksDirAnswer.tasksDir;
   }
 
-  // Glance hook: a Stop hook in the Claude Code settings / Codex hooks.json, only when asked for
-  const claudeSettings = forClaude ? claudeSettingsFile(getInstallPaths(targetPath).base) : null;
-  const codexHooks = forCodex ? getCodexPaths(codexScope, codexRoot).hooksFile : null;
-  const glanceInstalled = [claudeSettings, codexHooks].some(file => file !== null && hasGlanceHook(readJsonFile(file)));
-  let glance: GlanceChoice;
+  // Optional hooks, in the Claude Code settings / Codex hooks.json, only when asked for
+  const claudeSettings = forClaude ? readJsonFile(claudeSettingsFile(getInstallPaths(targetPath).base)) : null;
+  const codexHooks = forCodex ? readJsonFile(getCodexPaths(codexScope, codexRoot).hooksFile) : null;
+  // A project install also sees lean commits that's on in the user's own settings
+  const userClaude = forClaude && installType !== 'global' ? readJsonFile(path.join(getDefaultClaudeDir(), 'settings.json')) : null;
+  const userCodex = forCodex && installType !== 'global' ? readJsonFile(getCodexPaths('global', codexRoot).hooksFile) : null;
+  const glanceIn = { claude: hasHook(claudeSettings, GLANCE_HOOK), codex: hasHook(codexHooks, GLANCE_HOOK) };
+  const leanIn = {
+    claude: hasHook(claudeSettings, LEAN_COMMITS_HOOK) || hasHook(userClaude, LEAN_COMMITS_HOOK),
+    codex: hasHook(codexHooks, LEAN_COMMITS_HOOK_CODEX) || hasHook(userCodex, LEAN_COMMITS_HOOK_CODEX),
+  };
+  const leanGlobal = hasHook(userClaude, LEAN_COMMITS_HOOK) || hasHook(userCodex, LEAN_COMMITS_HOOK_CODEX);
+  const glanceInstalled = glanceIn.claude || glanceIn.codex;
+  const leanInstalled = leanIn.claude || leanIn.codex;
 
-  if (options.glance) {
-    const requested = options.glance.toLowerCase();
-    if (requested !== 'on' && requested !== 'off') {
-      console.error(chalk.red('Error: --glance must be on or off'));
-      process.exit(1);
-    }
-    glance = requested;
-  } else if (options.yes) {
-    glance = 'keep';
-  } else {
-    const glanceAnswer = await inquirer.prompt<{ glance: boolean }>([
-      {
-        type: 'confirm',
-        name: 'glance',
-        message: 'Glance pages: open /glance pages by themselves, and turn long replies into a visual page in the background (adds a Stop hook)?',
-        default: glanceInstalled,
+  const chooseHook = async (flag: string | undefined, name: string, message: string, installed: boolean): Promise<HookChoice> => {
+    if (flag) {
+      const requested = flag.toLowerCase();
+      if (requested !== 'on' && requested !== 'off') {
+        console.error(chalk.red(`Error: --${name} must be on or off`));
+        process.exit(1);
       }
-    ]);
-    glance = glanceAnswer.glance ? 'on' : 'off';
+      return requested;
+    }
+    if (options.yes) return 'keep';
+    const answer = await inquirer.prompt<{ on: boolean }>([{ type: 'confirm', name: 'on', message, default: installed }]);
+    return answer.on ? 'on' : 'off';
+  };
+  const glance = await chooseHook(options.glance, 'glance', 'Glance pages: open /glance pages by themselves, and turn long replies into a visual page in the background (adds a Stop hook)?', glanceInstalled);
+  const leanCommits = await chooseHook(options.leanCommits, 'lean-commits', 'Lean commits: one-line `type: description` messages with no co-author or session trailers (adds a hook that turns down other commits)?', leanInstalled);
+  // With 'keep', each tool keeps its own setting: say where it's on
+  const label = (choice: HookChoice, where: { claude: boolean; codex: boolean }) => {
+    if (choice !== 'keep') return choice;
+    const on = [forClaude && where.claude ? 'Claude Code' : '', forCodex && where.codex ? 'Codex' : ''].filter(Boolean);
+    return on.length ? `on (kept${forClaude && forCodex ? ` in ${on.join(' and ')}` : ''})` : 'off';
+  };
+  const glanceLabel = label(glance, glanceIn);
+  const leanLabel = label(leanCommits, leanIn);
+  if (leanCommits === 'off' && leanGlobal) {
+    console.log(chalk.yellow('  Lean commits is on in your user settings, and its hook still applies to this project.'));
+    console.log(chalk.yellow('  Run the installer with --global --lean-commits off to turn it off everywhere.'));
   }
-  const glanceLabel = glance === 'keep' ? (glanceInstalled ? 'on (kept)' : 'off') : glance;
 
   // Show what will be installed
   const sourcePaths = getSourcePaths();
@@ -291,6 +308,7 @@ async function main(): Promise<void> {
   console.log(`  ${chalk.bold('Power Level:')} ${chalk.magenta(`${powerLevel} - ${POWER_LEVEL_LABELS[powerLevel]}`)} ${chalk.dim(`(${describe(powerLevel)})`)}`);
   console.log(`  ${chalk.bold('Tasks Dir:')}   ${chalk.cyan(`${tasksDir}/`)}`);
   console.log(`  ${chalk.bold('Glance hook:')} ${glanceLabel}${glanceLabel.startsWith('on') && forClaude ? chalk.dim(` (Claude Code pages with ${glanceModel(powerLevel)})`) : ''}`);
+  console.log(`  ${chalk.bold('Lean commits:')} ${leanLabel}`);
   console.log(chalk.dim('─'.repeat(50)));
   console.log();
 
@@ -315,8 +333,8 @@ async function main(): Promise<void> {
   const spinner = ora('Installing blueprints...').start();
 
   try {
-    const claudeResult = forClaude ? await installBlueprints(targetPath, powerLevel, tasksDir, glance) : null;
-    const codexResult = forCodex ? await installCodex(codexScope, codexRoot, powerLevel, tasksDir, undefined, glance) : null;
+    const claudeResult = forClaude ? await installBlueprints(targetPath, powerLevel, tasksDir, { glance, leanCommits }) : null;
+    const codexResult = forCodex ? await installCodex(codexScope, codexRoot, powerLevel, tasksDir, undefined, { glance, leanCommits }) : null;
     spinner.succeed(chalk.green('Installation complete!'));
 
     console.log();
@@ -329,7 +347,11 @@ async function main(): Promise<void> {
       if (claudeResult.removed > 0) {
         console.log(`  ${chalk.green('✓')} ${claudeResult.removed} outdated blueprints files removed (your own files are never touched)`);
       }
-      reportGlance(claudeResult.glanceHook, claudeResult.settingsFile);
+      reportHook('glance hook', claudeResult.glanceHook, claudeResult.settingsFile);
+      reportHook('lean commits hook', claudeResult.leanCommits, claudeResult.settingsFile);
+      if (claudeResult.attribution === 'set') console.log(`  ${chalk.green('✓')} Claude Code's commit attribution turned off (attribution.commit, attribution.sessionUrl)`);
+      if (claudeResult.attribution === 'restored') console.log(`  ${chalk.green('✓')} Claude Code's attribution setting put back as it was`);
+      if (claudeResult.attribution === 'left') console.log(`  ${chalk.yellow('!')} Claude Code's attribution setting was changed after lean commits set it, so it was left as it is`);
     }
     if (codexResult) {
       console.log(chalk.bold('  Codex'));
@@ -344,7 +366,8 @@ async function main(): Promise<void> {
       if (codexResult.skipped.length > 0) {
         console.log(`  ${chalk.yellow('!')} Skipped (you already have your own): ${codexResult.skipped.join(', ')}`);
       }
-      reportGlance(codexResult.glanceHook, codexResult.paths.hooksFile);
+      reportHook('glance hook', codexResult.glanceHook, codexResult.paths.hooksFile);
+      reportHook('lean commits hook', codexResult.leanCommits, codexResult.paths.hooksFile);
     }
     console.log(chalk.dim('─'.repeat(50)));
     console.log();
@@ -360,9 +383,13 @@ async function main(): Promise<void> {
     if (codexResult) {
       const where = installType === 'global' ? 'in any project' : `in ${chalk.cyan(codexRoot)}`;
       console.log(`  ${chalk.cyan('Codex:')}       open Codex ${where} and type ${chalk.yellow('$autopilot')} or ${chalk.yellow('$blueprint')} (skills start with $)`);
-      const glanceChanged = codexResult.glanceHook === 'added' || codexResult.glanceHook === 'updated';
-      if (codexResult.hookRegistered || glanceChanged) {
-        const which = [codexResult.hookRegistered ? 'typecheck gate' : '', glanceChanged ? 'glance hook' : ''].filter(Boolean).join(' and ');
+      const changed = (result: HookResult) => result === 'added' || result === 'updated';
+      if (codexResult.hookRegistered || changed(codexResult.glanceHook) || changed(codexResult.leanCommits)) {
+        const which = [
+          codexResult.hookRegistered ? 'typecheck gate' : '',
+          changed(codexResult.glanceHook) ? 'glance hook' : '',
+          changed(codexResult.leanCommits) ? 'lean commits hook' : '',
+        ].filter(Boolean).join(', ').replace(/, ([^,]+)$/, ' and $1');
         console.log(`               run ${chalk.yellow('/hooks')} in Codex once to review and trust the blueprints ${which}`);
       }
       console.log(chalk.dim(`               Optional: for parallel streams in $parallelize, add "[agents]" with "max_depth = 2" to ${path.join(codexResult.paths.codexHome, 'config.toml')}`));
