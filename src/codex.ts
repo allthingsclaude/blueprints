@@ -165,6 +165,7 @@ const TOOL_REPLACEMENTS: Array<[RegExp, string]> = [
   [/\bWebSearch\b/g, '`web_search`'],
   [/\bWebFetch\b/g, '`web_search` or `curl -sL`'],
   // Instruction files and product name
+  [/CLAUDE\.md \(or the AGENTS\.md it imports\)/g, 'AGENTS.md'],
   [/CLAUDE\.md/g, 'AGENTS.md'],
   [/Claude Code/g, 'Codex'],
 ];

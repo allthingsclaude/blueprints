@@ -135,6 +135,60 @@ describe('workflow scripts', () => {
   });
 });
 
+describe('preflight', () => {
+  const finding = { severity: 'important', file: 'src/a.ts', line: 3, issue: 'null check missing', fix: 'guard it' };
+  const respond = (_p: string, o: Opts) => {
+    if (o.label === 'audit') return { findings: [finding], summary: 'one issue' };
+    if (['secure', 'a11y', 'test'].includes(o.label ?? '')) return { findings: [], summary: 'nothing' };
+    if (o.label?.startsWith('verify')) return { real: true, reason: 'seen' };
+    if (o.label?.startsWith('fix round')) return { fixed: ['F1'], skipped: [], checks: 'all pass' };
+    if (o.label?.startsWith('recheck')) return { resolved: true, reason: 'fixed' };
+    return null;
+  };
+
+  it('gives the caller\'s context to every reviewer, verifier and fixer, and fixes with the implement agent', async () => {
+    const context = 'Autopilot syncs CLAUDE.md later: don\'t report it as out of date.';
+    const { result, calls } = await runWorkflow('preflight', { base: 'abc', files: ['src/a.ts'], frontend: true, context }, respond);
+    expect(result.changesMade).toBe(true);
+    expect(calls.map(c => c.opts.label)).toEqual(['audit', 'secure', 'a11y', 'test', 'verify F1', 'fix round 1', 'recheck F1']);
+    for (const c of calls.filter(c => !c.opts.label?.startsWith('recheck'))) {
+      expect(c.prompt, c.opts.label).toContain(`Notes from the caller: ${context}`);
+    }
+    const fix = calls.find(c => c.opts.label === 'fix round 1')!;
+    expect(fix.opts.agentType).toBe('implement');
+    expect(fix.prompt).toMatch(/^Direct task: /);
+    expect(fix.prompt).toContain('don\'t check off plan tasks or edit the plan or STATE.md');
+  });
+
+  it('still starts the fixer prompt with "Direct task:" in a child repo', async () => {
+    const { calls } = await runWorkflow('preflight', { base: 'abc', repo: 'api' }, respond);
+    const fix = calls.find(c => c.opts.label === 'fix round 1')!;
+    expect(fix.prompt).toMatch(/^Direct task: Work inside the `api` directory/);
+  });
+
+  it('adds no notes without a context', async () => {
+    const { calls } = await runWorkflow('preflight', { base: 'abc', context: '  ' }, respond);
+    for (const c of calls) expect(c.prompt).not.toContain('Notes from the caller');
+  });
+
+  it('sends fixers the phrase implement\'s Direct Tasks section looks for', () => {
+    const implement = fs.readFileSync(path.join(agentsDir, 'implement.md'), 'utf-8');
+    expect(implement).toContain('## Direct Tasks');
+    expect(implement).toContain('A prompt that starts with "Direct task:"');
+    const read = (p: string) => fs.readFileSync(path.join(agentsDir, '..', p), 'utf-8');
+    for (const [file, count] of [['commands/autopilot.md', 2], ['procedures/integrate.md', 1]] as const) {
+      const text = read(file);
+      expect(text, file).not.toContain('subagent_type: "general-purpose"');
+      const launches = [...text.matchAll(/launch one fixer[^\n]*?\(`subagent_type: "(\w+)"`\)[^\n]*?: "([^"]{0,40})/g)];
+      expect(launches.length, file).toBe(count);
+      for (const m of launches) {
+        expect(m[1], file).toBe('implement');
+        expect(m[2], file).toMatch(/^Direct task: /);
+      }
+    }
+  });
+});
+
 describe('streams', () => {
   const partition = {
     planFile: 'tasks/plans/PLAN_03_SHOP.md',

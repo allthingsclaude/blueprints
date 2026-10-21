@@ -18,6 +18,7 @@ export const meta = {
 //   frontend?: bool   true when UI files changed: adds the a11y reviewer
 //   plan?: string     plan name, for context
 //   fix?: bool        false = review and verify only, default true
+//   context?: string  the caller's notes for every agent, e.g. what not to report
 // }
 const a = args || {}
 if (!a.base) {
@@ -30,7 +31,8 @@ const where = repo === '.' ? '' : `Work inside the \`${repo}\` directory (cd int
 const fileList = files.length
   ? ` Changed files: ${files.slice(0, 200).join(', ')}${files.length > 200 ? ` (+${files.length - 200} more)` : ''}.`
   : ''
-const scope = `${where}Review-only mode. Review the changes in \`git diff ${range}\`.${fileList}${a.plan ? ` They implement plan ${a.plan}.` : ''} Follow your Review-Only Mode instructions.`
+const notes = typeof a.context === 'string' && a.context.trim() ? `\n\nNotes from the caller: ${a.context.trim()}` : ''
+const scope = `${where}Review-only mode. Review the changes in \`git diff ${range}\`.${fileList}${a.plan ? ` They implement plan ${a.plan}.` : ''} Follow your Review-Only Mode instructions.${notes}`
 
 const FINDINGS = {
   type: 'object',
@@ -139,7 +141,7 @@ const verifyPrompt = f => `${where}Check one code-review finding about the chang
 Finding (${f.severity}, from ${f.reviewers.join('/')}): ${f.issue}
 Suggested fix: ${f.fix}
 
-It is real only if (1) the problem actually exists in the current code, (2) this branch's changes introduced or exposed it, or it is a failing test, and (3) it matters at the stated severity. A missing test for critical new logic counts as real. If you can't confirm it from the code, it is not real. Don't edit anything.`
+It is real only if (1) the problem actually exists in the current code, (2) this branch's changes introduced or exposed it, or it is a failing test, and (3) it matters at the stated severity. A missing test for critical new logic counts as real. If you can't confirm it from the code, it is not real. Don't edit anything.${notes}`
 
 phase('Verify')
 const verified = await pipeline(findings, f =>
@@ -168,7 +170,7 @@ if (!result.confirmed.length || a.fix === false) {
 }
 
 // ── Fix → Recheck: one fixer per round, at most two rounds ──
-const fixPrompt = (list, round) => `${where}Fix these confirmed review findings on the current branch (round ${round}). Parallel reviewers found them and an independent verifier confirmed them.
+const fixPrompt = (list, round) => `Direct task: ${where}Fix these confirmed review findings on the current branch (round ${round}). Parallel reviewers found them and an independent verifier confirmed them.
 
 ${JSON.stringify(list.map(f => ({ ...brief(f), fix: f.fix })), null, 2)}
 
@@ -178,12 +180,13 @@ Rules:
 - Don't change behavior beyond what a finding requires. Skip, with the reason "needs a decision", any finding whose fix would change authentication/authorization design, encryption choices, public API behavior, or product behavior.
 - For missing-test findings, add focused tests that match the project's test conventions.
 - When your edits are done, run the project's typecheck, lint and tests once with its own toolchain, and fix failures your edits caused.
-- Don't commit.
-Return the ids you fixed, the ids you skipped with reasons, and a one-line result of the checks.`
+- Don't commit, and don't check off plan tasks or edit the plan or STATE.md.
+Return the ids you fixed, the ids you skipped with reasons, and a one-line result of the checks.${notes}`
 
 let open = result.confirmed
 for (let round = 1; round <= 2 && open.length; round++) {
-  const fx = await agent(fixPrompt(open, round), { label: `fix round ${round}`, phase: 'Fix', schema: FIX_RESULT })
+  // implement, not the default workflow agent: its context is capped, and the fix pass can run long.
+  const fx = await agent(fixPrompt(open, round), { label: `fix round ${round}`, phase: 'Fix', agentType: 'implement', schema: FIX_RESULT })
   if (!fx) {
     log(`Fix round ${round} failed to return`)
     break

@@ -76,17 +76,29 @@ Ask only when the answer is genuinely the user's. Decide everything else yoursel
 - checks still failing after the fix rounds, or a technical blocker you can't get past
 - an unresolved critical review finding
 
-What happens to those depends on the mode:
-- **Default**: ask with `AskUserQuestion` (at most 4 questions per call; put everything that's pending into one), but don't stop for it. First launch whatever doesn't depend on the answer, then ask. If nothing later depends on it (a paid run at the end of the plan, say), finish Steps 5–6 first and ask at the end. For a step only the user can do, they can do it themselves, approve one you can run (such as a paid run), or leave it for later; anything they leave for later is set aside as with `--full`.
+**Questions only a later plan needs** are never asked during this run, in any mode: add `- Needs your decision: {question} (blocks: {tasks})` to that plan's Notes, where it's asked when that plan starts, and list it under **Left for you**. It doesn't hold up or pause this run.
+
+What happens to the rest depends on the mode:
+- **Default**: ask, but keep the run moving while you wait. First launch whatever doesn't depend on the answer. For each decision that blocks tasks in this plan, add `- Needs your decision: {question} (blocks: {tasks})` to this plan's Notes, so it survives a stop or a compaction. A step only the user can do gets its **(USER)** mark and a `Left for the user` line instead, which don't pause the plan. Then:
+  - **Nothing else can move until the answer comes** (nothing is running, and the next step needs it): ask with `AskUserQuestion` (at most 4 questions per call; put everything that's pending into one).
+<!-- claude-only -->
+  - **Agents or a workflow are still running**: don't use the AskUserQuestion tool yet. It holds the run until the user answers, so an agent that finishes in the meantime waits too, for hours if the user is away. Ask in your status message instead: number the questions, and give each its options and your recommendation. Carry on with whatever doesn't depend on the answer. If everything else finishes first, the case above applies: ask the questions still open with `AskUserQuestion`.
+<!-- /claude-only -->
+<!-- codex-only -->
+  - **Agents are still running**: ask with `AskUserQuestion` anyway. The agents you launched keep working meanwhile, and you collect their results once the user answers.
+<!-- /codex-only -->
+  - **Nothing in this plan depends on it** (a paid run at the end of the plan, say): finish Steps 5–6 first and ask at the end.
+
+  For a step only the user can do, they can do it themselves, approve one you can run (such as a paid run), or leave it for later; anything they leave for later is set aside as with `--full`.
 - **`--full`**, and every dispatched run: never ask.
   - A step only the user can do is set aside: leave its checkbox unchecked, mark the task **(USER)** at the start of its text, add `- Left for the user: {step} ({why})` to the plan's Notes (unless it's already there), tell the agents to skip it, and carry on.
-  - A decision only the user can make, or an open critical finding: leave the tasks that depend on it unchecked, add `- Needs your decision: {question} (blocks: {tasks})` to the Notes, and carry on with the rest. Skip a phase that depends on it; Step 5 still reviews what was built.
+  - A decision only the user can make, or an open critical finding: leave the tasks that depend on it unchecked, add `- Needs your decision: {question} (blocks: {tasks})` to this plan's Notes, and carry on with the rest. Skip a phase that depends on it; Step 5 still reviews what was built.
   - Checks still failing after the fix rounds, or a technical blocker: don't build on top of it. Stop and finish Step 6 as `⏸️ Paused`, with the failure in the report.
-  - The run ends `⏸️ Paused` while a `Needs your decision` note or a failing check is open. Steps marked **(USER)** don't keep it from completing. The final report lists everything that was set aside.
+  - The run ends `⏸️ Paused` while a `Needs your decision` note in this plan or a failing check is open. Steps marked **(USER)** don't keep it from completing. The final report lists everything that was set aside.
 
-**Record answers, then act on them**: write each answer from the user into the plan's Notes as `- Decided ({date}): {question} → {answer}`, replacing the matching `- Needs your decision` line if there is one. Then act on it: relaunch the implement agent for the tasks that were waiting (telling it what was decided), or for a preflight item, launch one fixer and commit its fix. Do the same for your own provisional decisions that leave work undone.
+**Record answers, then act on them**: write each answer from the user into the Notes of the plan it's about as `- Decided ({date}): {question} → {answer}`, replacing the matching `- Needs your decision` line. Then act on it, but only once nothing else is editing the working tree: let a running implement agent, fixer or preflight run hand back first (and commit a finished phase), so a commit doesn't pick up half-done work and the review doesn't miss the new changes. Read-only work can run alongside. For plan tasks that were waiting, relaunch the implement agent for those tasks, telling it what was decided, so it checks them off. For anything else (a preflight item, docs, a design, another plan), launch `implement` as a direct task and commit its result. Do the same for your own provisional decisions that leave work undone.
 
-**On resume** (Steps 1a and 1b), read the plan's open notes first: `grep -n -E '^- (Needs your decision|Left for the user)' {plan file}`. In default mode, ask the open decisions before launching agents. With `--full`, tell the agents to skip the tasks they block. Implement agents don't read the Notes section, so pass them the `Decided` and `Provisional` lines that matter for their phase in the prompt.
+**On resume** (Steps 1a and 1b), read the plan's open notes first: `grep -n -E '^- (Needs your decision|Left for the user)' {plan file}`. In default mode, ask the open decisions as described above: launch first whatever doesn't depend on them. With `--full`, tell the agents to skip the tasks they block. Implement agents don't read the Notes section, so pass them the `Decided` and `Provisional` lines that matter for their phase in the prompt.
 
 ### Worktree Mode (dispatched runs)
 
@@ -244,6 +256,8 @@ Report: "Working on branch `feat/{name}` in {N} repo(s): {list}"
 
 You own STATE.md during autopilot. Tell every implement/parallelize/showcase agent: "Autopilot updates STATE.md — don't edit it, and don't commit."
 
+`{{TASKS_DIR}}/CONVENTIONS.md` belongs to the project: implement agents write it when it's missing and add to it, so later phases and runs reuse what they found. Commit it with the phase that created or changed it when the tasks folder is tracked by git (in multi-repo mode it stays uncommitted beside the plans), and never delete it or move it away.
+
 For each remaining phase:
 
 #### 4a. Assess the Phase
@@ -278,8 +292,8 @@ When the agent reports:
 #### 4c. Commit the Phase
 
 **COMMIT CHECKPOINT** after each phase:
-- **Checks first**: don't rely on the implement agent's own test run, which may predate its last edit. Tell the commit agent to run typecheck, lint and the test suite before committing (tests without build-tool caches, e.g. `turbo run test --force`), and to commit nothing and report the failing command with its trimmed output if any of them fails. (While dispatched runs are going, exclude `.claude/worktrees/` from these checks.) On a failure, launch one fixer (`subagent_type: "general-purpose"`): "These checks fail after Phase {N} of {plan}: {output}. Fix what the phase's changes broke, minimally, following `{{TASKS_DIR}}/CONVENTIONS.md` and CLAUDE.md. Rerun the failing checks. Don't commit." Then run the commit agent again. At most 2 rounds; still failing → treat it as a blocker (4b).
-- **Single-repo**: launch the commit agent with what the phase accomplished; the message should reference the plan and phase (e.g. "feat: implement user authentication (PLAN_AUTH Phase 1)").
+- **Checks first**: don't rely on the implement agent's own test run, which may predate its last edit. Tell the commit agent to run typecheck, lint and the test suite before committing (tests without build-tool caches, e.g. `turbo run test --force`), and to commit nothing and report the failing command with its trimmed output if any of them fails. (While dispatched runs are going, exclude `.claude/worktrees/` from these checks.) On a failure, launch one fixer (`subagent_type: "implement"`): "Direct task: these checks fail after Phase {N} of {plan}: {output}. Fix what the phase's changes broke, minimally, following `{{TASKS_DIR}}/CONVENTIONS.md` and CLAUDE.md. Rerun the failing checks. Don't commit." Then run the commit agent again. At most 2 rounds; still failing → treat it as a blocker (4b).
+- **Single-repo**: launch the commit agent with what the phase accomplished, including `{{TASKS_DIR}}/CONVENTIONS.md` if the phase created or changed it; the message should reference the plan and phase (e.g. "feat: implement user authentication (PLAN_AUTH Phase 1)").
 - **Multi-repo**: set `PARENT_DIR=$(pwd)`. For each affected repo: `cd "$PARENT_DIR/{repo}"`, skip it if `git status --short` is empty, otherwise launch the commit agent with the phase summary and the repo name. Afterwards, `cd "$PARENT_DIR"` unconditionally and confirm with `pwd`. Record commit hashes per repo for the final report.
 
 **STATE UPDATE** (from the parent dir in multi-repo mode): set `**Phase**` to the next phase and `**Updated**` to now, and update this plan's row in `## Plans` (Progress, e.g. `Phase 3/5 · 12/20 tasks`; Updated). Never add per-task tables or long notes — the plan's checkboxes are the source of truth, and the implement agents check them off. If STATE.md is in the legacy format, update the header and the plan's Overview row only.
@@ -308,7 +322,8 @@ git diff --name-only {BASE}...HEAD
 
 If the `Workflow` tool is available, run the saved workflow **`preflight`** with args:
 ```json
-{ "base": "{BASE}", "files": [...FILES], "frontend": true|false, "plan": "{NAME}" }
+{ "base": "{BASE}", "files": [...FILES], "frontend": true|false, "plan": "{NAME}",
+  "context": "Autopilot syncs CLAUDE.md (or the AGENTS.md it imports) and STATE.md after this review: don't report them as out of date." }
 ```
 Multi-repo: one run per affected repo, adding `"repo": "{repo}"`. You may launch them together.
 
@@ -316,15 +331,15 @@ The workflow runs in the background: `audit`, `secure`, `a11y` (UI changes only)
 
 #### 5c. Fallback (no Workflow tool, workflows disabled, or the run fails)
 
-1. In **one message**, launch these reviewers with the `Agent` tool so they run in parallel: `audit`, `secure`, `a11y` (only if `FRONTEND`), and `test`. Prompt each: "Review-only mode. Review the changes in `git diff {BASE}...HEAD`. Changed files: {FILES}. Follow your Review-Only Mode instructions."
+1. In **one message**, launch these reviewers with the `Agent` tool so they run in parallel: `audit`, `secure`, `a11y` (only if `FRONTEND`), and `test`. Prompt each: "Review-only mode. Review the changes in `git diff {BASE}...HEAD`. Changed files: {FILES}. Follow your Review-Only Mode instructions. Autopilot syncs CLAUDE.md (or the AGENTS.md it imports) and STATE.md after this review: don't report them as out of date."
 2. Merge their findings, dropping duplicates (same file and line).
-3. If there are any, launch one fixer (`subagent_type: "general-purpose"`) with the merged list: "For each finding, first confirm it's real in the current code (skip false positives and say why). Fix confirmed ones minimally, following `{{TASKS_DIR}}/CONVENTIONS.md` and CLAUDE.md. Skip with 'needs a decision' anything that would change auth design, encryption, public API, or product behavior. Add focused tests for missing-test findings. Then run typecheck, lint and tests once and fix what your edits broke. Don't commit. Report fixed / skipped / remaining."
+3. If there are any, launch one fixer (`subagent_type: "implement"`) with the merged list: "Direct task: for each finding, first confirm it's real in the current code (skip false positives and say why). Fix confirmed ones minimally, following `{{TASKS_DIR}}/CONVENTIONS.md` and CLAUDE.md. Skip with 'needs a decision' anything that would change auth design, encryption, public API, or product behavior. Add focused tests for missing-test findings. Then run typecheck, lint and tests once and fix what your edits broke. Don't commit. Report fixed / skipped / remaining."
 4. If the fixer reports remaining failures, run one more fixer round for those only (max 2 rounds).
 
 #### 5d. Commit and Decide
 
 - **COMMIT CHECKPOINT**: if fixes were made (`changesMade`, or `git status --short` is non-empty), launch the commit agent with context "fix: address preflight findings for {NAME}" (per repo in multi-repo mode).
-- **`needsDecision` items and unresolved critical findings** → follow **When to Ask**. They're usually the user's (auth, encryption, public API, product behavior); decide yourself only internal, reversible ones. Act on each answer or decision with one fixer and a commit. With `--full`, record the rest as `Needs your decision` notes and finish Step 6 as `⏸️ Paused`.
+- **`needsDecision` items and unresolved critical findings** → follow **When to Ask**. They're usually the user's (auth, encryption, public API, product behavior); decide yourself only internal, reversible ones. Act on each answer or decision with one fixer (`implement`, as a direct task) and a commit. With `--full`, record the rest as `Needs your decision` notes and finish Step 6 as `⏸️ Paused`.
 - Report briefly:
 ```markdown
 **Preflight**: {N} confirmed · {M} dropped as false positives · {K} fixed · {U} unresolved
@@ -335,14 +350,14 @@ The workflow runs in the background: `audit`, `secure`, `a11y` (UI changes only)
 
 ### Step 6: Update & Report
 
-**UPDATE CLAUDE.md and STATE.md** (skip in worktree mode): launch the update agent (`subagent_type: "update"`) to sync CLAUDE.md with new patterns, dependencies, or structure from this session and to reconcile STATE.md (it also migrates a legacy-format STATE.md). If it changed CLAUDE.md, commit it (commit agent, "docs: update CLAUDE.md for {NAME}").
+**UPDATE CLAUDE.md and STATE.md** (skip in worktree mode): launch the update agent (`subagent_type: "update"`) to sync CLAUDE.md with new patterns, dependencies, or structure from this session and to reconcile STATE.md (it also migrates a legacy-format STATE.md). If it changed CLAUDE.md (or the AGENTS.md it imports), commit it (commit agent, "docs: update CLAUDE.md for {NAME}").
 
 **STATE UPDATE**:
 - All phases and validation passed (tasks marked **(USER)** may remain; they're listed under **Left for you**) → (worktree mode: see Worktree Mode) `**Active**: None`, `**File**`/`**Phase**`: `—`, `**Status**: ✅ Complete`, and the plan's row `✅ Complete`
-- Partially complete (open decisions, unresolved critical findings, failing checks, or the user stopped) → keep `**Active**` on the plan, `**Status**: ⏸️ Paused`, `**Phase**` = last completed phase
+- Partially complete (decisions on this plan still open, unresolved critical findings, failing checks, or the user stopped) → keep `**Active**` on the plan, `**Status**: ⏸️ Paused`, `**Phase**` = last completed phase
 - Update `**Updated**`
 
-Final summary:
+Final summary. When the plan changed something the user can see or run (UI, a CLI, an API, generated files such as PDFs), include **Try it**, built from the **Try it** lines in the implement agents' reports, the plan's success criteria and the project's scripts: the command that starts it, where to look (URLs, screens, files), and a few specific things to check by hand, each with what they should see. Leave it out for internal changes.
 
 ```markdown
 **Autopilot Complete**
@@ -355,6 +370,9 @@ Final summary:
 **What Was Done**:
 - [Phase 1 summary]
 - [Phase 2 summary]
+
+**Try it**: `{command that starts it}`, then {where to look}
+- {thing to check} → {what they should see}
 
 **Preflight**: {confirmed} confirmed · {fixed} fixed · {dropped} false positives dropped · {unresolved} unresolved
 {list unresolved / needs-decision items, if any}
@@ -397,6 +415,10 @@ Commits are non-destructive, so they happen automatically with or without `--ful
 ### Compose Existing Agents
 - Agents: `bootstrap`, `blueprint`, `implement`, `parallelize`, `showcase`, `audit`, `secure`, `a11y`, `test`, `commit`, `update` — plus the `preflight` workflow and the dispatch and integrate procedures for parallel runs
 - Don't do their jobs inline — delegate to specialists
+- Fixers, and other work that isn't a plan task (revising docs, a design or other plans after an answer, say), go to `implement` as a direct task ("Direct task: …"), or to a specialist such as `docs`. Plan tasks always get the normal launch, so they're checked off.
+<!-- claude-only -->
+- Don't use `general-purpose` for those: it has no context cap, so a long job grows past 400k tokens per call.
+<!-- /claude-only -->
 - Always use the commit agent for commits
 
 ### Handle Failures Gracefully

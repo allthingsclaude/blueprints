@@ -53,6 +53,7 @@ describe('convertTextForCodex', () => {
 
   it('renames instruction files and the product', () => {
     expect(convertTextForCodex('Update CLAUDE.md in Claude Code', COMMANDS).text).toBe('Update AGENTS.md in Codex');
+    expect(convertTextForCodex('syncs CLAUDE.md (or the AGENTS.md it imports) later', COMMANDS).text).toBe('syncs AGENTS.md later');
   });
 
   it('turns slash commands into $skill mentions without touching paths', () => {
@@ -191,6 +192,11 @@ describe('installCodex', () => {
       const agent = fs.readFileSync(path.join(paths.agents, `${name}.toml`), 'utf-8');
       expect(agent, name).not.toMatch(/Scan-Only Mode|Partition-only mode|Workflow Modes|`streams` workflow|`sweep`/);
     }
+    // The context cap that rules out general-purpose is a Claude Code agent setting, and asking in a
+    // status message relies on Claude Code waking the session when a background agent finishes.
+    const autopilot = fs.readFileSync(path.join(paths.skills, 'autopilot', 'SKILL.md'), 'utf-8');
+    expect(autopilot).not.toMatch(/general-purpose|status message instead|Agents or a workflow are still running/);
+    expect(autopilot).toContain('**Agents are still running**: ask with `request_user_input`');
   });
 
   it('gives dispatch the Codex launch commands instead of Claude Code background sessions', async () => {

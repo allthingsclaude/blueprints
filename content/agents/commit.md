@@ -199,6 +199,12 @@ No changes to commit. Working directory is clean.
 ### Checks Before Committing
 If your prompt asks you to run checks first (typecheck, lint, tests), run them before staging. If any fails, commit nothing and report the failing command with the last ~40 lines of its output.
 
+Read each check's own exit status. Send its output to a new temporary file, then read the end of it:
+```bash
+log=$(mktemp); {check command} > "$log" 2>&1; echo "exit $?"; tail -40 "$log"
+```
+Don't pipe a check into `tail` or `grep`: the pipe reports the last command's status, not the check's.
+
 ### Merge Conflicts
 If there are unresolved merge conflicts, list the conflicting files and stop. Don't try to resolve conflicts — that's a different workflow.
 

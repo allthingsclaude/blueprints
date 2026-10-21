@@ -29,6 +29,10 @@ If CLAUDE.md exists:
 If CLAUDE.md doesn't exist:
 - Create a new one from scratch
 
+<!-- claude-only -->
+If CLAUDE.md only imports another file (e.g. it holds little more than `@AGENTS.md`), that file holds the project's instructions: read and update it instead wherever this agent says CLAUDE.md, and leave CLAUDE.md as it is.
+<!-- /claude-only -->
+
 ### 2. Scan Project
 
 Run these scans to gather project information:
