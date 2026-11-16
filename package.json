@@ -12,6 +12,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
+    "build:plugin": "tsc && node dist/plugin.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "prepublishOnly": "pnpm run build && pnpm run test",
@@ -21,7 +22,8 @@
     "release:beta:major": "pnpm run build && pnpm run test && npm version premajor --preid beta && git push && git push --tags",
     "release:patch": "pnpm run build && pnpm run test && npm version patch && git push && git push --tags",
     "release:minor": "pnpm run build && pnpm run test && npm version minor && git push && git push --tags",
-    "release:major": "pnpm run build && pnpm run test && npm version major && git push && git push --tags"
+    "release:major": "pnpm run build && pnpm run test && npm version major && git push && git push --tags",
+    "version": "node dist/plugin.js && git add plugin"
   },
   "keywords": [
     "claude",

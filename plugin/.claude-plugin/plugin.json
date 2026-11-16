@@ -1,0 +1,21 @@
+{
+  "name": "blueprints",
+  "version": "0.11.1",
+  "description": "Plan, build, review and ship with Claude Code: commands, agents and workflows for planning, autonomous implementation, code review, research and on-brand design",
+  "author": {
+    "name": "Marko Radak",
+    "url": "https://github.com/markoradak"
+  },
+  "homepage": "https://github.com/allthingsclaude/blueprints#readme",
+  "repository": "https://github.com/allthingsclaude/blueprints",
+  "license": "MIT",
+  "keywords": [
+    "planning",
+    "implementation",
+    "code-review",
+    "agents",
+    "workflows",
+    "autopilot",
+    "design"
+  ]
+}
