@@ -1,6 +1,6 @@
 ---
 description: Full autonomous development loop - from idea to committed code
-argument-hint: [--full] plan name(s) or feature description
+argument-hint: "[--full] plan name(s) or feature description"
 disable-model-invocation: true
 author: "@markoradak"
 ---

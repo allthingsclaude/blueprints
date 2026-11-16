@@ -1,6 +1,6 @@
 ---
 description: Generate plan and bootstrap script for new projects
-argument-hint: {NAME} [optional: additional context]
+argument-hint: "{NAME} [optional: additional context]"
 author: "@markoradak"
 ---
 

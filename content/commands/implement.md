@@ -1,6 +1,6 @@
 ---
 description: Autonomously implement a plan using subagent
-argument-hint: {NAME} [optional: starting phase or task]
+argument-hint: "{NAME} [optional: starting phase or task]"
 author: "@markoradak"
 ---
 

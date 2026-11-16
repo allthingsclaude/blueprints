@@ -1,6 +1,6 @@
 ---
 description: Merge finished /dispatch runs back one at a time, test them together, and clean up
-argument-hint: [plan ...] [--review] [--yes]
+argument-hint: "[plan ...] [--review] [--yes]"
 disable-model-invocation: true
 author: "@markoradak"
 ---

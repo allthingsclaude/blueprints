@@ -1,6 +1,6 @@
 ---
 description: Create a plan document from conversation findings
-argument-hint: {NAME} [optional: additional context]
+argument-hint: "{NAME} [optional: additional context]"
 author: "@markoradak"
 ---
 

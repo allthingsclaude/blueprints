@@ -1,6 +1,6 @@
 ---
 description: Run several plans at once, each in its own git worktree and session
-argument-hint: [plan ...] [--yes] [--max N]
+argument-hint: "[plan ...] [--yes] [--max N]"
 disable-model-invocation: true
 author: "@markoradak"
 ---

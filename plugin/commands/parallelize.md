@@ -1,6 +1,6 @@
 ---
 description: Parallelize plan execution across multiple agents for faster development
-argument-hint: {PLAN_NAME} [optional: max-agents count]
+argument-hint: "{PLAN_NAME} [optional: max-agents count]"
 author: "@markoradak"
 ---
 

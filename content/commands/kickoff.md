@@ -1,6 +1,6 @@
 ---
 description: Start implementing a plan interactively in main context
-argument-hint: {NAME} [optional: starting phase or task]
+argument-hint: "{NAME} [optional: starting phase or task]"
 author: "@markoradak"
 ---
 
