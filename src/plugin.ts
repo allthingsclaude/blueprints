@@ -24,7 +24,6 @@ import {
   copyTemplatedFiles,
   DEFAULT_TASKS_DIR,
   ensureDir,
-  getPackageVersion,
   getSourcePaths,
   listFiles,
   type AgentPowerLevel,
@@ -43,10 +42,14 @@ export const PLUGIN_DIR = path.join(PACKAGE_ROOT, 'plugin');
 /** Hand-written plugin files (README, icon) that the build copies as they are */
 const PLUGIN_SOURCE = path.join(PACKAGE_ROOT, 'content', 'plugin');
 
-export function pluginManifest(version = getPackageVersion()) {
+/**
+ * No `version`: Claude Code and the directory then take each commit as a new version, so a
+ * change to the plugin alone reaches the directory without an npm release (a set version
+ * has to be raised every time, or the directory doesn't pick the commit up).
+ */
+export function pluginManifest() {
   return {
     name: PLUGIN_NAME,
-    version,
     description: 'Plan, build, review and ship with Claude Code: commands and agents for planning, autonomous implementation, code review, research and on-brand design',
     author: { name: 'Marko Radak', url: 'https://github.com/markoradak' },
     homepage: 'https://github.com/allthingsclaude/blueprints#readme',
@@ -128,7 +131,7 @@ export interface PluginBuildResult {
 }
 
 /** Build the plugin into outDir, replacing what a previous build left there */
-export function buildPlugin(outDir: string = PLUGIN_DIR, version = getPackageVersion()): PluginBuildResult {
+export function buildPlugin(outDir: string = PLUGIN_DIR): PluginBuildResult {
   const src = getSourcePaths();
   // Only ever clear a folder this build made (or an empty one)
   if (fs.existsSync(outDir) && fs.readdirSync(outDir).length) {
@@ -159,7 +162,7 @@ export function buildPlugin(outDir: string = PLUGIN_DIR, version = getPackageVer
   rewriteFiles(proceduresDir, '.md', text => inlineShellToSteps(prompt(text)));
 
   ensureDir(path.join(outDir, '.claude-plugin'));
-  fs.writeFileSync(path.join(outDir, '.claude-plugin', 'plugin.json'), JSON.stringify(pluginManifest(version), null, 2) + '\n', 'utf-8');
+  fs.writeFileSync(path.join(outDir, '.claude-plugin', 'plugin.json'), JSON.stringify(pluginManifest(), null, 2) + '\n', 'utf-8');
 
   for (const file of listFiles(PLUGIN_SOURCE, '', true)) {
     ensureDir(path.dirname(path.join(outDir, file)));

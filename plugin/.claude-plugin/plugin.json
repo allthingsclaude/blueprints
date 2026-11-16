@@ -1,6 +1,5 @@
 {
   "name": "blueprints",
-  "version": "0.11.1",
   "description": "Plan, build, review and ship with Claude Code: commands and agents for planning, autonomous implementation, code review, research and on-brand design",
   "author": {
     "name": "Marko Radak",
