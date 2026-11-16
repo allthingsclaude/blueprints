@@ -4,17 +4,19 @@ argument-hint: "[topic or file] | auto on | auto off"
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Glance
 
 Make one small HTML page that shows what the user would otherwise have to read: your previous reply, or what the arguments name (a plan, a handoff, a decision, a file). The page is saved in this project and never published.
 
 ## Current State
 
-**Glance hook**: !`grep -sl 'hooks/glance.mjs' ~/.claude/settings.json .claude/settings.json .claude/settings.local.json 2>/dev/null | head -1 | grep . || echo "not installed"`
+**Glance hook**: run `grep -sl 'hooks/glance.mjs' ~/.claude/settings.json .claude/settings.json .claude/settings.local.json 2>/dev/null | head -1 | grep . || echo "not installed"`
 
-**Automatic pages in this project**: !`test -f tasks/pages/.auto-off && echo "off" || echo "on (when the hook is installed)"`
+**Automatic pages in this project**: run `test -f tasks/pages/.auto-off && echo "off" || echo "on (when the hook is installed)"`
 
-**Now**: !`date +%Y-%m-%d-%H%M`
+**Now**: run `date +%Y-%m-%d-%H%M`
 
 ## Arguments
 

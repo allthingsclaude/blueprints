@@ -4,24 +4,26 @@ argument-hint: optional: commit message prefix or focus area
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Finalize Work Session
 
 I'll finalize your work session by updating plans, creating a git commit, and documenting any bottlenecks or key decisions.
 
 ## Current Session State
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
+**Branch**: run `git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Status**:
-!`git status --short 2>/dev/null | head -40 | grep . || echo "Clean, or not a git repository"`
+run `git status --short 2>/dev/null | head -40 | grep . || echo "Clean, or not a git repository"`
 
 **Changes Summary**:
-!`git diff --stat 2>/dev/null || echo "No changes"`
+run `git diff --stat 2>/dev/null || echo "No changes"`
 
 **Active Plans**:
-!`ls -1 tasks/plans/PLAN_*.md 2>/dev/null | tail -30 | grep . || echo "No active plans"`
+run `ls -1 tasks/plans/PLAN_*.md 2>/dev/null | tail -30 | grep . || echo "No active plans"`
 
 ---
 

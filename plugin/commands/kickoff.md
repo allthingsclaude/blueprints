@@ -4,6 +4,8 @@ argument-hint: {NAME} [optional: starting phase or task]
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Kickoff Plan Implementation
 
 I'll load the plan and work through it **with you** in this conversation.
@@ -17,14 +19,14 @@ $ARGUMENTS
 ## Available Plans
 
 **Active Plan**:
-!`head -n 40 tasks/STATE.md 2>/dev/null || echo "No active plan"`
+run `head -n 40 tasks/STATE.md 2>/dev/null || echo "No active plan"`
 
 **Plans in tasks/plans/**:
-!`ls -1 tasks/plans/PLAN_*.md 2>/dev/null | tail -30 | grep . || echo "No plans found"`
+run `ls -1 tasks/plans/PLAN_*.md 2>/dev/null | tail -30 | grep . || echo "No plans found"`
 
-**Current Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
+**Current Branch**: run `git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
 ---
 

@@ -4,22 +4,24 @@ argument-hint: optional: section to focus on
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Update CLAUDE.md
 
 I'll scan the project and update CLAUDE.md and STATE.md to reflect the current state — tech stack, structure, patterns, conventions, and plan progress.
 
 ## Current Context
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
 **Existing CLAUDE.md**:
-!`head -5 CLAUDE.md 2>/dev/null || echo "No CLAUDE.md found"`
+run `head -5 CLAUDE.md 2>/dev/null || echo "No CLAUDE.md found"`
 
 **Project Detection**:
-!`ls package.json tsconfig.json Cargo.toml go.mod pyproject.toml requirements.txt composer.json Gemfile pom.xml build.gradle mix.exs 2>/dev/null || echo "No recognized project files"`
+run `ls package.json tsconfig.json Cargo.toml go.mod pyproject.toml requirements.txt composer.json Gemfile pom.xml build.gradle mix.exs 2>/dev/null || echo "No recognized project files"`
 
 **Source Files**:
-!`find . -maxdepth 3 -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.py" -o -name "*.rs" -o -name "*.go" -o -name "*.java" -o -name "*.rb" -o -name "*.ex" -o -name "*.php" \) -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null | head -60 | grep . || echo "None found"`
+run `find . -maxdepth 3 -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.py" -o -name "*.rs" -o -name "*.go" -o -name "*.java" -o -name "*.rb" -o -name "*.ex" -o -name "*.php" \) -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null | head -60 | grep . || echo "None found"`
 
 ---
 

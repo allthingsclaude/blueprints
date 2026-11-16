@@ -4,28 +4,30 @@ argument-hint: email brief or leave empty for guided questionnaire
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Email — HTML Email Template Creation
 
 I'll create on-brand, email-client-compatible HTML templates — newsletters, product announcements, welcome sequences, transactional emails, and more. Every template is built with table-based layouts and inline CSS for maximum compatibility across Gmail, Outlook, Apple Mail, and every other email client.
 
 ## Current Context
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
 **Existing Brand Assets**:
-!`ls tailwind.config.* src/app/globals.css src/styles/*.css public/images/*.svg 2>/dev/null || echo "No brand files detected"`
+run `ls tailwind.config.* src/app/globals.css src/styles/*.css public/images/*.svg 2>/dev/null || echo "No brand files detected"`
 
 **Design Directory**:
-!`ls design/ 2>/dev/null || echo "No existing design directory"`
+run `ls design/ 2>/dev/null || echo "No existing design directory"`
 
 **Previous Brand Brief**:
-!`head -30 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
+run `head -30 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
 
 **Existing Email Templates**:
-!`find . -maxdepth 4 -name "*.html" \( -path "*email*" -o -path "*newsletter*" -o -path "*mail*template*" \) -not -path "*/node_modules/*" 2>/dev/null | head -40 | grep . || echo "No existing email templates"`
+run `find . -maxdepth 4 -name "*.html" \( -path "*email*" -o -path "*newsletter*" -o -path "*mail*template*" \) -not -path "*/node_modules/*" 2>/dev/null | head -40 | grep . || echo "No existing email templates"`
 
 **Mail-Related Dependencies**:
-!`grep -E "nodemailer|@sendgrid|sendgrid|mailgun|postmark|\"resend\"|@aws-sdk/client-ses|aws-sdk|mailchimp|mjml|react-email" package.json 2>/dev/null || echo "No mail dependencies detected"`
+run `grep -E "nodemailer|@sendgrid|sendgrid|mailgun|postmark|\"resend\"|@aws-sdk/client-ses|aws-sdk|mailchimp|mjml|react-email" package.json 2>/dev/null || echo "No mail dependencies detected"`
 
 ---
 

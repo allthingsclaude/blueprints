@@ -4,18 +4,20 @@ argument-hint: {PLAN_NAME} [optional: max-agents count]
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Parallelize Execution
 
 I'll analyze your plan or task, identify parallelization opportunities, and spawn multiple agents to work simultaneously.
 
 ## Current State
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
+**Branch**: run `git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Available Plans**:
-!`ls -1 tasks/plans/PLAN_*.md 2>/dev/null | tail -30 | grep . || echo "No plans found"`
+run `ls -1 tasks/plans/PLAN_*.md 2>/dev/null | tail -30 | grep . || echo "No plans found"`
 
 ---
 
@@ -65,10 +67,6 @@ The orchestrator agent will:
 The orchestrator picks the number of streams from the size of the work (see its heuristics); a max-agents count in the arguments caps it.
 
 ---
-
-**As a workflow (preferred)**: if the `Workflow` tool is available, run the saved workflow **`blueprints:streams`** instead of the orchestrator agent, with args `{ "plan": "{plan, if named}" }`, plus `"phase"` for a phase number, `"tasks"` for a task range and `"maxStreams"` for a max-agents count; for work described in words rather than a plan, pass `"description"` instead of `"plan"`. The orchestrator records the checks, installs new packages and splits the tasks into streams that never touch the same file; one `implement` (or `showcase`) agent per stream builds them in parallel; then the orchestrator finishes what crossed stream boundaries, runs typecheck, lint, the tests and the tasks' validation steps once on the combined result, fixes new failures (at most 2 rounds) and checks the tasks off. Wait for the completion notification — don't poll. Its result is the report: `status`, `done` tasks per stream, `notDone` with reasons (including the tasks of a stream that returned nothing), `checks` and `failing`, `fixes`, `conflicts`, plus `userTasks`, `choices`, `planChanges` and `blockers`. If `checkedOff` is false, check the `done` tasks off in the plan yourself.
-
-If the workflow isn't available or the run fails, launch the agent. If the run got as far as building (`git status` shows its changes), tell the agent the tasks may be partly built: check the diff first and finish what's missing rather than start over.
 
 Use the `Agent` tool to launch the parallelize orchestrator agent (subagent_type="parallelize") which will analyze the plan, partition work, spawn agents, and coordinate parallel execution. Pass along any max-agents count from the arguments.
 

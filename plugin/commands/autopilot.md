@@ -5,36 +5,38 @@ disable-model-invocation: true
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Autopilot Mode
 
 Full autonomous development loop. I'll take it from idea to committed code on a feature branch.
 
 ## Current State
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**Is Git Repo**: !`git rev-parse --is-inside-work-tree 2>/dev/null || echo "no"`
+**Is Git Repo**: run `git rev-parse --is-inside-work-tree 2>/dev/null || echo "no"`
 
-**Branch**: !`git branch --show-current 2>/dev/null || echo "(not a repo — will scan children)"`
+**Branch**: run `git branch --show-current 2>/dev/null || echo "(not a repo — will scan children)"`
 
 **Checkout** (this checkout's top level, then the main checkout — they differ in a linked worktree):
-!`git rev-parse --show-toplevel 2>/dev/null || echo "(not a repo)"`
-!`git worktree list --porcelain 2>/dev/null | head -1 || true`
+run `git rev-parse --show-toplevel 2>/dev/null || echo "(not a repo)"`
+run `git worktree list --porcelain 2>/dev/null | head -1 || true`
 
 **Git Status**:
-!`git status --short 2>/dev/null | head -40 | grep . || echo "(clean, or not a repo)"`
+run `git status --short 2>/dev/null | head -40 | grep . || echo "(clean, or not a repo)"`
 
 **Child Git Repos** (for multi-repo mode):
-!`find . -mindepth 2 -maxdepth 2 -name .git -type d 2>/dev/null || true`
+run `find . -mindepth 2 -maxdepth 2 -name .git -type d 2>/dev/null || true`
 
 **STATE.md** (header and plans):
-!`head -n 40 tasks/STATE.md 2>/dev/null || echo "No active plan"`
+run `head -n 40 tasks/STATE.md 2>/dev/null || echo "No active plan"`
 
 **Available Plans**:
-!`ls -1 tasks/plans/PLAN_*.md 2>/dev/null | tail -30 | grep . || echo "No plans found"`
+run `ls -1 tasks/plans/PLAN_*.md 2>/dev/null | tail -30 | grep . || echo "No plans found"`
 
 **Project Detection**:
-!`ls package.json tsconfig.json Cargo.toml go.mod pyproject.toml requirements.txt 2>/dev/null || echo "(no root-level project files — multi-repo likely)"`
+run `ls package.json tsconfig.json Cargo.toml go.mod pyproject.toml requirements.txt 2>/dev/null || echo "(no root-level project files — multi-repo likely)"`
 
 ---
 
@@ -270,14 +272,6 @@ Find the phase's line range from the heading list and count its unchecked tasks 
 
 Launch it with the `Agent` tool with the plan name and: "Execute Phase {N} only, then stop." (For a pass: "Execute only these tasks of Phase {N}: …, then stop." Add "Skip the phase's validation items" to every pass but the last.) Include any reference files from `tasks/references/` for showcase. **Multi-repo**: include the affected repos and their paths (the plan's file paths should already be prefixed with the repo name).
 
-**`parallelize` as a workflow**: if the `Workflow` tool is available, run the saved workflow **`blueprints:streams`** instead of the `parallelize` agent, with args `{ "plan": "{NN}_{NAME}", "phase": N, "updateState": false, "tests": false }` (4c runs the tests), plus `"context"` carrying what you'd tell the agent: this phase's `Decided`/`Provisional` notes, the tasks to skip (marked **(USER)**, or blocked by a `Needs your decision` note with `--full`), "don't touch `.claude/worktrees/` and leave it out of checks" while dispatched runs are going, and in multi-repo mode the repos and their paths. It splits the phase into streams, builds them in parallel, then finishes what crossed stream boundaries and typechecks, lints and fixes the combined result. Wait for the completion notification — don't poll. Then:
-- `checkedOff` is false → check the `done` tasks off in the plan yourself.
-- `notDone` tasks (including those of a stream that returned nothing) → launch the implement agent for just those tasks before committing, unless they are **(USER)** tasks or wait on a decision.
-- `blockers`, `userTasks`, `choices` and `planChanges` → handle them as in an agent's report, below.
-- Not `passing` → carry on to 4c; its checks and fixer rounds deal with it.
-
-If the workflow isn't available or the run fails, launch the `parallelize` agent; if the run got as far as building (`git status` shows its changes), tell the agent the tasks may be partly built: check the diff first and finish what's missing rather than start over.
-
 When the agent reports:
 - **Blockers** (including tasks marked **(USER)**, which agents leave to you) and **choices** the plan doesn't settle → follow **When to Ask**. If the user approves a step you can run (such as a paid run), launch the implement agent for just that task, saying the user approved it, and drop its **(USER)** mark. Move on to the next phase only when it doesn't depend on what's still open.
 - **Plan changes it proposed** → apply small ones to the plan (decide yourself); significant ones need the user.
@@ -311,18 +305,7 @@ git diff --name-only {BASE}...HEAD
 - `FILES`: the list above
 - `FRONTEND`: true if any file is UI code (`.tsx`, `.jsx`, `.vue`, `.svelte`, `.html`, `.css`, `.scss`, or under a components directory)
 
-#### 5b. Run the `preflight` Workflow (preferred)
-
-If the `Workflow` tool is available, run the saved workflow **`blueprints:preflight`** with args:
-```json
-{ "base": "{BASE}", "files": [...FILES], "frontend": true|false, "plan": "{NAME}",
-  "context": "Autopilot syncs CLAUDE.md (or the AGENTS.md it imports) and STATE.md after this review: don't report them as out of date." }
-```
-Multi-repo: one run per affected repo, adding `"repo": "{repo}"`. You may launch them together.
-
-The workflow runs in the background: `audit`, `secure`, `a11y` (UI changes only) and `test` review the range in parallel without editing; every finding gets an independent check; one fixer applies the confirmed findings and runs typecheck, lint and tests; each fix is rechecked (at most 2 rounds). Wait for the completion notification — don't poll. Its result lists `confirmed`, `dropped` (false positives), `unresolved`, `needsDecision`, and `changesMade`.
-
-#### 5c. Fallback (no Workflow tool, workflows disabled, or the run fails)
+#### 5c. Review in parallel
 
 1. In **one message**, launch these reviewers with the `Agent` tool so they run in parallel: `audit`, `secure`, `a11y` (only if `FRONTEND`), and `test`. Prompt each: "Review-only mode. Review the changes in `git diff {BASE}...HEAD`. Changed files: {FILES}. Follow your Review-Only Mode instructions. Autopilot syncs CLAUDE.md (or the AGENTS.md it imports) and STATE.md after this review: don't report them as out of date."
 2. Merge their findings, dropping duplicates (same file and line).

@@ -93,7 +93,6 @@ type(scope): concise description in imperative mood
 - Specific change 2
 - Specific change 3
 
-
 ```
 
 **Message Guidelines**:
@@ -111,12 +110,10 @@ feat(auth): add JWT refresh token rotation
 - Add refresh token family tracking to detect reuse
 - Store token lineage in Redis with 7-day TTL
 
-
 ```
 
 ```
 fix: prevent duplicate form submission on slow networks
-
 
 ```
 
@@ -126,7 +123,6 @@ chore: update dependencies and fix peer warnings
 - Bump next 14.1 → 14.2
 - Bump typescript 5.3 → 5.4
 - Add missing @types/node peer dependency
-
 
 ```
 
@@ -151,7 +147,6 @@ type(scope): description
 
 - change 1
 - change 2
-
 
 EOF
 )"

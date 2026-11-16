@@ -4,6 +4,8 @@ argument-hint: architecture | dependency | sequence | er | dataflow | component 
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Generate Diagrams
 
 I'll analyze your codebase and generate Mermaid diagrams that visualize architecture, dependencies, data flow, and more.
@@ -12,16 +14,16 @@ I'll analyze your codebase and generate Mermaid diagrams that visualize architec
 
 ## Current Context
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
 **Project**:
-!`head -10 package.json 2>/dev/null || echo "No package.json"`
+run `head -10 package.json 2>/dev/null || echo "No package.json"`
 
 **Structure**:
-!`ls -la src/ 2>/dev/null || echo "No src/ directory"`
+run `ls -la src/ 2>/dev/null || echo "No src/ directory"`
 
 **Existing Docs**:
-!`ls docs/ 2>/dev/null || echo "No docs/ directory"`
+run `ls docs/ 2>/dev/null || echo "No docs/ directory"`
 
 ---
 

@@ -4,22 +4,24 @@ argument-hint: design brief or leave empty for guided questionnaire
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Design — Marketing Asset Creation
 
 I'll create on-brand design and marketing assets — social media banners, ad creatives, email headers, OG images, and more.
 
 ## Current Context
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
 **Existing Brand Assets**:
-!`ls tailwind.config.* src/app/globals.css src/styles/*.css public/images/*.svg 2>/dev/null || echo "No brand files detected"`
+run `ls tailwind.config.* src/app/globals.css src/styles/*.css public/images/*.svg 2>/dev/null || echo "No brand files detected"`
 
 **Design Directory**:
-!`ls design/ 2>/dev/null || echo "No existing design directory"`
+run `ls design/ 2>/dev/null || echo "No existing design directory"`
 
 **Previous Brand Brief**:
-!`head -30 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
+run `head -30 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
 
 ---
 

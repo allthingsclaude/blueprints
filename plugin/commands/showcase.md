@@ -4,22 +4,24 @@ argument-hint: product/project name or description
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Showcase — Landing Page Design
 
 I'll design and build a high-end landing page with polished animations, micro-interactions, and visual craft worthy of an Awwwards feature.
 
 ## Current Context
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
 **Project Detection**:
-!`ls package.json tsconfig.json next.config.* vite.config.* astro.config.* tailwind.config.* 2>/dev/null || echo "No recognized project files"`
+run `ls package.json tsconfig.json next.config.* vite.config.* astro.config.* tailwind.config.* 2>/dev/null || echo "No recognized project files"`
 
 **Existing Pages**:
-!`find . -maxdepth 4 -type f \( -name "page.tsx" -o -name "page.jsx" -o -name "index.tsx" -o -name "index.jsx" -o -name "index.html" \) -not -path "*/node_modules/*" 2>/dev/null | head -40 | grep . || echo "None found"`
+run `find . -maxdepth 4 -type f \( -name "page.tsx" -o -name "page.jsx" -o -name "index.tsx" -o -name "index.jsx" -o -name "index.html" \) -not -path "*/node_modules/*" 2>/dev/null | head -40 | grep . || echo "None found"`
 
 **Reference Files** (images/videos provided):
-!`ls tasks/references/ 2>/dev/null || echo "No references found"`
+run `ls tasks/references/ 2>/dev/null || echo "No references found"`
 
 ---
 

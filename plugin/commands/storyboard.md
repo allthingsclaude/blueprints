@@ -4,6 +4,8 @@ argument-hint: <video-file-path> [optional: additional context]
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Video Storyboard Analysis
 
 I'll extract key frames from your video mockup and produce a structured interaction spec.
@@ -14,9 +16,9 @@ $ARGUMENTS
 
 ## Current Context
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**ffmpeg available**: !`which ffmpeg 2>/dev/null || echo "NOT FOUND"`
+**ffmpeg available**: run `which ffmpeg 2>/dev/null || echo "NOT FOUND"`
 
 ---
 

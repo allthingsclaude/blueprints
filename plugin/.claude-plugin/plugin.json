@@ -1,7 +1,7 @@
 {
   "name": "blueprints",
   "version": "0.11.1",
-  "description": "Plan, build, review and ship with Claude Code: commands, agents and workflows for planning, autonomous implementation, code review, research and on-brand design",
+  "description": "Plan, build, review and ship with Claude Code: commands and agents for planning, autonomous implementation, code review, research and on-brand design",
   "author": {
     "name": "Marko Radak",
     "url": "https://github.com/markoradak"
@@ -16,7 +16,6 @@
     "implementation",
     "code-review",
     "agents",
-    "workflows",
     "autopilot",
     "design"
   ]

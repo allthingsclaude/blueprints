@@ -4,6 +4,8 @@ argument-hint: package@version, "all", or migration description
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Migration Assistant
 
 I'll help you upgrade dependencies or migrate between framework versions safely.
@@ -12,18 +14,18 @@ I'll help you upgrade dependencies or migrate between framework versions safely.
 
 ## Current State
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
+**Branch**: run `git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Status**:
-!`git status --short 2>/dev/null || echo "Not a git repository"`
+run `git status --short 2>/dev/null || echo "Not a git repository"`
 
 **Current Dependencies**:
-!`head -40 package.json 2>/dev/null || echo "No package.json"`
+run `head -40 package.json 2>/dev/null || echo "No package.json"`
 
 **Lock File**:
-!`ls pnpm-lock.yaml yarn.lock bun.lockb package-lock.json 2>/dev/null || echo "No lock file found"`
+run `ls pnpm-lock.yaml yarn.lock bun.lockb package-lock.json 2>/dev/null || echo "No lock file found"`
 
 ---
 

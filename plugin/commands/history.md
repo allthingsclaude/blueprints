@@ -4,6 +4,8 @@ argument-hint: <file path> [optional: :function or symbol name]
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # File History
 
 Investigating the history of: **$ARGUMENTS**
@@ -12,31 +14,31 @@ Investigating the history of: **$ARGUMENTS**
 
 ## Context
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**File Exists**: !`f="$ARGUMENTS"; f="${f%%:*}"; f="${f%% *}"; ls "$f" 2>/dev/null || echo "File not found — check the path"`
+**File Exists**: run `f="$ARGUMENTS"; f="${f%%:*}"; f="${f%% *}"; ls "$f" 2>/dev/null || echo "File not found — check the path"`
 
-**File Size**: !`f="$ARGUMENTS"; f="${f%%:*}"; f="${f%% *}"; wc -l < "$f" 2>/dev/null || echo "N/A"`
+**File Size**: run `f="$ARGUMENTS"; f="${f%%:*}"; f="${f%% *}"; wc -l < "$f" 2>/dev/null || echo "N/A"`
 
 ## Git History
 
 **Full Log (following renames, newest first, capped at 150)**:
-!`f="$ARGUMENTS"; f="${f%%:*}"; f="${f%% *}"; git log --follow --format="%h|%an|%ar|%s" -- "$f" 2>/dev/null | head -150 | grep . || echo "No git history available"`
+run `f="$ARGUMENTS"; f="${f%%:*}"; f="${f%% *}"; git log --follow --format="%h|%an|%ar|%s" -- "$f" 2>/dev/null | head -150 | grep . || echo "No git history available"`
 
 **File Creation**:
-!`f="$ARGUMENTS"; f="${f%%:*}"; f="${f%% *}"; git log --follow --diff-filter=A --format="%h %an (%ar): %s" -- "$f" 2>/dev/null | tail -1 | grep . || echo "Unable to determine creation"`
+run `f="$ARGUMENTS"; f="${f%%:*}"; f="${f%% *}"; git log --follow --diff-filter=A --format="%h %an (%ar): %s" -- "$f" 2>/dev/null | tail -1 | grep . || echo "Unable to determine creation"`
 
 **Contributors (commits per author)**:
-!`f="$ARGUMENTS"; f="${f%%:*}"; f="${f%% *}"; git log --follow --format="%an" -- "$f" 2>/dev/null | sort | uniq -c | sort -rn | head -10 | grep . || echo "N/A"`
+run `f="$ARGUMENTS"; f="${f%%:*}"; f="${f%% *}"; git log --follow --format="%an" -- "$f" 2>/dev/null | sort | uniq -c | sort -rn | head -10 | grep . || echo "N/A"`
 
 **Recent Activity (last 30 days)**:
-!`f="$ARGUMENTS"; f="${f%%:*}"; f="${f%% *}"; git log --since="30 days ago" --follow --format="%h %s (%ar)" -- "$f" 2>/dev/null | head -30 | grep . || echo "No recent changes"`
+run `f="$ARGUMENTS"; f="${f%%:*}"; f="${f%% *}"; git log --since="30 days ago" --follow --format="%h %s (%ar)" -- "$f" 2>/dev/null | head -30 | grep . || echo "No recent changes"`
 
 **Change Frequency**:
-!`f="$ARGUMENTS"; f="${f%%:*}"; f="${f%% *}"; n=$(git log --follow --oneline -- "$f" 2>/dev/null | wc -l | tr -d ' '); first=$(git log --follow --format=%as -- "$f" 2>/dev/null | tail -1); last=$(git log -1 --format=%as -- "$f" 2>/dev/null); echo "$n commits (first: ${first:-n/a}, last: ${last:-n/a})"`
+run `f="$ARGUMENTS"; f="${f%%:*}"; f="${f%% *}"; n=$(git log --follow --oneline -- "$f" 2>/dev/null | wc -l | tr -d ' '); first=$(git log --follow --format=%as -- "$f" 2>/dev/null | tail -1); last=$(git log -1 --format=%as -- "$f" 2>/dev/null); echo "$n commits (first: ${first:-n/a}, last: ${last:-n/a})"`
 
 **Symbol History** (only when a `:symbol` is given):
-!`s="$ARGUMENTS"; case "$s" in *:*) f="${s%%:*}"; sym="${s#*:}"; sym="${sym%% *}"; git log -L ":$sym:$f" --format='%h %an %ar %s' 2>/dev/null | head -300 | grep . || echo "No history found for $sym in $f";; *) echo "(no symbol given)";; esac`
+run `s="$ARGUMENTS"; case "$s" in *:*) f="${s%%:*}"; sym="${s#*:}"; sym="${sym%% *}"; git log -L ":$sym:$f" --format='%h %an %ar %s' 2>/dev/null | head -300 | grep . || echo "No history found for $sym in $f";; *) echo "(no symbol given)";; esac`
 
 ---
 

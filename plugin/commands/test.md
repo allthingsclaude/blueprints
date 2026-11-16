@@ -4,18 +4,20 @@ argument-hint: optional: file pattern, test name, or "generate" for new tests
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Test Assistant
 
 I'll help you run tests, analyze failures, and generate missing test coverage.
 
 ## Current State
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
+**Branch**: run `git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Test Configuration**:
-!`ls -la vitest.config.* jest.config.* playwright.config.* 2>/dev/null || echo "No test config found"`
+run `ls -la vitest.config.* jest.config.* playwright.config.* 2>/dev/null || echo "No test config found"`
 
 ---
 

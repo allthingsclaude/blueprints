@@ -4,17 +4,19 @@ argument-hint: optional: specific task or focus area
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Load Handoff and Continue
 
 Loading the handoff document from your previous session.
 
 ## Handoff Document
 
-!`cat tasks/sessions/HANDOFF.md 2>/dev/null || echo "No handoff found — run /handoff first"`
+run `cat tasks/sessions/HANDOFF.md 2>/dev/null || echo "No handoff found — run /handoff first"`
 
 ## Active Plan (STATE.md header)
 
-!`head -n 40 tasks/STATE.md 2>/dev/null || echo "No active plan"`
+run `head -n 40 tasks/STATE.md 2>/dev/null || echo "No active plan"`
 
 ---
 

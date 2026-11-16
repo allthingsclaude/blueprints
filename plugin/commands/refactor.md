@@ -4,6 +4,8 @@ argument-hint: operation target (e.g., "rename:old:new", "extract:ComponentName"
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Refactor Assistant
 
 I'll help you safely restructure code — renaming, extracting, inlining, or moving — with validation after every change.
@@ -12,12 +14,12 @@ I'll help you safely restructure code — renaming, extracting, inlining, or mov
 
 ## Current State
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
+**Branch**: run `git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Status**:
-!`git status --short 2>/dev/null || echo "Not a git repository"`
+run `git status --short 2>/dev/null || echo "Not a git repository"`
 
 ---
 

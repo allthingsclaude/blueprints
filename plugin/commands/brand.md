@@ -4,38 +4,40 @@ argument-hint: brand description or leave empty for guided questionnaire
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Brand — Identity System
 
 I'll create or document a comprehensive brand identity system — colors, typography, voice, visual patterns, and design tokens — all captured in a structured brand guide.
 
 ## Current Context
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
 **Existing Brand Assets**:
-!`ls tailwind.config.* src/app/globals.css src/styles/*.css styles/*.css public/images/*.svg public/*.svg 2>/dev/null || echo "No brand files detected"`
+run `ls tailwind.config.* src/app/globals.css src/styles/*.css styles/*.css public/images/*.svg public/*.svg 2>/dev/null || echo "No brand files detected"`
 
 **Design Directory**:
-!`ls design/ 2>/dev/null || echo "No existing design directory"`
+run `ls design/ 2>/dev/null || echo "No existing design directory"`
 
 **Previous Brand Brief**:
-!`head -40 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
+run `head -40 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
 
 **CSS / Tailwind Config**:
-!`head -40 tailwind.config.* 2>/dev/null || echo "No Tailwind config"`
+run `head -40 tailwind.config.* 2>/dev/null || echo "No Tailwind config"`
 
 **Font Imports**:
-!`grep -rE "googleapis.com/css|next/font|@import.*font|@font-face|fontFamily" tailwind.config.* src/app/layout.tsx src/app/globals.css src/styles/*.css 2>/dev/null | head -40 | grep . || echo "No font declarations found"`
+run `grep -rE "googleapis.com/css|next/font|@import.*font|@font-face|fontFamily" tailwind.config.* src/app/layout.tsx src/app/globals.css src/styles/*.css 2>/dev/null | head -40 | grep . || echo "No font declarations found"`
 
 **Color Definitions**:
-!`grep -rE "#[0-9A-Fa-f]{3,8}\b|--color-|rgba?\(|hsl" src/app/globals.css tailwind.config.* styles/*.css src/styles/*.css 2>/dev/null | head -60 | grep . || echo "No color definitions found"`
+run `grep -rE "#[0-9A-Fa-f]{3,8}\b|--color-|rgba?\(|hsl" src/app/globals.css tailwind.config.* styles/*.css src/styles/*.css 2>/dev/null | head -60 | grep . || echo "No color definitions found"`
 
 **Logo Files**:
-!`ls public/images/logo* public/logo* public/images/icon* public/*.svg src/assets/*.svg 2>/dev/null || echo "No logo files found"`
+run `ls public/images/logo* public/logo* public/images/icon* public/*.svg src/assets/*.svg 2>/dev/null || echo "No logo files found"`
 
 **README / Package Info**:
-!`head -20 README.md 2>/dev/null || echo "No README"`
-!`head -10 package.json 2>/dev/null || echo "No package.json"`
+run `head -20 README.md 2>/dev/null || echo "No README"`
+run `head -10 package.json 2>/dev/null || echo "No package.json"`
 
 ---
 

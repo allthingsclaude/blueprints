@@ -4,6 +4,8 @@ argument-hint: optional: specific files or focus area
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Code Audit
 
 I'll perform a thorough review of your code changes before you commit.
@@ -12,12 +14,12 @@ I'll perform a thorough review of your code changes before you commit.
 
 ## Current Changes
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
+**Branch**: run `git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Status**:
-!`git status --short 2>/dev/null | head -40 | grep . || echo "Clean, or not a git repository"`
+run `git status --short 2>/dev/null | head -40 | grep . || echo "Clean, or not a git repository"`
 
 ---
 

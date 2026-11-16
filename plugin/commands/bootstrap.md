@@ -4,16 +4,18 @@ argument-hint: {NAME} [optional: additional context]
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Bootstrap New Project
 
 I'll create a comprehensive plan and executable bootstrap script for your new project.
 
 ## Current Session Context
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
 **Git Status**:
-!`git status --short 2>/dev/null | head -40 | grep . || echo "Clean, or not a git repository"`
+run `git status --short 2>/dev/null | head -40 | grep . || echo "Clean, or not a git repository"`
 
 ---
 

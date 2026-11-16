@@ -4,37 +4,39 @@ argument-hint: specific page or route or leave empty for all pages
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # OG — Open Graph Image Generation
 
 I'll generate on-brand Open Graph images for your pages — each a self-contained 1200x630 HTML file in `design/og/` with per-page content, plus a script that screenshots them to PNGs in `public/og/`.
 
 ## Current Context
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
 **Framework Detection**:
-!`ls next.config.* nuxt.config.* astro.config.* remix.config.* svelte.config.* vite.config.* angular.json 2>/dev/null || echo "No framework config detected"`
+run `ls next.config.* nuxt.config.* astro.config.* remix.config.* svelte.config.* vite.config.* angular.json 2>/dev/null || echo "No framework config detected"`
 
 **App Router Pages** (Next.js):
-!`find src/app -name "page.tsx" -o -name "page.jsx" -o -name "page.ts" -o -name "page.js" 2>/dev/null | head -60 | grep . || echo "No App Router pages"`
+run `find src/app -name "page.tsx" -o -name "page.jsx" -o -name "page.ts" -o -name "page.js" 2>/dev/null | head -60 | grep . || echo "No App Router pages"`
 
 **Pages Router** (Next.js/Nuxt):
-!`find src/pages pages -maxdepth 4 \( -name "*.tsx" -o -name "*.jsx" -o -name "*.vue" \) 2>/dev/null | head -40 | grep . || echo "No Pages Router files"`
+run `find src/pages pages -maxdepth 4 \( -name "*.tsx" -o -name "*.jsx" -o -name "*.vue" \) 2>/dev/null | head -40 | grep . || echo "No Pages Router files"`
 
 **Astro Pages**:
-!`find src/pages -name "*.astro" -o -name "*.md" -o -name "*.mdx" 2>/dev/null | head -60 | grep . || echo "No Astro pages"`
+run `find src/pages -name "*.astro" -o -name "*.md" -o -name "*.mdx" 2>/dev/null | head -60 | grep . || echo "No Astro pages"`
 
 **Static HTML**:
-!`find . -maxdepth 3 -name "*.html" ! -path "./node_modules/*" ! -path "./design/*" ! -path "./public/og/*" ! -path "./.next/*" ! -path "./dist/*" 2>/dev/null | head -60 | grep . || echo "No static HTML files"`
+run `find . -maxdepth 3 -name "*.html" ! -path "./node_modules/*" ! -path "./design/*" ! -path "./public/og/*" ! -path "./.next/*" ! -path "./dist/*" 2>/dev/null | head -60 | grep . || echo "No static HTML files"`
 
 **Existing OG Images**:
-!`find public/og design/og -maxdepth 1 \( -name "*.png" -o -name "*.html" \) 2>/dev/null | head -40 | grep . || echo "No existing OG images"`
+run `find public/og design/og -maxdepth 1 \( -name "*.png" -o -name "*.html" \) 2>/dev/null | head -40 | grep . || echo "No existing OG images"`
 
 **Brand Assets**:
-!`head -30 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
+run `head -30 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
 
 **Metadata / SEO**:
-!`grep -rn "openGraph\|og:image\|og:title\|og:description\|meta.*property.*og:" src/ pages/ app/ 2>/dev/null | head -40 | grep . || echo "No existing OG meta tags found"`
+run `grep -rn "openGraph\|og:image\|og:title\|og:description\|meta.*property.*og:" src/ pages/ app/ 2>/dev/null | head -40 | grep . || echo "No existing OG meta tags found"`
 
 ---
 

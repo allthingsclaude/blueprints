@@ -4,16 +4,18 @@ argument-hint: file path, component name, feature, or concept to explain
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Explain Code
 
 I'll provide a detailed, educational explanation of the code, architecture, or feature you're interested in.
 
 ## Current Context
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
 **Project Structure**:
-!`ls -la src/ 2>/dev/null || echo "No src/ directory"`
+run `ls -la src/ 2>/dev/null || echo "No src/ directory"`
 
 ---
 

@@ -4,13 +4,15 @@ argument-hint: <what you want to see> [optional: path/to/reference.png]
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Image Generation
 
 $ARGUMENTS
 
 ## API Keys (presence only — values are never printed)
 
-!`printf 'GEMINI_API_KEY=%s FAL_KEY=%s\n' "$([ -n "$GEMINI_API_KEY" ] && echo set || echo unset)" "$([ -n "$FAL_KEY" ] && echo set || echo unset)" 2>/dev/null || echo "Key check unavailable"`
+run `printf 'GEMINI_API_KEY=%s FAL_KEY=%s\n' "$([ -n "$GEMINI_API_KEY" ] && echo set || echo unset)" "$([ -n "$FAL_KEY" ] && echo set || echo unset)" 2>/dev/null || echo "Key check unavailable"`
 
 ---
 

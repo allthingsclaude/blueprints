@@ -4,6 +4,8 @@ argument-hint: optional: file/folder path, or focus area like "deps", "auth", "a
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Security Scan
 
 I'll perform a focused security audit of your codebase, checking for vulnerabilities, exposed secrets, and insecure patterns.
@@ -12,15 +14,15 @@ I'll perform a focused security audit of your codebase, checking for vulnerabili
 
 ## Current State
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
+**Branch**: run `git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Status**:
-!`git status --short 2>/dev/null | head -40 | grep . || echo "Clean, or not a git repository"`
+run `git status --short 2>/dev/null | head -40 | grep . || echo "Clean, or not a git repository"`
 
 **Dependency Manifests**:
-!`ls package.json requirements.txt go.mod Cargo.toml pyproject.toml 2>/dev/null || echo "No manifest found"`
+run `ls package.json requirements.txt go.mod Cargo.toml pyproject.toml 2>/dev/null || echo "No manifest found"`
 
 ---
 
@@ -53,8 +55,6 @@ The security agent will:
 2. **Fix critical issues** — Fix critical findings with validation
 3. **Create fix plan** — Generate `tasks/plans/PLAN_SECURITY_FIXES.md`
 4. **Fix all** — Work through all findings by priority
-
-**Whole codebase or a folder, as a workflow**: with no argument, a focus area (`auth`, `api`, `secrets`) or a folder path, and the `Workflow` tool available, run the saved workflow **`blueprints:sweep`** instead of the agent, with args `{ "kinds": ["secure"] }`, plus `"scope"` for a focus area and `"paths"` for a folder. It splits the code into areas and scans them in parallel (one more scanner covers dependencies and repo-level config), and a separate agent checks every finding. It changes nothing. Wait for the completion notification, then show its result as the report: the `confirmed` findings grouped by severity with their ids; `unverified` ones separately, flagged as unchecked; how many were `dropped` as false positives; and any `missingScanners` (areas that weren't scanned), `skipped` areas and `leftOut` count. Then continue with **When the agent returns**, offering the options above for those findings. For `deps`, a single file, or when the workflow isn't available or the run fails, launch the agent:
 
 Use the `Agent` tool to launch the secure agent (subagent_type="secure") which will perform a comprehensive security analysis and provide actionable remediation guidance.
 

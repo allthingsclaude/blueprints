@@ -4,31 +4,33 @@ argument-hint: copy brief or leave empty for guided questionnaire
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Copy — On-Brand Marketing Copywriting
 
 I'll write on-brand marketing copy — social captions, ad copy, email subject lines, landing page headlines, product descriptions, and more — all grounded in your product's actual voice.
 
 ## Current Context
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
 **Existing Brand Brief**:
-!`head -40 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
+run `head -40 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
 
 **Project Identity**:
-!`head -30 README.md 2>/dev/null || echo "No README found"`
+run `head -30 README.md 2>/dev/null || echo "No README found"`
 
 **Package Description**:
-!`head -10 package.json 2>/dev/null || echo "No package.json found"`
+run `head -10 package.json 2>/dev/null || echo "No package.json found"`
 
 **Existing Copy & Messaging**:
-!`grep -rh 'content=\|<title>\|<meta name=.description' src/app/layout.tsx src/app/page.tsx index.html 2>/dev/null || echo "No meta/title tags detected"`
+run `grep -rh 'content=\|<title>\|<meta name=.description' src/app/layout.tsx src/app/page.tsx index.html 2>/dev/null || echo "No meta/title tags detected"`
 
 **Landing Page Copy**:
-!`grep -rh "<h1\|<h2\|<p class.*hero\|<p class.*subtitle\|<p class.*tagline" src/app/page.tsx src/components/Hero.tsx src/components/Landing.tsx index.html 2>/dev/null || echo "No landing page copy detected"`
+run `grep -rh "<h1\|<h2\|<p class.*hero\|<p class.*subtitle\|<p class.*tagline" src/app/page.tsx src/components/Hero.tsx src/components/Landing.tsx index.html 2>/dev/null || echo "No landing page copy detected"`
 
 **Design Directory**:
-!`ls design/ 2>/dev/null || echo "No existing design directory"`
+run `ls design/ 2>/dev/null || echo "No existing design directory"`
 
 ---
 

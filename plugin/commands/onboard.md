@@ -4,6 +4,8 @@ argument-hint: optional: focus area like "backend", "frontend", "api", or "contr
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Generate Onboarding Guide
 
 I'll analyze your project and generate a comprehensive onboarding guide for new developers.
@@ -12,23 +14,23 @@ I'll analyze your project and generate a comprehensive onboarding guide for new 
 
 ## Current Context
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
 **Project**:
-!`head -15 package.json 2>/dev/null || echo "No package.json"`
+run `head -15 package.json 2>/dev/null || echo "No package.json"`
 
 **Structure**:
-!`ls -la`
+run `ls -la`
 
 **Git Info**:
-!`git log --oneline -5 2>/dev/null || echo "No git history"`
-!`git branch -a 2>/dev/null | head -20 | grep . || echo "Not a git repository"`
+run `git log --oneline -5 2>/dev/null || echo "No git history"`
+run `git branch -a 2>/dev/null | head -20 | grep . || echo "Not a git repository"`
 
 **Existing Docs**:
-!`ls README* CONTRIBUTING* CLAUDE.md docs/ 2>/dev/null || echo "No README, CONTRIBUTING, CLAUDE.md or docs/ found"`
+run `ls README* CONTRIBUTING* CLAUDE.md docs/ 2>/dev/null || echo "No README, CONTRIBUTING, CLAUDE.md or docs/ found"`
 
 **Dev Scripts**:
-!`grep -A 20 '"scripts"' package.json 2>/dev/null || echo "No package.json"`
+run `grep -A 20 '"scripts"' package.json 2>/dev/null || echo "No package.json"`
 
 ---
 

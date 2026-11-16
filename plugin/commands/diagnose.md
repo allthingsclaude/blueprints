@@ -4,21 +4,23 @@ argument-hint: error message, file path, or behavior description
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Diagnose Assistant
 
 I'll systematically investigate and diagnose the issue you're experiencing.
 
 ## Current State
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
+**Branch**: run `git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Recent Changes** (potential cause):
-!`git log --oneline -5 2>/dev/null || echo "No git history"`
+run `git log --oneline -5 2>/dev/null || echo "No git history"`
 
 **Modified Files**:
-!`git status --short 2>/dev/null || echo "Not a git repository"`
+run `git status --short 2>/dev/null || echo "Not a git repository"`
 
 ---
 

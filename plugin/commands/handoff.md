@@ -4,25 +4,27 @@ argument-hint: optional: focus area or notes
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Generate Session Handoff
 
 I'll create a comprehensive handoff document to capture the current state of your work.
 
 ## Current Session Context
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
 **Git Status**:
-!`git status --short 2>/dev/null | head -40 | grep . || echo "Clean, or not a git repository"`
+run `git status --short 2>/dev/null | head -40 | grep . || echo "Clean, or not a git repository"`
 
 **Recent Commits** (last 5):
-!`git log --oneline -5 2>/dev/null || echo "No git history"`
+run `git log --oneline -5 2>/dev/null || echo "No git history"`
 
 **Unstaged Changes**:
-!`git diff --stat 2>/dev/null | tail -25 | grep . || echo "No changes"`
+run `git diff --stat 2>/dev/null | tail -25 | grep . || echo "No changes"`
 
 **Staged Changes**:
-!`git diff --cached --stat 2>/dev/null | tail -25 | grep . || echo "No changes"`
+run `git diff --cached --stat 2>/dev/null | tail -25 | grep . || echo "No changes"`
 
 ---
 

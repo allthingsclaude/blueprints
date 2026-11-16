@@ -4,6 +4,8 @@ argument-hint: {NAME} [optional: starting phase or task]
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Autonomous Plan Implementation
 
 I'll launch the implementation agent to **autonomously execute** your plan.
@@ -17,11 +19,11 @@ $ARGUMENTS
 ## Available Plans
 
 **Plans in tasks/plans/**:
-!`ls -1 tasks/plans/PLAN_*.md 2>/dev/null | tail -30 | grep . || echo "No plans found"`
+run `ls -1 tasks/plans/PLAN_*.md 2>/dev/null | tail -30 | grep . || echo "No plans found"`
 
-**Current Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
+**Current Branch**: run `git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
 ---
 

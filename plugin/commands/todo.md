@@ -4,6 +4,8 @@ argument-hint: optional: directory, file, or keyword to filter
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # TODO Scanner
 
 Scanning the codebase for code markers and annotations.
@@ -12,25 +14,25 @@ Scanning the codebase for code markers and annotations.
 
 ## Current State
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**Git Root**: !`git rev-parse --show-toplevel 2>/dev/null || echo "Not a git repository"`
+**Git Root**: run `git rev-parse --show-toplevel 2>/dev/null || echo "Not a git repository"`
 
 ## Marker Scan
 
 **Marker counts per file** (all tiers):
-!`git grep -c -w -E 'FIXME|HACK|XXX|TODO|TASK|TEMP|DEPRECATED|NOTE|WARN' -- ':!node_modules' 2>/dev/null | sort -t: -k2 -rn | head -40 | grep . || echo "No markers found"`
+run `git grep -c -w -E 'FIXME|HACK|XXX|TODO|TASK|TEMP|DEPRECATED|NOTE|WARN' -- ':!node_modules' 2>/dev/null | sort -t: -k2 -rn | head -40 | grep . || echo "No markers found"`
 
 Each list below is capped at 200 lines; use the counts above for totals.
 
 **High Priority (FIXME, HACK, XXX)**:
-!`git grep -n -w -E 'FIXME|HACK|XXX' -- ':!node_modules' 2>/dev/null | head -200 | grep . || echo "No high-priority markers found"`
+run `git grep -n -w -E 'FIXME|HACK|XXX' -- ':!node_modules' 2>/dev/null | head -200 | grep . || echo "No high-priority markers found"`
 
 **Standard (TODO, TASK, TEMP, DEPRECATED)**:
-!`git grep -n -w -E 'TODO|TASK|TEMP|DEPRECATED' -- ':!node_modules' 2>/dev/null | head -200 | grep . || echo "No standard markers found"`
+run `git grep -n -w -E 'TODO|TASK|TEMP|DEPRECATED' -- ':!node_modules' 2>/dev/null | head -200 | grep . || echo "No standard markers found"`
 
 **Informational (NOTE, WARN)**:
-!`git grep -n -w -E 'NOTE|WARN' -- ':!node_modules' 2>/dev/null | head -200 | grep . || echo "No informational markers found"`
+run `git grep -n -w -E 'NOTE|WARN' -- ':!node_modules' 2>/dev/null | head -200 | grep . || echo "No informational markers found"`
 
 ## User Filter
 

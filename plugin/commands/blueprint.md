@@ -4,16 +4,18 @@ argument-hint: {NAME} [optional: additional context]
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Create Plan Document
 
 I'll create a structured plan document based on our conversation findings.
 
 ## Current Session Context
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
 **Git Status**:
-!`git status --short 2>/dev/null | head -40 | grep . || echo "Clean, or not a git repository"`
+run `git status --short 2>/dev/null | head -40 | grep . || echo "Clean, or not a git repository"`
 
 ---
 

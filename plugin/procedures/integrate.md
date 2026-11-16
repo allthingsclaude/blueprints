@@ -98,7 +98,7 @@ If nothing was merged, skip to the report.
 
 ## 6. Review Everything Merged (`--review` only)
 
-If the `Workflow` tool is available, run the saved workflow **`blueprints:preflight`** with `{ "base": "{START}", "files": [git diff --name-only {START}...HEAD], "frontend": true|false, "plan": "integration of {plans}", "context": "CLAUDE.md (or the AGENTS.md it imports) and STATE.md are synced after this review: don't report them as out of date." }` and wait for it to finish. Otherwise, launch the `audit` and `test` agents together with "Review-only mode. Review the changes in `git diff {START}...HEAD`. CLAUDE.md (or the AGENTS.md it imports) and STATE.md are synced after this review: don't report them as out of date." and give their confirmed findings to one fixer (`subagent_type: "blueprints:implement"`, as a direct task). Commit any fixes with the commit agent.
+Launch the `audit` and `test` agents together with "Review-only mode. Review the changes in `git diff {START}...HEAD`. CLAUDE.md (or the AGENTS.md it imports) and STATE.md are synced after this review: don't report them as out of date." and give their confirmed findings to one fixer (`subagent_type: "blueprints:implement"`, as a direct task). Commit any fixes with the commit agent.
 
 ## 7. Clean Up
 

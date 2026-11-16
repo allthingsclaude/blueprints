@@ -5,28 +5,30 @@ disable-model-invocation: true
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Integrate Dispatched Plans
 
 I'll merge the finished `/dispatch` runs into the branch they started from, one at a time, testing after each merge. Then I'll sync CLAUDE.md and STATE.md once and remove the worktrees. (`/autopilot` offers the same when it finds finished runs.)
 
 ## Current State
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**Branch**: !`git branch --show-current 2>/dev/null || echo "(not a git repo)"`
+**Branch**: run `git branch --show-current 2>/dev/null || echo "(not a git repo)"`
 
 **Checkout** (this checkout's top level, then the main checkout — they differ in a linked worktree):
-!`git rev-parse --show-toplevel 2>/dev/null || echo "(not a repo)"`
-!`git worktree list --porcelain 2>/dev/null | head -1 || true`
+run `git rev-parse --show-toplevel 2>/dev/null || echo "(not a repo)"`
+run `git worktree list --porcelain 2>/dev/null | head -1 || true`
 
 **Git Status**:
-!`git status --short 2>/dev/null | head -20 | grep . || echo "(clean, or not a repo)"`
+run `git status --short 2>/dev/null | head -20 | grep . || echo "(clean, or not a repo)"`
 
 **Worktrees**:
-!`git worktree list 2>/dev/null | head -20 || true`
+run `git worktree list 2>/dev/null | head -20 || true`
 
 **STATE.md** (header and plans):
-!`head -n 40 tasks/STATE.md 2>/dev/null || echo "No STATE.md"`
+run `head -n 40 tasks/STATE.md 2>/dev/null || echo "No STATE.md"`
 
 ---
 

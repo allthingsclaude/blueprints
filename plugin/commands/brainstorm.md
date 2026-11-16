@@ -4,6 +4,8 @@ argument-hint: topic or context
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Brainstorming Mode
 
 You are now in **BRAINSTORMING MODE**. Your goal is to explore ideas, discuss approaches, and think through solutions WITHOUT implementing anything.
@@ -18,10 +20,10 @@ This is pure ideation. We're thinking, not doing.
 Before brainstorming, quickly assess the current project:
 
 **Project Detection**:
-!`ls package.json tsconfig.json Cargo.toml go.mod pyproject.toml requirements.txt composer.json Gemfile pom.xml build.gradle mix.exs 2>/dev/null || echo "No recognized project files"`
+run `ls package.json tsconfig.json Cargo.toml go.mod pyproject.toml requirements.txt composer.json Gemfile pom.xml build.gradle mix.exs 2>/dev/null || echo "No recognized project files"`
 
 **Source Files**:
-!`find . -maxdepth 3 -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.py" -o -name "*.rs" -o -name "*.go" -o -name "*.java" -o -name "*.rb" -o -name "*.ex" -o -name "*.php" \) 2>/dev/null | head -60 | grep . || echo "None found"`
+run `find . -maxdepth 3 -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.py" -o -name "*.rs" -o -name "*.go" -o -name "*.java" -o -name "*.rb" -o -name "*.ex" -o -name "*.php" \) 2>/dev/null | head -60 | grep . || echo "None found"`
 
 **Is this an empty/new project?** If there are fewer than 5 source files and no meaningful project configuration, this is likely a **new project**. In that case:
 - Mention to the user that this looks like a new project and brainstorming is a great starting point

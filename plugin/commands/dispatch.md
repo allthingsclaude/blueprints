@@ -5,6 +5,8 @@ disable-model-invocation: true
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Dispatch Plans in Parallel
 
 I'll check which plans can safely run side by side, settle what each run will need from you, give each plan its own git worktree and branch, and start `/autopilot` in each. The runs don't wait for approvals: what only you can do is set aside and listed when they finish. Then `/autopilot` (or `/integrate`) merges them back.
@@ -13,30 +15,30 @@ I'll check which plans can safely run side by side, settle what each run will ne
 
 ## Current State
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**Branch**: !`git branch --show-current 2>/dev/null || echo "(not a git repo)"`
+**Branch**: run `git branch --show-current 2>/dev/null || echo "(not a git repo)"`
 
 **Checkout** (this checkout's top level, then the main checkout — they differ in a linked worktree):
-!`git rev-parse --show-toplevel 2>/dev/null || echo "(not a repo)"`
-!`git worktree list --porcelain 2>/dev/null | head -1 || true`
+run `git rev-parse --show-toplevel 2>/dev/null || echo "(not a repo)"`
+run `git worktree list --porcelain 2>/dev/null | head -1 || true`
 
 **Git Status**:
-!`git status --short 2>/dev/null | head -20 | grep . || echo "(clean, or not a repo)"`
+run `git status --short 2>/dev/null | head -20 | grep . || echo "(clean, or not a repo)"`
 
 **Worktrees**:
-!`git worktree list 2>/dev/null | head -20 || true`
+run `git worktree list 2>/dev/null | head -20 || true`
 
 **STATE.md** (header and plans):
-!`head -n 40 tasks/STATE.md 2>/dev/null || echo "No STATE.md"`
+run `head -n 40 tasks/STATE.md 2>/dev/null || echo "No STATE.md"`
 
 **Available Plans**:
-!`ls -1 tasks/plans/PLAN_*.md 2>/dev/null | tail -30 | grep . || echo "No plans found"`
+run `ls -1 tasks/plans/PLAN_*.md 2>/dev/null | tail -30 | grep . || echo "No plans found"`
 
-**Conventions**: !`ls tasks/CONVENTIONS.md 2>/dev/null || echo "missing"`
+**Conventions**: run `ls tasks/CONVENTIONS.md 2>/dev/null || echo "missing"`
 
 **.worktreeinclude**:
-!`head -20 .worktreeinclude 2>/dev/null | grep . || echo "(none)"`
+run `head -20 .worktreeinclude 2>/dev/null | grep . || echo "(none)"`
 
 ---
 

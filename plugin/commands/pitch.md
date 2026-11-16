@@ -4,28 +4,30 @@ argument-hint: pitch topic/audience or leave empty for guided questionnaire
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Pitch — Presentation Deck Creation
 
 I'll create an on-brand, self-contained HTML presentation deck with keyboard navigation, slide transitions, and speaker notes — ready to present from any browser.
 
 ## Current Context
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
 **Existing Brand Brief**:
-!`head -40 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
+run `head -40 design/brand-brief.md 2>/dev/null || echo "No brand brief yet"`
 
 **Project Identity**:
-!`head -30 README.md 2>/dev/null || echo "No README found"`
+run `head -30 README.md 2>/dev/null || echo "No README found"`
 
 **Package Description**:
-!`head -10 package.json 2>/dev/null || echo "No package.json found"`
+run `head -10 package.json 2>/dev/null || echo "No package.json found"`
 
 **Product Features & Stats**:
-!`grep -rhE "<h2|<h3|<strong|features|pricing|stats|metric" --include="*.tsx" --include="*.jsx" --include="README.md" src app components README.md 2>/dev/null | head -40 | grep . || echo "No product features detected"`
+run `grep -rhE "<h2|<h3|<strong|features|pricing|stats|metric" --include="*.tsx" --include="*.jsx" --include="README.md" src app components README.md 2>/dev/null | head -40 | grep . || echo "No product features detected"`
 
 **Design Directory**:
-!`ls design/ 2>/dev/null || echo "No existing design directory"`
+run `ls design/ 2>/dev/null || echo "No existing design directory"`
 
 ---
 

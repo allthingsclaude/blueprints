@@ -5,6 +5,8 @@ author: "@markoradak"
 disable-model-invocation: true
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Release
 
 I'll orchestrate a complete release for your project — detecting existing release scripts and tooling first.
@@ -13,28 +15,28 @@ I'll orchestrate a complete release for your project — detecting existing rele
 
 ## Current State
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
+**Branch**: run `git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Status**:
-!`git status --short 2>/dev/null | head -40 | grep . || echo "Clean (or not a git repository)"`
+run `git status --short 2>/dev/null | head -40 | grep . || echo "Clean (or not a git repository)"`
 
 **Current Version**:
-!`grep '"version"' package.json 2>/dev/null || grep '^version' Cargo.toml 2>/dev/null || grep '^version' pyproject.toml 2>/dev/null || echo "Could not detect version"`
+run `grep '"version"' package.json 2>/dev/null || grep '^version' Cargo.toml 2>/dev/null || grep '^version' pyproject.toml 2>/dev/null || echo "Could not detect version"`
 
 **Latest Tags**:
-!`git tag --sort=-version:refname 2>/dev/null | head -5 | grep . || echo "No tags found"`
+run `git tag --sort=-version:refname 2>/dev/null | head -5 | grep . || echo "No tags found"`
 
-**Last Tag**: !`git describe --tags --abbrev=0 2>/dev/null || echo "(no tags)"`
+**Last Tag**: run `git describe --tags --abbrev=0 2>/dev/null || echo "(no tags)"`
 
 **Recent Commits** (the ones since the last tag are what this release ships; with no tag, all of them):
-!`git log --oneline --decorate -100 2>/dev/null || echo "No git history"`
+run `git log --oneline --decorate -100 2>/dev/null || echo "No git history"`
 
 **Release Scripts Detected**:
-!`grep -E '"[^"]*(release|version|bump|publish)[^"]*"[[:space:]]*:' package.json 2>/dev/null | head -20 | grep . || echo "None in package.json"`
-!`ls .release-it.* .changeset/ .versionrc* lerna.json .releaserc* release.config.* 2>/dev/null || echo "No release tool configs found"`
-!`ls scripts/release* scripts/publish* scripts/version* Makefile 2>/dev/null || echo "No release scripts found"`
+run `grep -E '"[^"]*(release|version|bump|publish)[^"]*"[[:space:]]*:' package.json 2>/dev/null | head -20 | grep . || echo "None in package.json"`
+run `ls .release-it.* .changeset/ .versionrc* lerna.json .releaserc* release.config.* 2>/dev/null || echo "No release tool configs found"`
+run `ls scripts/release* scripts/publish* scripts/version* Makefile 2>/dev/null || echo "No release scripts found"`
 
 ---
 

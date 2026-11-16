@@ -4,6 +4,8 @@ argument-hint: readme | api | architecture | file path or component to document
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Generate Documentation
 
 I'll analyze your codebase and generate or update documentation.
@@ -12,14 +14,14 @@ I'll analyze your codebase and generate or update documentation.
 
 ## Current Context
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
 **Project**:
-!`ls README* 2>/dev/null || echo "No README found"`
-!`ls docs/ 2>/dev/null || echo "No docs/ directory"`
+run `ls README* 2>/dev/null || echo "No README found"`
+run `ls docs/ 2>/dev/null || echo "No docs/ directory"`
 
 **Existing Docs**:
-!`find . -maxdepth 3 -name "*.md" -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null | head -60 | grep . || echo "None found"`
+run `find . -maxdepth 3 -name "*.md" -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null | head -60 | grep . || echo "None found"`
 
 ---
 

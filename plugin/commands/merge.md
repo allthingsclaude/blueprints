@@ -4,6 +4,8 @@ author: "@markoradak"
 disable-model-invocation: true
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Merge into Parent Branch
 
 I'll detect which branch the current branch was created from, then merge into it.
@@ -12,15 +14,15 @@ I'll detect which branch the current branch was created from, then merge into it
 
 ## Current State
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**Current Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
+**Current Branch**: run `git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Status**:
-!`git status --short 2>/dev/null || echo "Not a git repository"`
+run `git status --short 2>/dev/null || echo "Not a git repository"`
 
 **Uncommitted Changes**:
-!`git diff --stat 2>/dev/null || echo "No changes"`
+run `git diff --stat 2>/dev/null || echo "No changes"`
 
 ---
 

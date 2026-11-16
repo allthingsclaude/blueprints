@@ -4,6 +4,8 @@ argument-hint: optional: "imports" | "dead-code" | "types" | "todos" | focus are
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Code Cleanup
 
 I'll scan your codebase for dead code, unused imports, and technical debt.
@@ -12,12 +14,12 @@ I'll scan your codebase for dead code, unused imports, and technical debt.
 
 ## Current State
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
+**Branch**: run `git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Files to Analyze**:
-!`find . -maxdepth 5 \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \) -not -path "*/node_modules/*" 2>/dev/null | wc -l | tr -d " " || echo "0"` source files
+run `find . -maxdepth 5 \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \) -not -path "*/node_modules/*" 2>/dev/null | wc -l | tr -d " " || echo "0"` source files
 
 ---
 
@@ -35,8 +37,6 @@ The cleanup agent will:
 - Generate a structured report with file:line references
 - Offer auto-fix for safe changes (with your approval)
 - Validate that nothing breaks after cleanup
-
-**Whole codebase or a folder, as a workflow**: unless the argument is a single file, and if the `Workflow` tool is available, run the saved workflow **`blueprints:sweep`** instead of the agent, with args `{ "kinds": ["cleanup"] }`, plus `"scope"` for a category or focus (`imports`, `dead-code`, `types`, `todos`, or words) and `"paths"` for a folder. It runs the unused-code tooling once, scans the code area by area in parallel, and has a separate agent check every finding (above all that "unused" code really has no references anywhere). It changes nothing. Wait for the completion notification, then show its result as the report: the `confirmed` findings grouped by category, with whether each is auto-fixable, with their ids; `unverified` ones separately, flagged as unchecked; how many were `dropped` as false positives; and any `missingScanners` (areas that weren't scanned), `skipped` areas and `leftOut` count. Ask which to apply with `AskUserQuestion`, then relaunch the agent as below, naming the ids and including the findings (e.g. "apply CLN-1, CLN-4 from this report; skip rescanning"). For a single file, or when the workflow isn't available or the run fails, launch the agent:
 
 Use the `Agent` tool to launch the cleanup agent (subagent_type="cleanup") with the focus area and any additional context from arguments.
 

@@ -4,6 +4,8 @@ argument-hint: optional: timeframe like "3 days" or "this week"
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Standup Summary
 
 Generating a standup summary from recent activity.
@@ -12,26 +14,26 @@ Generating a standup summary from recent activity.
 
 ## Recent Activity
 
-**Current Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
+**Current Branch**: run `git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
-**Author**: !`git config --get user.name 2>/dev/null || echo "Unknown"`
+**Author**: run `git config --get user.name 2>/dev/null || echo "Unknown"`
 
-**Email**: !`git config --get user.email 2>/dev/null || echo "Unknown"`
+**Email**: run `git config --get user.email 2>/dev/null || echo "Unknown"`
 
 **Commits (last 48 hours, all branches; yours are the ones with the email above)**:
-!`git log --all --since="48 hours ago" --format="%h %ae %s (%ar)" 2>/dev/null | head -100 | grep . || echo "No recent commits"`
+run `git log --all --since="48 hours ago" --format="%h %ae %s (%ar)" 2>/dev/null | head -100 | grep . || echo "No recent commits"`
 
 **Uncommitted Changes**:
-!`git diff --stat 2>/dev/null | tail -25 | grep . || echo "None"`
+run `git diff --stat 2>/dev/null | tail -25 | grep . || echo "None"`
 
 **Staged Changes**:
-!`git diff --cached --stat 2>/dev/null | tail -25 | grep . || echo "None"`
+run `git diff --cached --stat 2>/dev/null | tail -25 | grep . || echo "None"`
 
 **Stashed Work**:
-!`git stash list 2>/dev/null | head -10 | grep . || echo "No stashes"`
+run `git stash list 2>/dev/null | head -10 | grep . || echo "No stashes"`
 
 **Active Plan** (STATE.md header and plans):
-!`head -n 40 tasks/STATE.md 2>/dev/null || echo "No active plan"`
+run `head -n 40 tasks/STATE.md 2>/dev/null || echo "No active plan"`
 
 **Next Unchecked Tasks in the Active Plan**: if the header above names a plan `**File**`, list its first unchecked tasks with `grep -n -m 8 -E '^[[:space:]]*([0-9]+\.|[-*]) \[ \]' {plan file}`.
 

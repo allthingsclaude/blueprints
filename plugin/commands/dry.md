@@ -4,6 +4,8 @@ argument-hint: optional: file/folder path, "functions" | "components" | "hooks" 
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # DRY Optimization
 
 I'll find and eliminate DRY violations across your codebase while guaranteeing identical behavior.
@@ -12,15 +14,15 @@ I'll find and eliminate DRY violations across your codebase while guaranteeing i
 
 ## Current State
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
+**Branch**: run `git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Status**:
-!`git status --short 2>/dev/null || echo "Not a git repository"`
+run `git status --short 2>/dev/null || echo "Not a git repository"`
 
 **Files to Analyze**:
-!`find . -maxdepth 5 \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \) -not -path "*/node_modules/*" 2>/dev/null | wc -l | tr -d " " || echo "0"` source files
+run `find . -maxdepth 5 \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" \) -not -path "*/node_modules/*" 2>/dev/null | wc -l | tr -d " " || echo "0"` source files
 
 ---
 
@@ -44,8 +46,6 @@ The DRY agent will:
 - No argument → Full source scan
 - `functions` / `components` / `hooks` / `types` / `constants` → Category-specific scan
 - File/folder path → Scoped deep scan
-
-**Whole codebase or a folder, as a workflow**: unless the argument is a single file, and if the `Workflow` tool is available, run the saved workflow **`blueprints:sweep`** instead of the agent, with args `{ "kinds": ["dry"] }`, plus `"scope"` for a category (`functions`, `components`, `hooks`, `types`, `constants`) and `"paths"` for a folder. It scans the code area by area in parallel (each scanner also looks for copies in the rest of the codebase), and a separate agent checks every finding. It changes nothing. Wait for the completion notification, then show its result as the report: the `confirmed` findings by priority, with their locations and whether each is safe to auto-apply, with their ids; `unverified` ones separately, flagged as unchecked; how many were `dropped` as false positives; and any `missingScanners` (areas that weren't scanned), `skipped` areas and `leftOut` count. Ask which to apply with `AskUserQuestion`, then relaunch the agent as below, naming the ids and including the findings (e.g. "apply DRY-1, DRY-3 from this report; skip rescanning"). For a single file, or when the workflow isn't available or the run fails, launch the agent:
 
 Use the `Agent` tool to launch the DRY agent (subagent_type="dry") which will capture the baseline, scan for DRY violations, present a prioritized report, and — with user approval — apply optimizations one at a time with validation after each change.
 

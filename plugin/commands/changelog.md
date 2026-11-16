@@ -4,6 +4,8 @@ argument-hint: optional: version tag, date range, or "unreleased"
 author: "@markoradak"
 ---
 
+> Lines marked "run `…`" are context to gather first: run those commands with the Bash tool before following the steps below, and use their output.
+
 # Generate Changelog
 
 I'll analyze your git history and generate a well-structured changelog.
@@ -12,15 +14,15 @@ I'll analyze your git history and generate a well-structured changelog.
 
 ## Current State
 
-**Working Directory**: !`pwd`
+**Working Directory**: run `pwd`
 
-**Branch**: !`git branch --show-current 2>/dev/null || echo "Not a git repository"`
+**Branch**: run `git branch --show-current 2>/dev/null || echo "Not a git repository"`
 
 **Latest Tags**:
-!`git tag --sort=-version:refname 2>/dev/null | head -5 | grep . || echo "No tags found"`
+run `git tag --sort=-version:refname 2>/dev/null | head -5 | grep . || echo "No tags found"`
 
 **Recent Commits**:
-!`git log --oneline -10 2>/dev/null || echo "No git history"`
+run `git log --oneline -10 2>/dev/null || echo "No git history"`
 
 ---
 
