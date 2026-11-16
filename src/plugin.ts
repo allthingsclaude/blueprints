@@ -58,6 +58,8 @@ export function pluginManifest(version = getPackageVersion()) {
     author: { name: 'Marko Radak', url: 'https://github.com/markoradak' },
     homepage: 'https://github.com/allthingsclaude/blueprints#readme',
     repository: 'https://github.com/allthingsclaude/blueprints',
+    documentationUrl: 'https://github.com/allthingsclaude/blueprints/blob/main/plugin/README.md',
+    supportUrl: 'https://github.com/allthingsclaude/blueprints/issues',
     license: 'MIT',
     keywords: ['planning', 'implementation', 'code-review', 'agents', 'workflows', 'autopilot', 'design'],
   };
