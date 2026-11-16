@@ -162,7 +162,7 @@ export function buildPlugin(outDir: string = PLUGIN_DIR, version = getPackageVer
   ensureDir(path.join(outDir, '.claude-plugin'));
   fs.writeFileSync(path.join(outDir, '.claude-plugin', 'plugin.json'), JSON.stringify(pluginManifest(version), null, 2) + '\n', 'utf-8');
 
-  for (const file of listFiles(PLUGIN_SOURCE)) {
+  for (const file of listFiles(PLUGIN_SOURCE, '', true)) {
     ensureDir(path.dirname(path.join(outDir, file)));
     fs.copyFileSync(path.join(PLUGIN_SOURCE, file), path.join(outDir, file));
   }

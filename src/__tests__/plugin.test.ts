@@ -31,7 +31,7 @@ describe('plugin build', () => {
   });
 
   it('has the files the directory requires and nothing it refuses', () => {
-    for (const rel of ['.claude-plugin/plugin.json', 'README.md', 'LICENSE', 'hooks/hooks.json', 'assets/icon.png']) {
+    for (const rel of ['.claude-plugin/plugin.json', 'README.md', 'LICENSE', 'hooks/hooks.json', '.claude-plugin/icon.png']) {
       expect(fs.existsSync(path.join(out, rel)), rel).toBe(true);
     }
     expect(fs.existsSync(path.join(out, 'bin'))).toBe(false);
